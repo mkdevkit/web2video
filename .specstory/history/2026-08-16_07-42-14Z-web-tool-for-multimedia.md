@@ -27279,9 +27279,599 @@ _**User**_
 
 _**Agent (grok-4.6)**_
 
+<think><details><summary>Thought Process</summary>
+字幕条默认关闭。导出时可选择生成字幕文件。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+默认关掉烧录字幕，导出时加上可选的字幕文件。先看字幕条和导出现在怎么做。
+
+_**Agent (grok-4.6)**_
+
 <tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
 <summary>Tool use: **ripgrep_raw_search**</summary>
-Status: **loading**
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "glob": "*.{ts,tsx}",
+  "path": "D:\\WorkSpace\\tools\\web2video\\src",
+  "pattern": "showCaptions|captionForTime|烧录"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\src",
+  "pattern": "showCaptions|captionForTime|烧录",
+  "topFiles": [
+    {
+      "matchCount": 5,
+      "uri": "src\\lib\\ai\\tools.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "src\\types.ts"
+    },
+    {
+      "matchCount": 3,
+      "uri": "src\\components\\dialogs\\ExportDialog.tsx"
+    },
+    {
+      "matchCount": 3,
+      "uri": "src\\lib\\templates.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "src\\components\\Stage.tsx"
+    },
+    {
+      "matchCount": 3,
+      "uri": "src\\components\\AppearancePanel.tsx"
+    },
+    {
+      "matchCount": 6,
+      "uri": "src\\layouts\\StageView.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "src\\lib\\narration.ts"
+    }
+  ],
+  "totalFiles": 8,
+  "totalMatches": 23
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\narration.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\timeline.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在将空项目、示例项目和规范化项目的默认 `showCaptions` 设为 false。旧项目会保留原有设置。
+
+导出对话框的字幕选项默认关闭。导出时仅在用户勾选后才写入项目设置，避免默认开启。
+
+导出字幕文件时需要全局时间线数据。本地节拍时间需映射到全局时间戳。字幕格式将支持 SRT 和 VTT。导出对话框会提供格式选择。
+
+导出字幕选项将持久化到 ExportSettings，下次导出时自动记住用户的勾选状态和格式偏好。字幕生成仍基于场景时钟，把本地节拍时间映射为全局时间戳。
+
+正在梳理字幕生成的具体映射逻辑。场景内各阶段（开场、正文、结尾）的节拍时间均基于音频相对时间，需要进一步读取 sceneStarts 与音频映射关系，才能将其转换为全局时间戳并写入字幕文件。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\timeline.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\components\dialogs\ExportDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\exportSettings.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\templates.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\templates.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\templates.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+导出对话框在导出时会永久修改项目设置，这是一个细微问题。
+
+导出时临时修改项目 showCaptions 以控制字幕渲染，结束后恢复原值。这样既能实现临时烧录，又不会永久改变项目设置。
+
+保存并恢复 showCaptions 的具体实现已确定：导出前记录旧值，结束后通过 try/finally 恢复。同时开始设计 subtitles.ts，用于收集音轨节拍并映射到场景本地时间，生成 SRT 或 VTT 字幕文件。
+
+已确定字幕时间映射规则：OPEN 节拍按 openBeforeMs 偏移，CLOSE 按 closeSpeechStartMs 偏移，body 按 bodyStartMs 偏移，再叠加 sceneStart 得到全局时间。每个节拍将独立生成 cue，暂时不合并相邻相同文本。
+
+字幕文件将包含 open 和 close 节拍的旁白，但排除空文本。节拍间隙使用 beatSpansForScene 的 endMs，若映射后重叠则合并或钳制。正在编写 SRT 时间戳转换函数。
+
+SRT 时间戳格式已确定为 `HH:mm:ss,mmm`，VTT 则使用 `.` 分隔毫秒。
+
+导出设置将新增两个字段：`exportSubtitles`（默认 false）和 `subtitleFormat`（默认 srt）。导出对话框会提供“烧录字幕条”和“导出字幕文件”两个选项，其中字幕文件格式支持 SRT 与 VTT 切换。
+
+“烧录字幕条”默认未勾选，且仅对本次导出生效，不会写入项目配置。导出对话框中的该选项初始化自项目当前的 showCaptions 值。
+
+showCaptions 将严格判断为 `=== true`。未显式存储该字段的旧项目保持原有行为，新项目默认关闭。
+
+字幕文件将与视频同名保存。若生成失败则跳过并提示用户。已开始实现 `collectSubtitleCues` 函数及 `mapAudioToLocal` 映射逻辑。
+
+正在编写 `collectSubtitleCues` 的具体循环逻辑：遍历场景节拍，提取非空文本并替换多余空白；将节拍起止时间映射到场景本地时间后，强制最小持续 200 毫秒，并钳制结束时间不超过场景总时长。随后将本地时间叠加到场景起始时间，得到全局字幕 cue。
+
+字幕 cue 收集完成后会排序并修复重叠，剔除时长不足 80 毫秒的无效片段。subtitles.ts 需要引入 SPEAK_OPEN 与 SPEAK_CLOSE 常量。VTT 格式需转义文本中的 `-->`，SRT 不需要。界面说明将区分“烧录”（直接嵌入画面）与“字幕文件”（外部侧边栏）两种导出方式。
+
+将在 AI 工具的导出设置 schema 中补充 exportSubtitles 字段。界面文案将明确说明默认关闭，导出时可另存字幕文件。CaptionFields 的默认复选框标签也需同步调整。接下来准备实现 .tt 模板。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\types.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\components\AppearancePanel.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+准备实施所有文件修改。
+
+导出对话框将默认关闭字幕并提供可选开关。导出后恢复字幕显示状态。字幕生成放在合成之后、录制之前完成，文件名为 `${name}-${langZhName}.srt`。接下来将仔细编写 subtitles.ts。
+
+正在设计字幕生成逻辑。将从旁白中提取 SPEAK_OPEN 和 SPEAK_CLOSE 标记，并把音频时间映射到本地时间轴。最小提示时长设为 200 毫秒。导出格式支持 SRT 与 VTT 两种类型。同时需要在 AI schema 中新增 exportSubtitles 和 subtitleFormat 字段。
+
+系统提示词已确定：默认关闭字幕，导出时可嵌入画面，也可另存 SRT 或 VTT 文件。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\types.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\lib\exportSettings.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\lib\exportSettings.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\lib\subtitles.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\lib\templates.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\lib\templates.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\components\AppearancePanel.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在更新导出对话框。字幕默认关闭，导出后恢复状态，并增加生成字幕文件的选项。
+
+同时更新了 AI 工具的 schema 和提示词。字幕文件名将使用视频名称和语言中文名拼接，例如 `项目名-中文名.srt`。导出对话框会从 subtitleFile 获取文本内容，再根据语言显示名称生成最终文件名。
+
+字幕文件名将忽略语言 ID，由导出对话框自行拼接。烧录字幕的状态会在导出前后临时切换，完成后恢复原值，且不持久化到项目数据中。字幕开关的初始状态默认为关闭。
+
+预览字幕与导出烧录字幕相互独立。导出对话框中的烧录开关始终默认关闭，不受预览设置影响。导出时若用户勾选，会临时启用项目字幕以渲染画面，结束后恢复原状。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\components\dialogs\ExportDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\components\dialogs\ExportDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\components\dialogs\ExportDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\components\dialogs\ExportDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "path": "D:\\WorkSpace\\tools\\web2video\\src\\lib\\ai\\tools.ts",
+  "pattern": "口播字幕条"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\src\\lib\\ai\\tools.ts",
+  "pattern": "口播字幕条",
+  "topFiles": [
+    {
+      "matchCount": 3,
+      "uri": "src\\lib\\ai\\tools.ts"
+    }
+  ],
+  "totalFiles": 1,
+  "totalMatches": 3
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在更新系统提示与 AI 注释，以反映该字幕功能的调整。
+
+正在 schema 中添加 exportSubtitles 字段，并优化字幕文件名显示。检查了字幕收集逻辑与时间边界，准备运行类型检查。注意到旧项目若显式保存了 showCaptions: true，仍会保持开启状态。
+
+未显式设置 showCaptions 的项目默认关闭字幕。内存中的示例项目已同步更新为 false。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2"><details>
+<summary>Tool use: **run_terminal_command_v2** • Run command: npx tsc --noEmit</summary>
+```bash
+npx tsc --noEmit
+```
+
+```
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+```
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+类型检查已通过。将用中文给出清晰总结。
+
+旧项目若曾保存显示字幕，预览仍会保留该设置。新项目与空项目默认关闭字幕。运行中的旧项目可能在刷新前继续显示字幕，此为预期行为。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+新工程默认**不烧录、预览也不显示**字幕条。
+
+导出窗口现在是两项分开的：
+
+- **烧录字幕条到画面**：这次导出才画进视频，默认不勾，也不会改你工程里的预览开关
+- **同时导出字幕文件**：按口播时间另存 **SRT** 或 **VTT**，文件名和视频一样，例如 `黑洞不是洞-中文.srt`
+
+字幕条样式仍在顶栏「配置」里调。旧工程如果已经存过「显示字幕」，会保持原样，关掉即可。
+
+---
+
+_**User**_
+
+本工具用的技术方案等写入README.md
+
+---
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+用户要求将技术方案与架构写入 README.md。
+
+正在读取现有 README，并从 package.json、Vite 配置及关键库中提取准确的技术栈信息。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\README.md</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\package.json</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="search" data-tool-name="glob_file_search"><details>
+<summary>Tool use: **glob_file_search** • Searched codebase "" • **45** results in **1** directory</summary>
+
+Directory: **`D:\WorkSpace\tools\web2video`** (45 files)
+
+| File |
+|------|
+| `../.\src\lib\ai\tools.ts` |
+| `../.\src\lib\templates.ts` |
+| `../.\src\lib\subtitles.ts` |
+| `../.\src\lib\exportSettings.ts` |
+| `../.\src\types.ts` |
+| `../.\.specstory\history\2026-08-16_07-42-14Z-web-tool-for-multimedia.md` |
+| `../.\.specstory\statistics.json` |
+| `../.\src\vite-env.d.ts` |
+| `../.\src\lib\projectFolder.ts` |
+| `../.\src\lib\exportVideo.ts` |
+| `../.\src\lib\synthProject.ts` |
+| `../.\src\lib\ai\storyboard.ts` |
+| `../.\src\lib\fonts.ts` |
+| `../.\src\lib\textI18n.ts` |
+| `../.\src\store\useEditor.ts` |
+| `../.\src\lib\tts.ts` |
+| `../.\src\lib\audioStore.ts` |
+| `../.\src\lib\narration.ts` |
+| `../.\src\lib\interpolate.ts` |
+| `../.\src\lib\blocks.ts` |
+| `../.\src\lib\ttsSecrets.ts` |
+| `../.\src\lib\voices.ts` |
+| `../.\src\lib\qwenTts.ts` |
+| `../.\vite-plugin-edge-tts.ts` |
+| `../.\src\lib\voiceLibrary.ts` |
+| `../.\src\lib\aiChat.ts` |
+| `../.\src\lib\ai\agent.ts` |
+| `../.\src\lib\aiSecrets.ts` |
+| `../.\vite.config.ts` |
+| `../.\vite-plugin-llm-proxy.ts` |
+| `../.\src\lib\timeline.ts` |
+| `../.\src\lib\cues.ts` |
+| `../.\src\lib\scriptSplit.ts` |
+| `../.\README.md` |
+| `../.\src\lib\edgeTts.ts` |
+| `../.\package-lock.json` |
+| `../.\src\hooks\useKeyboard.ts` |
+| `../.\src\lib\insertImage.ts` |
+| `../.\src\lib\ids.ts` |
+| `../.\src\lib\edgeTranslate.ts` |
+| `../.\src\lib\langs.ts` |
+| `../.\tsconfig.node.json` |
+| `../.\tsconfig.json` |
+| `../.\package.json` |
+| `../.\.specstory\.project.json` |
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\vite.config.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在整理技术细节，准备写入 README。涉及 Qwen TTS、AI 工具、File System Access API、MediaRecorder 和 IndexedDB 等。
+
+发现 README 中仍残留 Edge TTS 和 Azure/OpenAI 的过时描述。将修正功能列表并新增技术架构章节。先读取关键文件以确保描述准确。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\vite-plugin-llm-proxy.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\vite-plugin-edge-tts.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\qwenTts.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\audioStore.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\aiSecrets.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\edgeTranslate.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+已理清整体情况，准备重写 README.md。
+
+将更新功能描述以匹配当前实现。新增技术方案章节，涵盖技术栈、架构、TTS、AI、导出、存储、时间轴及国际化等细节。保持中文撰写，不提及计划文件。
+
+保持技术性与可读性并重，避免罗列全部文件。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\README.md</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+README.md 已撰写完成，技术方案与实现细节已整理其中。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+已经写进 `README.md`：在原有用法和快捷键之外，补了当前技术方案。
+
+主要包括：Vite + React + Zustand 的纯前端结构、千问 TTS 与本机代理、Chat Completions 分镜工具、时间轴怎么跟口播对齐、File System Access / IndexedDB 存工程和音频，以及 `html-to-image` + `MediaRecorder` 导出、SRT/VTT 字幕。功能列表也按现状改过（不再写 Edge TTS 为主、只导出 WebM 那些旧说明）。
+
+---
+
+_**User**_
+
+支持视频和gif动画元件。
+
+---
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: </summary>
 
 </details></tool-use>
 
@@ -27289,6 +27879,14 @@ _**Agent (grok-4.6)**_
 
 <tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
 <summary>Tool use: **read_file_v2** • Read file: </summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+Status: **loading**
 
 </details></tool-use>
 

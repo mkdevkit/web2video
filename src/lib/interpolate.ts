@@ -34,6 +34,7 @@ export function defaultSettings(type: LayoutBlock["type"]): BlockSettings {
     opacity: 1,
     rotation: 0,
     objectFit: "cover",
+    loop: type === "gif" || type === "video",
     listLayout: "stack",
     shadow: false,
   };

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { pickImageFile } from "../lib/insertImage";
+import { pickGifFile, pickImageFile, pickVideoFile } from "../lib/insertImage";
 import { sceneBlocks } from "../lib/blocks";
 import { cueBind, cueKeyProgress, cueStay, resolveCueOnScene } from "../lib/cues";
 import { mergedSettings, restPose } from "../lib/interpolate";
@@ -55,6 +55,10 @@ function parseSignedSec(raw: string, min = -5, max = 10) {
 
 function secSigned(ms: number) {
   return Number((ms / 1000).toFixed(2));
+}
+
+function isMediaType(type: string) {
+  return type === "image" || type === "video" || type === "gif";
 }
 
 function SpeakRoleSelect({ sceneId, speakKey }: { sceneId: string; speakKey: string }) {
@@ -527,7 +531,12 @@ function BlockInspector({ scene, block }: { scene: Scene; block: LayoutBlock }) 
           }
         />
       </Field>
-      {block.type !== "image" && block.type !== "shape" && block.type !== "list" && block.type !== "dialogue" && (
+      {block.type !== "image" &&
+        block.type !== "video" &&
+        block.type !== "gif" &&
+        block.type !== "shape" &&
+        block.type !== "list" &&
+        block.type !== "dialogue" && (
         <div className="mt-2">
           <SlotField scene={scene} lang={lang} source={source} field={block.type as "title"} label="内容" />
         </div>
@@ -543,7 +552,7 @@ function BlockInspector({ scene, block }: { scene: Scene; block: LayoutBlock }) 
             />
           </Field>
           <SpeakRoleSelect sceneId={scene.id} speakKey={block.id} />
-          {block.type !== "image" && block.type !== "shape" && (
+          {block.type !== "image" && block.type !== "video" && block.type !== "gif" && block.type !== "shape" && (
             <button
               className="btn mt-1 w-full"
               onClick={() => {
@@ -703,10 +712,51 @@ function BlockInspector({ scene, block }: { scene: Scene; block: LayoutBlock }) 
           })}
         </div>
       )}
-      {block.type === "image" && (
-        <button className="btn mt-2 w-full" onClick={() => void pickImageFile().then((src) => src && useEditor.getState().setImage(scene.id, src))}>
-          更换配图
-        </button>
+      {isMediaType(block.type) && (
+        <div className="mt-2 space-y-2">
+          <button
+            className="btn w-full"
+            onClick={() => {
+              const pick = block.type === "video" ? pickVideoFile : block.type === "gif" ? pickGifFile : pickImageFile;
+              void pick().then((src) => {
+                if (!src) return;
+                if (block.type === "image" && block.id === "image") useEditor.getState().setImage(scene.id, src);
+                else useEditor.getState().patchBlockSettings(scene.id, block.id, { src });
+              });
+            }}
+          >
+            {block.type === "video" ? "选择视频" : block.type === "gif" ? "选择 GIF" : "更换配图"}
+          </button>
+          <Field label="铺满">
+            <select
+              className="field"
+              value={set.objectFit ?? "cover"}
+              onChange={(e) =>
+                useEditor.getState().patchBlockSettings(scene.id, block.id, { objectFit: e.target.value as "cover" | "contain" })
+              }
+            >
+              <option value="cover">裁切铺满</option>
+              <option value="contain">完整显示</option>
+            </select>
+          </Field>
+          {(block.type === "video") && (
+            <label className="flex items-center gap-2 text-[11px] text-ink-200">
+              <input
+                type="checkbox"
+                checked={set.loop !== false}
+                onChange={(e) => useEditor.getState().patchBlockSettings(scene.id, block.id, { loop: e.target.checked })}
+              />
+              循环播放
+            </label>
+          )}
+          <p className="text-[10px] text-ink-500">
+            {block.type === "video"
+              ? "无声画面，跟场景时间轴走。导出时按当前帧截进视频。建议 MP4 / WebM，不超过 24MB。"
+              : block.type === "gif"
+                ? "GIF 会动，导出时按当前帧截进视频。文件请控制在 24MB 内。"
+                : "也可选 GIF，动画会画进导出。"}
+          </p>
+        </div>
       )}
       {(block.type === "title" ||
         block.type === "subtitle" ||

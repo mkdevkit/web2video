@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, Hash, Image, List, MessageSquare, Plus, Quote, Square, Type, User } from "lucide-react";
+import { ChevronDown, Film, Hash, Image, ImagePlay, List, MessageSquare, Plus, Quote, Square, Type, User } from "lucide-react";
 import { BLOCK_TYPES, type BlockType } from "../types";
 import { useEditor } from "../store/useEditor";
+import { pickGifFile, pickVideoFile } from "../lib/insertImage";
 
 const TYPE_ICON: Record<BlockType, typeof Type> = {
   title: Type,
@@ -15,6 +16,8 @@ const TYPE_ICON: Record<BlockType, typeof Type> = {
   list: List,
   dialogue: MessageSquare,
   image: Image,
+  video: Film,
+  gif: ImagePlay,
   shape: Square,
 };
 
@@ -52,7 +55,15 @@ export function AddBlockMenu() {
   const add = (type: BlockType) => {
     if (!currentSceneId) return;
     useEditor.getState().addBlock(currentSceneId, type);
+    const sceneId = currentSceneId;
+    const blockId = useEditor.getState().selectedBlockId;
     setOpen(false);
+    if (type === "video" || type === "gif") {
+      const pick = type === "video" ? pickVideoFile : pickGifFile;
+      void pick().then((src) => {
+        if (src && blockId) useEditor.getState().patchBlockSettings(sceneId, blockId, { src, loop: true });
+      });
+    }
   };
 
   return (

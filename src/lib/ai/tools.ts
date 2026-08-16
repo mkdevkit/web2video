@@ -444,7 +444,8 @@ export function executeTool(name: string, rawArgs: unknown): string {
           close: "结束口播钉在最后一帧，排在全部元件口播之后",
           speakBind: "有口播的元件默认跟该语言的那一句入场",
           dialogue: "dialogue 版面是左右双人对话窗。对白写在 dialogue 数组，口播键为 item:{id}，每句可配 role",
-          bg: "bg 是场景底色；bgImage 只能用户本地选图，不要编造 URL。bgDim 是遮罩",
+          bg: "bg 是场景底色；bgImage / 图片 / 视频 / GIF 只能用户本地选文件，不要编造 URL",
+          media: "video、gif 元件用 manage_blocks 添加后，src 由用户在检视里选择，存在 settings.src",
           captions: "showCaptions 只控制预览字幕条，默认关。导出烧录在导出窗勾选；exportSettings.exportSubtitles 另存字幕文件",
           progress: "showTopProgress + progressStyle 控制画布进度条，画在画布上会进导出，不是工作区装饰",
           speakRole: "speakRole 填 get_project.voices 的 id；缺省用 voiceByLang 该语言默认",
@@ -636,7 +637,7 @@ export const SYSTEM_PROMPT = `你是 Web2Video 的分镜助手。这是本地口
 版面与对白：
 - 封面 cover，要点 bullets/cards，步骤 steps，金句 quote，数据 bigStat，对话 dialogue。
 - 对话场填 dialogue:[{side,name,text,role?}]，左右交替。开场口播宜短或空，对白每句单独配音。
-- 场景底色用 bg；遮罩 bgDim 0–1。不要编造图片 URL。
+- 场景底色用 bg；遮罩 bgDim 0–1。不要编造图片、视频、GIF 的 URL。视频/GIF 元件让用户在检视里选本地文件。
 
 外观：
 - 口播字幕条：showCaptions 默认关，只影响预览。导出烧录在导出窗勾选；exportSettings.exportSubtitles 可另存 SRT/VTT。

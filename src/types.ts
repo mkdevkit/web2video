@@ -30,6 +30,8 @@ export type BlockType =
   | "list"
   | "dialogue"
   | "image"
+  | "video"
+  | "gif"
   | "shape";
 export type TtsProvider = "edge" | "azure" | "openai" | "qwen";
 export type SceneTransition = "cut" | "crossfade";
@@ -169,6 +171,10 @@ export interface BlockSettings {
   opacity?: number;
   rotation?: number;
   objectFit?: "cover" | "contain";
+  /** Image / video / GIF payload (data URL). Image blocks may fall back to `slots.image`. */
+  src?: string;
+  /** Video / GIF: restart after the clip ends. */
+  loop?: boolean;
   listLayout?: "stack" | "row" | "grid";
   shadow?: boolean;
 }
@@ -324,5 +330,7 @@ export const BLOCK_TYPES: { type: BlockType; label: string }[] = [
   { type: "list", label: "列表" },
   { type: "dialogue", label: "对话窗" },
   { type: "image", label: "图片" },
+  { type: "video", label: "视频" },
+  { type: "gif", label: "GIF" },
   { type: "shape", label: "色块" },
 ];

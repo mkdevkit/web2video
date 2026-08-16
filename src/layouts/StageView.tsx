@@ -7,6 +7,8 @@ import { captionStyleOf, fontStack, hexAlpha, resolveBlockFont } from "../lib/fo
 import { itemText, textOf } from "../lib/textI18n";
 import { type LangId } from "../lib/langs";
 import { cueVisible, sceneClock } from "../lib/timeline";
+import { MediaFrame } from "./MediaFrame";
+import { mediaSrcOf } from "../lib/insertImage";
 import type { Cue, LayoutBlock, Project, Scene } from "../types";
 
 function cueOf(scene: Scene, target: string): Cue | undefined {
@@ -218,10 +220,17 @@ export function StageView({
           if (b.type === "shape") {
             return <div className="h-full w-full" style={{ background: set.fill || "#c45c26", borderRadius: `${set.radius ?? 1}cqw` }} />;
           }
-          if (b.type === "image") {
-            return img ? (
-              <img src={img} alt="" className="h-full w-full origin-center" style={{ objectFit: set.objectFit ?? "cover" }} />
-            ) : null;
+          if (b.type === "image" || b.type === "video" || b.type === "gif") {
+            const src = mediaSrcOf(b, img);
+            return (
+              <MediaFrame
+                src={src}
+                kind={b.type}
+                objectFit={set.objectFit ?? "cover"}
+                loop={set.loop !== false}
+                timeMs={localMs}
+              />
+            );
           }
           if (b.type === "dialogue") {
             const lines = scene.slots.dialogue ?? [];

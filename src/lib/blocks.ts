@@ -82,6 +82,8 @@ export function makeBlock(type: BlockType): LayoutBlock {
     list: [8, 28, 84, 56],
     dialogue: [8, 20, 84, 72],
     image: [50, 10, 44, 80],
+    video: [8, 18, 84, 64],
+    gif: [8, 18, 84, 64],
     shape: [8, 8, 30, 20],
   };
   const [x, y, w, h] = defaults[type];
@@ -122,7 +124,7 @@ export function defaultCues(
     const out: Cue[] = [];
     let i = 0;
     for (const b of list) {
-      const bind: CueBind = b.type === "image" || b.type === "shape" ? "visual" : "speak";
+      const bind: CueBind = b.type === "image" || b.type === "video" || b.type === "gif" || b.type === "shape" ? "visual" : "speak";
       if (b.type === "list") {
         out.push(...itemCues(items, 0.12 + i * 0.08));
       } else if (b.type === "dialogue") {

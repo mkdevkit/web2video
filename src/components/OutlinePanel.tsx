@@ -1,4 +1,4 @@
-import { Hash, Image, List, MessageSquare, Quote, Square, Type, User } from "lucide-react";
+import { Film, Hash, Image, ImagePlay, List, MessageSquare, Quote, Square, Type, User } from "lucide-react";
 import { sceneBlocks } from "../lib/blocks";
 import { blockNameOf, itemText, sourceLangOf, textOf } from "../lib/textI18n";
 import { itemSpeakKey, speakText } from "../lib/narration";
@@ -17,6 +17,8 @@ const TYPE_ICON: Record<BlockType, typeof Type> = {
   list: List,
   dialogue: MessageSquare,
   image: Image,
+  video: Film,
+  gif: ImagePlay,
   shape: Square,
 };
 
@@ -26,6 +28,8 @@ function typeLabel(type: BlockType) {
 
 function previewOf(scene: Scene, block: LayoutBlock, lang: LangId, source: LangId) {
   if (block.type === "image") return "配图";
+  if (block.type === "video") return "视频";
+  if (block.type === "gif") return "GIF";
   if (block.type === "shape") return "色块";
   if (block.type === "list") return `${scene.slots.items?.length ?? 0} 项`;
   if (block.type === "dialogue") return `${scene.slots.dialogue?.length ?? 0} 句`;
