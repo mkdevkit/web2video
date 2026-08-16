@@ -3,8 +3,9 @@ import { sceneBlocks } from "../lib/blocks";
 import { bodyBeatSpans, resolveCue } from "../lib/cues";
 import { mergedSettings, sampleBlock } from "../lib/interpolate";
 import { captionForTime } from "../lib/narration";
+import { captionStyleOf, fontStack, hexAlpha, resolveBlockFont } from "../lib/fonts";
 import { itemText, textOf } from "../lib/textI18n";
-import { langMeta, type LangId } from "../lib/langs";
+import { type LangId } from "../lib/langs";
 import { cueVisible, sceneClock } from "../lib/timeline";
 import type { Cue, LayoutBlock, Project, Scene } from "../types";
 
@@ -68,7 +69,11 @@ export function StageView({
   const blocks = sceneBlocks(scene);
   const firstAt = Math.min(
     1,
-    ...[...blocks.map((b) => resolvedOf(b.id)?.at ?? 0), ...(scene.slots.items ?? []).map((it) => resolvedOf(`item:${it.id}`)?.at ?? 1)],
+    ...[
+      ...blocks.map((b) => resolvedOf(b.id)?.at ?? 0),
+      ...(scene.slots.items ?? []).map((it) => resolvedOf(`item:${it.id}`)?.at ?? 1),
+      ...(scene.slots.dialogue ?? []).map((it) => resolvedOf(`item:${it.id}`)?.at ?? 1),
+    ],
   );
   const sampleOpts = { freeze, firstAt: Number.isFinite(firstAt) ? firstAt : 0 };
   const title = textOf(scene.slots.title, lang, source);
@@ -80,7 +85,9 @@ export function StageView({
   const number = textOf(scene.slots.number, lang, source);
   const items = scene.slots.items ?? [];
   const img = scene.slots.image;
-  const font = langMeta(lang).sans;
+  const bodyFont = fontStack(project.fontId, lang);
+  const captionFont = fontStack(project.captionFontId || project.fontId, lang);
+  const capStyle = captionStyleOf(project.captionStyle);
   const cap = showCaptions
     ? captionForTime(scene, lang, source, localMs, durationMs, phase, audioMs, animLocal, animDur, (target) => {
         const cue = resolvedOf(target);
@@ -165,16 +172,29 @@ export function StageView({
     <div
       ref={rootRef}
       className="relative h-full w-full overflow-hidden"
-      style={{ background: scene.bg || "#141811", fontFamily: font, color: "#f3eee3", containerType: "size" }}
+      style={{ background: scene.bg || "#141811", fontFamily: bodyFont, color: "#f3eee3", containerType: "size" }}
       onMouseDown={() => {
         if (editable) onSelect?.(null);
       }}
     >
-      <div className="pointer-events-none absolute inset-0 opacity-40" style={{ background: "radial-gradient(circle at 20% 10%, #c45c2633, transparent 42%)" }} />
+      {scene.bgImage ? (
+        <img
+          src={scene.bgImage}
+          alt=""
+          className="pointer-events-none absolute inset-0 h-full w-full"
+          style={{ objectFit: scene.bgFit === "contain" ? "contain" : "cover" }}
+        />
+      ) : (
+        <div className="pointer-events-none absolute inset-0 opacity-40" style={{ background: "radial-gradient(circle at 20% 10%, #c45c2633, transparent 42%)" }} />
+      )}
+      {(scene.bgDim ?? 0) > 0 && (
+        <div className="pointer-events-none absolute inset-0" style={{ background: `rgba(0,0,0,${Math.min(1, Math.max(0, scene.bgDim ?? 0))})` }} />
+      )}
       {blocks.map((b) => {
         const cue = resolvedOf(b.id);
         const pose = sampleBlock(b, progress, cue, sampleOpts);
         const set = mergedSettings(b);
+        const typeFont = fontStack(resolveBlockFont(project, b), lang);
         const selected = selectedId === b.id;
         const box: CSSProperties = {
           position: "absolute",
@@ -182,7 +202,7 @@ export function StageView({
           top: `${pose.y}%`,
           width: `${pose.w}%`,
           height: `${pose.h}%`,
-          zIndex: selected ? 30 : (b.z ?? 1),
+          zIndex: b.z ?? 1,
           opacity: pose.opacity,
           transform: `rotate(${pose.rotation}deg)`,
           textAlign: set.align,
@@ -202,6 +222,45 @@ export function StageView({
             return img ? (
               <img src={img} alt="" className="h-full w-full origin-center" style={{ objectFit: set.objectFit ?? "cover" }} />
             ) : null;
+          }
+          if (b.type === "dialogue") {
+            const lines = scene.slots.dialogue ?? [];
+            return (
+              <div className="flex h-full flex-col justify-end gap-[1.1cqw]">
+                {lines.map((it) => {
+                  const left = it.side !== "right";
+                  const itemCue = resolvedOf(`item:${it.id}`);
+                  const ip = sampleBlock({ ...b, id: it.id, keys: undefined }, progress, itemCue, sampleOpts);
+                  const name = (it.name ?? "").trim() || (left ? "左" : "右");
+                  return (
+                    <div
+                      key={it.id}
+                      className={`flex ${left ? "justify-start" : "justify-end"}`}
+                      style={{ opacity: ip.opacity }}
+                    >
+                      <div
+                        className={`max-w-[78%] px-[1.5cqw] py-[1cqw] ${
+                          left ? "rounded-[1.2cqw] rounded-bl-[0.25cqw] bg-white/12" : "rounded-[1.2cqw] rounded-br-[0.25cqw] bg-[#c45c26]/40"
+                        }`}
+                      >
+                        <div
+                          className="mb-[0.25cqw] opacity-70"
+                          style={{ fontSize: `${Math.max(1, (set.fontSize ?? 1.7) * 0.62)}cqw`, fontFamily: typeFont, textAlign: left ? "left" : "right" }}
+                        >
+                          {name}
+                        </div>
+                        <div
+                          className="leading-snug"
+                          style={{ fontSize: `${set.fontSize ?? 1.7}cqw`, fontFamily: typeFont, textAlign: left ? "left" : "right" }}
+                        >
+                          {itemText(it, lang, source)}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
           }
           if (b.type === "list") {
             const layout = set.listLayout ?? "stack";
@@ -223,7 +282,7 @@ export function StageView({
                       <span className="flex h-[2.2cqw] w-[2.2cqw] shrink-0 items-center justify-center rounded-full bg-[#c45c26] text-[1.2cqw]">
                         {i + 1}
                       </span>
-                      <span className="leading-snug" style={{ fontSize: `${set.fontSize ?? 1.8}cqw` }}>
+                      <span className="leading-snug" style={{ fontSize: `${set.fontSize ?? 1.8}cqw`, fontFamily: typeFont }}>
                         {itemText(it, lang, source)}
                       </span>
                     </div>
@@ -236,8 +295,9 @@ export function StageView({
           if (!content) return null;
           return (
             <div
-              className={`flex h-full w-full items-center ${b.type === "title" || b.type === "quote" || b.type === "number" ? "font-display" : ""}`}
+              className="flex h-full w-full items-center"
               style={{
+                fontFamily: typeFont,
                 fontSize: `${set.fontSize}cqw`,
                 fontWeight: set.fontWeight === "bold" ? 700 : set.fontWeight === "medium" ? 500 : 400,
                 lineHeight: set.lineHeight,
@@ -294,7 +354,25 @@ export function StageView({
         );
       })}
       {showCaptions && cap && (
-        <div className="pointer-events-none absolute inset-x-[10%] bottom-[3%] z-20 rounded-full bg-black/55 px-[2cqw] py-[0.9cqw] text-center text-[1.7cqw] leading-snug backdrop-blur-sm">
+        <div
+          className="pointer-events-none absolute z-20 leading-snug"
+          style={{
+            left: `${capStyle.insetX}%`,
+            right: `${capStyle.insetX}%`,
+            top: capStyle.position === "top" ? `${capStyle.insetY}%` : undefined,
+            bottom: capStyle.position === "bottom" ? `${capStyle.insetY}%` : undefined,
+            textAlign: capStyle.align,
+            fontSize: `${capStyle.fontSize}cqw`,
+            fontFamily: captionFont,
+            fontWeight: capStyle.fontWeight === "bold" ? 700 : capStyle.fontWeight === "medium" ? 500 : 400,
+            color: capStyle.color,
+            background: capStyle.box === "none" ? "transparent" : hexAlpha(capStyle.bg, capStyle.bgOpacity),
+            borderRadius: capStyle.box === "pill" ? 999 : capStyle.box === "bar" ? "0.5cqw" : 0,
+            padding: `${capStyle.paddingY}cqw ${capStyle.paddingX}cqw`,
+            backdropFilter: capStyle.blur && capStyle.box !== "none" ? "blur(8px)" : undefined,
+            textShadow: capStyle.outline ? "0 0.06cqw 0.18cqw #000, 0 0 0.35cqw rgba(0,0,0,.85)" : undefined,
+          }}
+        >
           {cap}
         </div>
       )}

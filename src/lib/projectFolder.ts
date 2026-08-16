@@ -9,6 +9,7 @@ const FILE_NAME = "project.json";
 const DB_NAME = "web2video";
 const STORE = "handles";
 const HANDLE_KEY = "project-dir";
+const WIN_RESERVED = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
 
 let boundDir: FileSystemDirectoryHandle | null = null;
 
@@ -88,6 +89,53 @@ async function pickDirectory(mode: DirMode): Promise<FileSystemDirectoryHandle |
   }
 }
 
+export function folderNameFromProject(name: string): string {
+  let s = (name.trim() || DEFAULT_PROJECT_NAME)
+    .replace(/[<>:"/\\|?*\u0000-\u001f]/g, "")
+    .replace(/[. ]+$/g, "")
+    .slice(0, 80)
+    .trim();
+  if (!s) s = DEFAULT_PROJECT_NAME;
+  if (WIN_RESERVED.test(s)) s = `_${s}`;
+  return s;
+}
+
+async function hasProjectFile(dir: FileSystemDirectoryHandle): Promise<boolean> {
+  try {
+    await dir.getFileHandle(FILE_NAME);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function findProjectDirs(dir: FileSystemDirectoryHandle): Promise<FileSystemDirectoryHandle[]> {
+  if (await hasProjectFile(dir)) return [dir];
+  const found: FileSystemDirectoryHandle[] = [];
+  for await (const handle of dir.values()) {
+    if (handle.kind !== "directory" || handle.name === "media") continue;
+    const child = handle as FileSystemDirectoryHandle;
+    if (await hasProjectFile(child)) found.push(child);
+  }
+  return found;
+}
+
+async function resolveProjectDir(picked: FileSystemDirectoryHandle): Promise<FileSystemDirectoryHandle | null> {
+  const hits = await findProjectDirs(picked);
+  if (hits.length === 1) return hits[0];
+  if (!hits.length) return null;
+  const prefer = folderNameFromProject(useEditor.getState().project.name);
+  const named = hits.find((h) => h.name === prefer);
+  if (named) return named;
+  window.alert(`此目录下有多个工程：${hits.map((h) => h.name).join("、")}。请直接打开那个项目名文件夹。`);
+  return null;
+}
+
+async function projectDirIn(parent: FileSystemDirectoryHandle, projectName: string): Promise<FileSystemDirectoryHandle> {
+  if (await hasProjectFile(parent)) return parent;
+  return parent.getDirectoryHandle(folderNameFromProject(projectName), { create: true });
+}
+
 async function writeMedia(dir: FileSystemDirectoryHandle, project: Project) {
   const media = await dir.getDirectoryHandle("media", { create: true });
   for (const scene of project.scenes) {
@@ -162,9 +210,14 @@ export async function openProjectFolder(): Promise<void> {
     }
     return;
   }
-  const dir = await pickDirectory("readwrite");
-  if (!dir) return;
+  const picked = await pickDirectory("readwrite");
+  if (!picked) return;
   try {
+    const dir = await resolveProjectDir(picked);
+    if (!dir) {
+      window.alert("此目录没有 project.json。保存时工程写在「项目名」子文件夹里，请打开那个文件夹，或选择包含它的上级目录。");
+      return;
+    }
     const fileHandle = await dir.getFileHandle(FILE_NAME);
     const text = await (await fileHandle.getFile()).text();
     const project = parseProjectFile(text);
@@ -173,7 +226,7 @@ export async function openProjectFolder(): Promise<void> {
     useEditor.getState().replaceProject(project);
   } catch (e) {
     if (isNotFound(e)) {
-      window.alert("此目录没有 project.json，请选择包含工程文件的文件夹。");
+      window.alert("此目录没有 project.json。保存时工程写在「项目名」子文件夹里，请打开那个文件夹，或选择包含它的上级目录。");
       return;
     }
     window.alert(e instanceof Error ? e.message : "无法打开工程目录");
@@ -192,16 +245,19 @@ export async function saveProjectFolder(): Promise<void> {
     if (!ok) dir = null;
   }
   if (!dir) {
-    dir = await pickDirectory("readwrite");
-    if (!dir) return;
+    const parent = await pickDirectory("readwrite");
+    if (!parent) return;
+    try {
+      dir = await projectDirIn(parent, s.project.name);
+    } catch (e) {
+      if (isAbort(e)) return;
+      window.alert(e instanceof Error ? e.message : "无法创建项目文件夹");
+      return;
+    }
     bindDir(dir);
   }
 
-  let project = s.project;
-  if (!project.name.trim() || project.name === DEFAULT_PROJECT_NAME) {
-    s.setProjectName(dir.name);
-    project = useEditor.getState().project;
-  }
+  const project = s.project;
 
   try {
     await writeProjectJson(dir, project);

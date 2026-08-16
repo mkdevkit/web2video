@@ -37,6 +37,11 @@ export function collectNarrationBeats(scene: Scene, lang: LangId, source: LangId
         push(itemSpeakKey(it.id), speakText(scene, itemSpeakKey(it.id), lang, source));
       }
     }
+    if (block.type === "dialogue") {
+      for (const it of scene.slots.dialogue ?? []) {
+        push(itemSpeakKey(it.id), speakText(scene, itemSpeakKey(it.id), lang, source));
+      }
+    }
   }
   push(SPEAK_CLOSE, speakText(scene, SPEAK_CLOSE, lang, source));
   return beats;
@@ -142,6 +147,14 @@ export function markLangAudioStale(scene: Scene, lang: LangId): Scene {
   const audio = scene.audioByLang?.[lang];
   if (!audio) return scene;
   return { ...scene, audioByLang: { ...scene.audioByLang, [lang]: { ...audio, stale: true } } };
+}
+
+export function markAllAudioStale(scene: Scene): Scene {
+  let next = scene;
+  for (const lang of Object.keys(scene.audioByLang ?? {}) as LangId[]) {
+    next = markLangAudioStale(next, lang);
+  }
+  return next;
 }
 
 export type BeatSpan = { target: string; text: string; startMs: number; endMs: number };

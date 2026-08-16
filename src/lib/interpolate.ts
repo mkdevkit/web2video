@@ -20,6 +20,7 @@ export function defaultSettings(type: LayoutBlock["type"]): BlockSettings {
     author: 1.6,
     number: 9,
     list: 1.8,
+    dialogue: 1.7,
   };
   return {
     align: type === "title" || type === "quote" || type === "number" || type === "author" ? "center" : "left",
@@ -28,8 +29,8 @@ export function defaultSettings(type: LayoutBlock["type"]): BlockSettings {
     fontSize: text[type] ?? 2,
     fontWeight: type === "title" || type === "number" ? "bold" : "normal",
     lineHeight: 1.25,
-    padding: type === "list" ? 0.6 : 0,
-    radius: type === "shape" || type === "list" ? 1 : 0,
+    padding: type === "list" || type === "dialogue" ? 0.6 : 0,
+    radius: type === "shape" || type === "list" || type === "dialogue" ? 1 : 0,
     opacity: 1,
     rotation: 0,
     objectFit: "cover",

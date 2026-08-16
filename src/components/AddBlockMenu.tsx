@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, Hash, Image, List, Plus, Quote, Square, Type, User } from "lucide-react";
+import { ChevronDown, Hash, Image, List, MessageSquare, Plus, Quote, Square, Type, User } from "lucide-react";
 import { BLOCK_TYPES, type BlockType } from "../types";
 import { useEditor } from "../store/useEditor";
 
@@ -13,6 +13,7 @@ const TYPE_ICON: Record<BlockType, typeof Type> = {
   author: User,
   number: Hash,
   list: List,
+  dialogue: MessageSquare,
   image: Image,
   shape: Square,
 };

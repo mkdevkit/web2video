@@ -1,10 +1,10 @@
 import { toCanvas } from "html-to-image";
 import { flushSync } from "react-dom";
 import { getAudio } from "./audioStore";
+import { exportPx, exportSettingsOf, formatExt, pickMimeFor } from "./exportSettings";
 import { sceneClock, totalDuration } from "./timeline";
-import { ASPECT_PX } from "../types";
 import type { LangId } from "./langs";
-import type { Project } from "../types";
+import type { ExportSettings, Project } from "../types";
 
 function copySlice(ctx: AudioContext, src: AudioBuffer, startSec: number, endSec: number): AudioBuffer | null {
   const sr = src.sampleRate;
@@ -35,24 +35,21 @@ function playSlice(
   src.start(Math.max(ctx.currentTime, when));
 }
 
-function pickMime(): string {
-  const types = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"];
-  return types.find((t) => typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(t)) ?? "";
-}
-
 export async function recordProject(opts: {
   project: Project;
   lang: LangId;
   stage: HTMLElement;
   setPlayhead: (ms: number) => void;
   onProgress?: (ratio: number) => void;
-  fps?: number;
-}): Promise<Blob> {
+  settings?: Partial<ExportSettings>;
+}): Promise<{ blob: Blob; ext: "webm" | "mp4" }> {
   const { project, lang, stage, setPlayhead, onProgress } = opts;
-  const fps = opts.fps ?? 24;
-  const { w, h } = ASPECT_PX[project.aspect];
-  const mime = pickMime();
-  if (!mime) throw new Error("当前浏览器不支持 WebM 录制，请使用 Chrome 或 Edge");
+  const st = exportSettingsOf({ ...project.exportSettings, ...opts.settings });
+  const mime = pickMimeFor(st.format) || pickMimeFor("webm-vp9") || pickMimeFor("webm-vp8");
+  if (!mime) throw new Error("当前浏览器不支持视频录制，请使用 Chrome 或 Edge");
+  const ext = mime.includes("mp4") ? "mp4" : formatExt(st.format);
+  const fps = st.fps;
+  const { w, h } = exportPx(project.aspect, st.height);
 
   const duration = totalDuration(project, lang);
   if (duration <= 0) throw new Error("时长为 0");
@@ -83,14 +80,21 @@ export async function recordProject(opts: {
   }
 
   const combined = new MediaStream([...canvasStream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
-  const rec = new MediaRecorder(combined, { mimeType: mime, videoBitsPerSecond: 6_000_000 });
+  const rec = new MediaRecorder(combined, {
+    mimeType: mime,
+    videoBitsPerSecond: Math.round(st.videoMbps * 1_000_000),
+    audioBitsPerSecond: Math.round(st.audioKbps * 1000),
+  });
   const chunks: Blob[] = [];
   rec.ondataavailable = (e) => {
     if (e.data.size) chunks.push(e.data);
   };
 
   const stopped = new Promise<Blob>((resolve, reject) => {
-    rec.onstop = () => resolve(new Blob(chunks, { type: mime.startsWith("video/") ? "video/webm" : mime }));
+    rec.onstop = () => {
+      const type = rec.mimeType || (ext === "mp4" ? "video/mp4" : "video/webm");
+      resolve(new Blob(chunks, { type }));
+    };
     rec.onerror = () => reject(new Error("录制失败"));
   });
 
@@ -130,5 +134,5 @@ export async function recordProject(opts: {
   rec.stop();
   const blob = await stopped;
   await audioCtx.close();
-  return blob;
+  return { blob, ext };
 }

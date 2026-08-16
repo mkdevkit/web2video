@@ -3,16 +3,26 @@ import { cueUntil, sceneBlocks } from "../lib/blocks";
 import { getAudio } from "../lib/audioStore";
 import { bodyBeatSpans, cueBind, resolveCue } from "../lib/cues";
 import { formatMs, sceneAt, sceneClock, sceneDuration, sceneHoldMs, sceneStarts, totalDuration, type ScenePhase } from "../lib/timeline";
-import { sourceLangOf } from "../lib/textI18n";
+import { blockNameOf, sourceLangOf } from "../lib/textI18n";
 import { BLOCK_TYPES } from "../types";
 import { useEditor } from "../store/useEditor";
-import type { Cue } from "../types";
+import type { LangId } from "../lib/langs";
+import type { Cue, Scene } from "../types";
 
-function labelOf(cue: Cue, items: { id: string }[]): string {
+function labelOf(cue: Cue, scene: Scene | undefined, lang: LangId, source: LangId): string {
   if (cue.target.startsWith("item:")) {
     const id = cue.target.slice(5);
+    const di = (scene?.slots.dialogue ?? []).findIndex((it) => it.id === id);
+    if (di >= 0) return scene!.slots.dialogue![di].name?.trim() || `对白 ${di + 1}`;
+    const items = scene?.slots.items ?? [];
     const i = items.findIndex((it) => it.id === id);
     return i >= 0 ? `条目 ${i + 1}` : "条目";
+  }
+  if (scene) {
+    const block = sceneBlocks(scene).find((b) => b.id === cue.target);
+    const named = block ? blockNameOf(block, lang, source) : "";
+    if (named.trim()) return named;
+    if (block) return BLOCK_TYPES.find((t) => t.type === block.type)?.label ?? cue.target;
   }
   return BLOCK_TYPES.find((b) => b.type === cue.target)?.label ?? cue.target;
 }
@@ -39,6 +49,75 @@ async function peaksOf(blob: Blob, n: number): Promise<number[]> {
 function ratioFromX(clientX: number, el: HTMLElement) {
   const r = el.getBoundingClientRect();
   return Math.min(1, Math.max(0, (clientX - r.left) / Math.max(1, r.width)));
+}
+
+export function GlobalProgressBar() {
+  const project = useEditor((s) => s.project);
+  const playheadMs = useEditor((s) => s.playheadMs);
+  const currentSceneId = useEditor((s) => s.currentSceneId);
+  const lang = project.previewLang;
+  const total = Math.max(1, totalDuration(project, lang));
+  const starts = sceneStarts(project, lang);
+  const elRef = useRef<HTMLDivElement>(null);
+  const scrubbing = useRef(false);
+
+  const seek = (clientX: number) => {
+    const el = elRef.current;
+    if (!el) return;
+    const s = useEditor.getState();
+    const p = s.project;
+    s.setPlayhead(ratioFromX(clientX, el) * Math.max(1, totalDuration(p, p.previewLang)));
+    s.setPlaying(false);
+  };
+
+  useEffect(() => {
+    const move = (e: MouseEvent) => {
+      if (scrubbing.current) seek(e.clientX);
+    };
+    const up = () => {
+      scrubbing.current = false;
+    };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+    return () => {
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+    };
+  }, []);
+
+  return (
+    <div
+      ref={elRef}
+      className="relative mx-2 mt-2 h-8 cursor-ew-resize overflow-hidden rounded border border-ink-600 bg-ink-800"
+      onMouseDown={(e) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        scrubbing.current = true;
+        seek(e.clientX);
+      }}
+    >
+      {project.scenes.map((s, i) => {
+        const dur = sceneDuration(s, lang, project);
+        const left = (starts[i] / total) * 100;
+        const width = (dur / total) * 100;
+        const hold = sceneHoldMs(s, project);
+        const holdPct = dur > 0 ? (hold / dur) * 100 : 0;
+        const active = s.id === currentSceneId;
+        return (
+          <div
+            key={s.id}
+            className={`pointer-events-none absolute top-0 h-full border-r border-ink-700 px-1.5 py-1 text-[10px] ${active ? "bg-copper/25 text-paper" : "text-ink-200"}`}
+            style={{ left: `${left}%`, width: `${width}%` }}
+            title={hold ? `${s.name}（含停留 ${formatMs(hold)}）` : s.name}
+          >
+            {holdPct > 0 && <div className="absolute inset-y-0 right-0 bg-ink-950/45" style={{ width: `${holdPct}%` }} />}
+            <div className="relative truncate">{s.name}</div>
+          </div>
+        );
+      })}
+      <div className="pointer-events-none absolute top-0 z-10 h-full w-0.5 bg-brass" style={{ left: `${(playheadMs / total) * 100}%` }} />
+    </div>
+  );
 }
 
 function pct(ms: number, total: number) {
@@ -73,7 +152,6 @@ export function Timeline() {
   const selectedCueId = useEditor((s) => s.selectedCueId);
   const lang = project.previewLang;
   const source = sourceLangOf(project);
-  const total = Math.max(1, totalDuration(project, lang));
   const starts = sceneStarts(project, lang);
   const at = sceneAt(project, lang, playheadMs);
   const scene = project.scenes.find((s) => s.id === currentSceneId) ?? at?.scene;
@@ -191,33 +269,7 @@ export function Timeline() {
 
   return (
     <div className="flex h-56 shrink-0 flex-col border-t border-ink-600 bg-ink-900 select-none">
-      <div
-        className="relative mx-2 mt-2 h-8 cursor-ew-resize overflow-hidden rounded border border-ink-600 bg-ink-800"
-        onMouseDown={(e) => beginScrub(e, "global", e.currentTarget)}
-      >
-        {project.scenes.map((s, i) => {
-          const dur = sceneDuration(s, lang, project);
-          const left = (starts[i] / total) * 100;
-          const width = (dur / total) * 100;
-          const hold = sceneHoldMs(s, project);
-          const holdPct = dur > 0 ? (hold / dur) * 100 : 0;
-          const active = s.id === currentSceneId;
-          return (
-            <div
-              key={s.id}
-              className={`pointer-events-none absolute top-0 h-full border-r border-ink-700 px-1.5 py-1 text-[10px] ${active ? "bg-copper/25 text-paper" : "text-ink-200"}`}
-              style={{ left: `${left}%`, width: `${width}%` }}
-              title={hold ? `${s.name}（含停留 ${formatMs(hold)}）` : s.name}
-            >
-              {holdPct > 0 && (
-                <div className="absolute inset-y-0 right-0 bg-ink-950/45" style={{ width: `${holdPct}%` }} />
-              )}
-              <div className="relative truncate">{s.name}</div>
-            </div>
-          );
-        })}
-        <div className="pointer-events-none absolute top-0 z-10 h-full w-0.5 bg-brass" style={{ left: `${(playheadMs / total) * 100}%` }} />
-      </div>
+      <GlobalProgressBar />
       <div className="mx-2 mt-1 flex min-h-0 flex-1 flex-col">
         <div
           className="relative h-7 cursor-ew-resize overflow-hidden rounded border border-ink-700 bg-ink-950"
@@ -318,7 +370,7 @@ export function Timeline() {
             const keys = sceneBlocks(scene ?? { layoutId: "cover", blocks: [] }).find((b) => b.id === cue.target)?.keys ?? [];
             return (
               <div key={cue.id} className="mb-0.5 flex h-6 items-center gap-1">
-                <span className="w-14 shrink-0 truncate text-[10px] text-ink-400">{labelOf(cue, scene?.slots.items ?? [])}</span>
+                <span className="w-14 shrink-0 truncate text-[10px] text-ink-400">{labelOf(cue, scene, lang, source)}</span>
                 <div
                   className="relative h-5 flex-1 cursor-ew-resize rounded bg-ink-800"
                   onMouseDown={(e) => beginScrub(e, "local", e.currentTarget)}
@@ -333,7 +385,7 @@ export function Timeline() {
                       onMouseDown={(e) => beginDrag(e, cue, "start", e.currentTarget.parentElement!.parentElement!)}
                     />
                     <span className="pointer-events-none block truncate px-2 text-[10px] leading-4">
-                      {labelOf(cue, scene?.slots.items ?? [])}
+                      {labelOf(cue, scene, lang, source)}
                     </span>
                     <span
                       className="absolute right-0 top-0 h-full w-1.5 cursor-ew-resize rounded-r bg-black/30"

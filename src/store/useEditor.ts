@@ -1,13 +1,13 @@
 import { create } from "zustand";
 import { uid } from "../lib/ids";
 import { collectI18nRows, patchSceneI18n, writeI18n } from "../lib/textI18n";
-import { defaultCues, ensureCues, makeBlock, presetBlocks, sceneBlocks } from "../lib/blocks";
+import { ensureCues, makeBlock, presetBlocks, rebuildCues, sceneBlocks } from "../lib/blocks";
 import { upsertKey, removeKeyAt } from "../lib/interpolate";
-import { emptyScene, normalizeProject, sampleProject } from "../lib/templates";
+import { defaultDialogueLines, emptyScene, nextDialogueSide, normalizeProject, sampleProject } from "../lib/templates";
 import { sceneAt, sceneStarts } from "../lib/timeline";
 import { applyResolvedCueRange, bakeCueBind } from "../lib/cues";
-import { itemSpeakKey, markLangAudioStale, ensureCuesFromBeats, writeSpeak } from "../lib/narration";
-import type { BlockSettings, BlockType, Cue, CueBind, EditorSnapshot, LayoutBlock, LayoutId, Project, Scene, SceneAudio, TtsProvider, VoiceProfile } from "../types";
+import { itemSpeakKey, markAllAudioStale, markLangAudioStale, ensureCuesFromBeats, writeSpeak } from "../lib/narration";
+import type { BlockSettings, BlockType, Cue, CueBind, DialogueLine, DialogueSide, EditorSnapshot, LayoutBlock, LayoutId, Project, Scene, SceneAudio, TtsProvider, VoiceProfile } from "../types";
 import type { LangId } from "../lib/langs";
 import type { I18nRow } from "../lib/textI18n";
 
@@ -40,7 +40,7 @@ function persist(project: Project, currentSceneId: string) {
 
 const boot = sampleProject();
 
-export type DialogId = null | "welcome" | "export" | "texts" | "script" | "tts" | "help";
+export type DialogId = null | "welcome" | "export" | "texts" | "script" | "tts" | "help" | "ai" | "prefs";
 
 interface EditorState {
   project: Project;
@@ -52,12 +52,14 @@ interface EditorState {
   exporting: boolean;
   exportHint: string;
   dialog: DialogId;
+  rightTab: "inspector" | "ai";
   past: EditorSnapshot[];
   future: EditorSnapshot[];
   projectDirName: string | null;
 
   currentScene: () => Scene | undefined;
   setDialog: (dialog: DialogId) => void;
+  setRightTab: (tab: "inspector" | "ai") => void;
   setPlaying: (playing: boolean) => void;
   setExporting: (exporting: boolean) => void;
   setExportHint: (hint: string) => void;
@@ -79,7 +81,8 @@ interface EditorState {
   updateProject: (patch: Partial<Project>, history?: boolean) => void;
   setPreviewLang: (lang: LangId) => void;
   setSourceLang: (lang: LangId) => void;
-  setVoice: (lang: LangId, voice: string) => void;
+  setVoice: (id: string) => void;
+  setLangVoice: (lang: LangId, id: string) => void;
 
   addScene: (layout?: LayoutId) => void;
   duplicateScene: (id?: string) => void;
@@ -93,8 +96,13 @@ interface EditorState {
   patchSlotText: (sceneId: string, key: "title" | "subtitle" | "body" | "caption" | "quote" | "author" | "number" | "narration" | "narrationClose", value: string) => void;
   patchItemText: (sceneId: string, itemId: string, value: string) => void;
   patchSpeak: (sceneId: string, key: string, value: string) => void;
+  patchSpeakRole: (sceneId: string, key: string, roleId: string) => void;
   addItem: (sceneId: string) => void;
   removeItem: (sceneId: string, itemId: string) => void;
+  addDialogueLine: (sceneId: string) => void;
+  removeDialogueLine: (sceneId: string, lineId: string) => void;
+  patchDialogueText: (sceneId: string, lineId: string, value: string) => void;
+  patchDialogueLine: (sceneId: string, lineId: string, patch: Partial<Pick<DialogueLine, "side" | "name">>) => void;
   setImage: (sceneId: string, src: string) => void;
   setCueAt: (sceneId: string, cueId: string, at: number) => void;
   setCueRange: (sceneId: string, cueId: string, at: number, until: number) => void;
@@ -126,6 +134,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   exporting: false,
   exportHint: "",
   dialog: "welcome",
+  rightTab: "inspector",
   past: [],
   future: [],
   projectDirName: null,
@@ -133,6 +142,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   currentScene: () => get().project.scenes.find((s) => s.id === get().currentSceneId),
 
   setDialog: (dialog) => set({ dialog }),
+  setRightTab: (rightTab) => set({ rightTab }),
   setPlaying: (playing) => set({ playing }),
   setExporting: (exporting) => set({ exporting, exportHint: exporting ? get().exportHint : "" }),
   setExportHint: (hint) => set({ exportHint: hint }),
@@ -254,10 +264,15 @@ export const useEditor = create<EditorState>((set, get) => ({
     set({ project });
     persist(project, get().currentSceneId);
   },
-  setVoice: (lang, voice) => {
-    const project = { ...get().project, voiceByLang: { ...get().project.voiceByLang, [lang]: voice } };
-    set({ project });
-    persist(project, get().currentSceneId);
+  setVoice: (id) => {
+    get().updateProject({ voiceId: id }, false);
+  },
+  setLangVoice: (lang, id) => {
+    const project = get().project;
+    const voiceByLang = { ...project.voiceByLang };
+    if (id.trim()) voiceByLang[lang] = id.trim();
+    else delete voiceByLang[lang];
+    get().updateProject({ voiceByLang, voiceId: project.voiceId || id.trim() }, false);
   },
 
   addScene: (layout = "cover") => {
@@ -338,12 +353,16 @@ export const useEditor = create<EditorState>((set, get) => ({
     get().patchScene(
       id,
       (s) => {
-        const items = s.slots.items;
+        const lang = get().project.sourceLang;
+        const dialogue =
+          layout === "dialogue" && !(s.slots.dialogue?.length) ? defaultDialogueLines(lang) : s.slots.dialogue;
         if (layout === "custom") {
           const blocks = s.blocks?.length ? s.blocks : presetBlocks(s.layoutId === "custom" ? "cover" : s.layoutId);
-          return { ...s, layoutId: layout, blocks, cues: defaultCues(layout, items, blocks) };
+          const next = { ...s, layoutId: layout, blocks, slots: { ...s.slots, dialogue } };
+          return { ...next, cues: rebuildCues(next) };
         }
-        return { ...s, layoutId: layout, blocks: undefined, cues: defaultCues(layout, items) };
+        const next = { ...s, layoutId: layout, blocks: undefined, slots: { ...s.slots, dialogue } };
+        return { ...next, cues: rebuildCues(next) };
       },
       true,
     );
@@ -385,6 +404,18 @@ export const useEditor = create<EditorState>((set, get) => ({
       true,
     );
   },
+  patchSpeakRole: (sceneId, key, roleId) => {
+    get().patchScene(
+      sceneId,
+      (s) => {
+        const speakRole = { ...s.speakRole };
+        if (roleId.trim()) speakRole[key] = roleId.trim();
+        else delete speakRole[key];
+        return markAllAudioStale({ ...s, speakRole });
+      },
+      true,
+    );
+  },
   patchItemText: (sceneId, itemId, value) => {
     const lang = get().project.previewLang;
     const source = get().project.sourceLang;
@@ -408,8 +439,8 @@ export const useEditor = create<EditorState>((set, get) => ({
       sceneId,
       (s) => {
         const items = [...(s.slots.items ?? []), { id: uid("it"), i18n: { [lang]: "新条目" } }];
-        const blocks = sceneBlocks(s);
-        return { ...s, slots: { ...s.slots, items }, cues: defaultCues(s.layoutId, items, s.layoutId === "custom" ? blocks : undefined) };
+        const next = { ...s, slots: { ...s.slots, items } };
+        return { ...next, cues: rebuildCues(next) };
       },
       true,
     );
@@ -419,12 +450,77 @@ export const useEditor = create<EditorState>((set, get) => ({
       sceneId,
       (s) => {
         const items = (s.slots.items ?? []).filter((it) => it.id !== itemId);
+        const key = itemSpeakKey(itemId);
         const speak = { ...s.speak };
-        delete speak[itemSpeakKey(itemId)];
-        const blocks = sceneBlocks(s);
-        return { ...s, speak, slots: { ...s.slots, items }, cues: defaultCues(s.layoutId, items, s.layoutId === "custom" ? blocks : undefined) };
+        delete speak[key];
+        const speakRole = { ...s.speakRole };
+        delete speakRole[key];
+        const next = { ...s, speak, speakRole, slots: { ...s.slots, items } };
+        return { ...next, cues: rebuildCues(next) };
       },
       true,
+    );
+  },
+  addDialogueLine: (sceneId) => {
+    const lang = get().project.sourceLang;
+    get().patchScene(
+      sceneId,
+      (s) => {
+        const prev = s.slots.dialogue ?? [];
+        const side: DialogueSide = nextDialogueSide(prev);
+        const name = side === "left" ? (prev.find((l) => l.side === "left")?.name ?? "角色A") : (prev.find((l) => l.side === "right")?.name ?? "角色B");
+        const line: DialogueLine = { id: uid("it"), side, name, i18n: { [lang]: "新对白" } };
+        const dialogue = [...prev, line];
+        const next = { ...s, slots: { ...s.slots, dialogue } };
+        return { ...next, cues: rebuildCues(next) };
+      },
+      true,
+    );
+  },
+  removeDialogueLine: (sceneId, lineId) => {
+    get().patchScene(
+      sceneId,
+      (s) => {
+        const dialogue = (s.slots.dialogue ?? []).filter((it) => it.id !== lineId);
+        const key = itemSpeakKey(lineId);
+        const speak = { ...s.speak };
+        delete speak[key];
+        const speakRole = { ...s.speakRole };
+        delete speakRole[key];
+        const next = { ...s, speak, speakRole, slots: { ...s.slots, dialogue } };
+        return { ...next, cues: rebuildCues(next) };
+      },
+      true,
+    );
+  },
+  patchDialogueText: (sceneId, lineId, value) => {
+    const lang = get().project.previewLang;
+    const source = get().project.sourceLang;
+    get().patchScene(
+      sceneId,
+      (s) => ({
+        ...s,
+        slots: {
+          ...s.slots,
+          dialogue: (s.slots.dialogue ?? []).map((it) =>
+            it.id === lineId ? { ...it, i18n: writeI18n(it.i18n, lang, source, value) } : it,
+          ),
+        },
+      }),
+      true,
+    );
+  },
+  patchDialogueLine: (sceneId, lineId, patch) => {
+    get().patchScene(
+      sceneId,
+      (s) => ({
+        ...s,
+        slots: {
+          ...s.slots,
+          dialogue: (s.slots.dialogue ?? []).map((it) => (it.id === lineId ? { ...it, ...patch } : it)),
+        },
+      }),
+      false,
     );
   },
   setImage: (sceneId, src) => {
@@ -487,15 +583,15 @@ export const useEditor = create<EditorState>((set, get) => ({
   },
   addBlock: (sceneId, type) => {
     const block = makeBlock(type);
+    const lang = get().project.sourceLang;
     get().patchScene(
       sceneId,
       (s) => {
         const blocks = [...sceneBlocks(s), block];
-        return {
-          ...s,
-          blocks,
-          cues: defaultCues(s.layoutId, s.slots.items, blocks),
-        };
+        const dialogue =
+          type === "dialogue" && !(s.slots.dialogue?.length) ? defaultDialogueLines(lang) : s.slots.dialogue;
+        const next = { ...s, blocks, slots: { ...s.slots, dialogue } };
+        return { ...next, cues: rebuildCues(next) };
       },
       true,
     );
@@ -521,10 +617,13 @@ export const useEditor = create<EditorState>((set, get) => ({
         const blocks = sceneBlocks(s).filter((b) => b.id !== blockId);
         const speak = { ...s.speak };
         delete speak[blockId];
+        const speakRole = { ...s.speakRole };
+        delete speakRole[blockId];
         return {
           ...s,
           blocks,
           speak,
+          speakRole,
           cues: (s.cues ?? []).filter((c) => c.target !== blockId),
         };
       },
@@ -537,7 +636,8 @@ export const useEditor = create<EditorState>((set, get) => ({
   },
   addVoice: (voice) => {
     const project = get().project;
-    get().updateProject({ voices: [...(project.voices ?? []), voice] }, true);
+    const voices = [...(project.voices ?? []), voice];
+    get().updateProject({ voices, voiceId: project.voiceId || voice.id }, true);
   },
   updateVoice: (id, patch) => {
     const voices = (get().project.voices ?? []).map((v) => (v.id === id ? { ...v, ...patch } : v));
@@ -550,7 +650,8 @@ export const useEditor = create<EditorState>((set, get) => ({
     for (const lang of Object.keys(voiceByLang) as (keyof typeof voiceByLang)[]) {
       if (voiceByLang[lang] === id) delete voiceByLang[lang];
     }
-    get().updateProject({ voices, voiceByLang }, true);
+    const voiceId = project.voiceId === id ? (voices[0]?.id ?? "") : project.voiceId;
+    get().updateProject({ voices, voiceByLang, voiceId }, true);
   },
   applyI18nRow: (row, lang, value, history = false) => {
     const source = get().project.sourceLang;

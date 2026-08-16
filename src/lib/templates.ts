@@ -2,12 +2,27 @@ import { uid } from "./ids";
 import { defaultCues } from "./blocks";
 import { t18 } from "./scriptSplit";
 import { defaultVoiceByLang, defaultVoiceProfiles } from "./ttsSecrets";
+import { DEFAULT_CAPTION_STYLE, DEFAULT_PROGRESS_STYLE, DEFAULT_CAPTION_FONT_ID, DEFAULT_FONT_ID, DEFAULT_QUOTE_FONT_ID, DEFAULT_SUBTITLE_FONT_ID, DEFAULT_TITLE_FONT_ID, captionStyleOf, progressStyleOf, isStageFontId } from "./fonts";
+import { DEFAULT_EXPORT_SETTINGS, exportSettingsOf } from "./exportSettings";
 import { DEFAULT_HOLD_MS, DEFAULT_TRANSITION, DEFAULT_TRANSITION_MS, DEFAULT_OPEN_PAD_BEFORE_MS, DEFAULT_OPEN_PAD_AFTER_MS, DEFAULT_CLOSE_PAD_BEFORE_MS, DEFAULT_CLOSE_PAD_AFTER_MS } from "./timeline";
 import { itemSpeakKey } from "./narration";
-import type { LayoutId, Project, Scene, SceneTransition } from "../types";
+import { asNameI18n } from "./textI18n";
+import type { DialogueLine, DialogueSide, LayoutId, Project, Scene, SceneTransition } from "../types";
 import type { LangId } from "./langs";
 
 export const DEFAULT_PROJECT_NAME = "未命名口播";
+export const DEFAULT_SCENE_BG = "#141811";
+
+export function defaultDialogueLines(lang: LangId): DialogueLine[] {
+  return [
+    { id: uid("it"), side: "left", name: "角色A", i18n: { [lang]: "……" } },
+    { id: uid("it"), side: "right", name: "角色B", i18n: { [lang]: "……" } },
+  ];
+}
+
+export function nextDialogueSide(lines: DialogueLine[]): DialogueSide {
+  return lines[lines.length - 1]?.side === "left" ? "right" : "left";
+}
 
 const PLACEHOLDER = `data:image/svg+xml,${encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
@@ -37,6 +52,7 @@ export function emptyScene(lang: LangId = "zh", layout: LayoutId = "cover"): Sce
             { id: uid("it"), i18n: { [lang]: "观点 B" } },
           ]
         : undefined;
+  const dialogue = layout === "dialogue" ? defaultDialogueLines(lang) : undefined;
   return {
     id: uid("sc"),
     name: "新场景",
@@ -51,11 +67,12 @@ export function emptyScene(lang: LangId = "zh", layout: LayoutId = "cover"): Sce
       author: t18(lang, "出处"),
       number: t18(lang, "42"),
       items,
+      dialogue,
       image: PLACEHOLDER,
     },
-    cues: defaultCues(layout, items),
+    cues: defaultCues(layout, items, undefined, dialogue),
     narrationClose: t18(lang, ""),
-    bg: "#141811",
+    bg: DEFAULT_SCENE_BG,
   };
 }
 
@@ -69,6 +86,7 @@ export function sampleProject(): Project {
     extra?: { close?: string; speak?: Record<string, string> },
   ): Scene => {
     const items = slots.items;
+    const dialogue = slots.dialogue;
     const speak: Scene["speak"] = {};
     if (extra?.speak) {
       for (const [k, v] of Object.entries(extra.speak)) speak[k] = t18(lang, v);
@@ -81,8 +99,8 @@ export function sampleProject(): Project {
       narrationClose: extra?.close ? t18(lang, extra.close) : t18(lang, ""),
       speak,
       slots: { image: PLACEHOLDER, ...slots },
-      cues: defaultCues(layout, items),
-      bg: "#141811",
+      cues: defaultCues(layout, items, undefined, dialogue),
+      bg: DEFAULT_SCENE_BG,
     };
   };
 
@@ -103,10 +121,20 @@ export function sampleProject(): Project {
     sourceLang: "zh",
     previewLang: "zh",
     aspect: "16:9",
-    ttsProvider: "edge",
+    ttsProvider: "qwen",
     voices,
+    voiceId: "",
     voiceByLang: defaultVoiceByLang(voices),
-    showCaptions: true,
+    showCaptions: false,
+    showTopProgress: false,
+    fontId: DEFAULT_FONT_ID,
+    titleFontId: DEFAULT_TITLE_FONT_ID,
+    subtitleFontId: DEFAULT_SUBTITLE_FONT_ID,
+    quoteFontId: DEFAULT_QUOTE_FONT_ID,
+    captionFontId: DEFAULT_CAPTION_FONT_ID,
+    captionStyle: { ...DEFAULT_CAPTION_STYLE },
+    progressStyle: { ...DEFAULT_PROGRESS_STYLE },
+    exportSettings: { ...DEFAULT_EXPORT_SETTINGS },
     holdMs: DEFAULT_HOLD_MS,
     openPadBeforeMs: DEFAULT_OPEN_PAD_BEFORE_MS,
     openPadAfterMs: DEFAULT_OPEN_PAD_AFTER_MS,
@@ -214,10 +242,20 @@ export function emptyProject(name = DEFAULT_PROJECT_NAME): Project {
     sourceLang: "zh",
     previewLang: "zh",
     aspect: "16:9",
-    ttsProvider: "edge",
+    ttsProvider: "qwen",
     voices,
+    voiceId: "",
     voiceByLang: defaultVoiceByLang(voices),
-    showCaptions: true,
+    showCaptions: false,
+    showTopProgress: false,
+    fontId: DEFAULT_FONT_ID,
+    titleFontId: DEFAULT_TITLE_FONT_ID,
+    subtitleFontId: DEFAULT_SUBTITLE_FONT_ID,
+    quoteFontId: DEFAULT_QUOTE_FONT_ID,
+    captionFontId: DEFAULT_CAPTION_FONT_ID,
+    captionStyle: { ...DEFAULT_CAPTION_STYLE },
+    progressStyle: { ...DEFAULT_PROGRESS_STYLE },
+    exportSettings: { ...DEFAULT_EXPORT_SETTINGS },
     holdMs: DEFAULT_HOLD_MS,
     openPadBeforeMs: DEFAULT_OPEN_PAD_BEFORE_MS,
     openPadAfterMs: DEFAULT_OPEN_PAD_AFTER_MS,
@@ -251,6 +289,30 @@ function asTransition(value: SceneTransition | undefined): SceneTransition | und
   return value === "cut" || value === "crossfade" ? value : undefined;
 }
 
+function asFit(value: Scene["bgFit"]): Scene["bgFit"] {
+  return value === "contain" || value === "cover" ? value : undefined;
+}
+
+function finite01(value: number | undefined): number | undefined {
+  if (!Number.isFinite(value)) return undefined;
+  return Math.min(1, Math.max(0, value as number));
+}
+
+export function asCssHex(value: string | undefined, fallback = DEFAULT_SCENE_BG): string {
+  const s = (value ?? "").trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(s)) return s;
+  if (/^#[0-9a-fA-F]{3}$/.test(s)) return `#${s[1]}${s[1]}${s[2]}${s[2]}${s[3]}${s[3]}`;
+  return fallback;
+}
+
+export function sceneBgFit(scene: Pick<Scene, "bgFit">): "cover" | "contain" {
+  return scene.bgFit === "contain" ? "contain" : "cover";
+}
+
+export function sceneBgDim(scene: Pick<Scene, "bgDim">): number {
+  return finite01(scene.bgDim) ?? 0;
+}
+
 export function normalizeProject(data: Project): Project {
   const base = emptyProject(data.name || DEFAULT_PROJECT_NAME);
   const scenes = (data.scenes?.length ? data.scenes : base.scenes).map((s) => ({
@@ -270,13 +332,36 @@ export function normalizeProject(data: Project): Project {
     closePadAfterMs: finiteMs(s.closePadAfterMs),
     transition: asTransition(s.transition),
     transitionMs: finiteMs(s.transitionMs),
+    bg: asCssHex(s.bg),
+    bgImage: typeof s.bgImage === "string" && s.bgImage.trim() ? s.bgImage : undefined,
+    bgFit: asFit(s.bgFit),
+    bgDim: finite01(s.bgDim),
+    blocks: s.blocks?.map((b) => {
+      const name = asNameI18n(b.name, data.sourceLang ?? "zh");
+      return name ? { ...b, name } : { ...b, name: undefined };
+    }),
   }));
   return {
     ...base,
     ...data,
-    ttsProvider: data.ttsProvider ?? "edge",
-    voices: data.voices?.length ? data.voices : base.voices,
+    ttsProvider: "qwen",
+    voices: (Array.isArray(data.voices) ? data.voices : base.voices).filter((v) => !v.provider || v.provider === "qwen"),
     voiceByLang: data.voiceByLang ?? base.voiceByLang,
+    voiceId: typeof data.voiceId === "string" && data.voiceId.trim()
+      ? data.voiceId
+      : data.voiceByLang
+        ? (Object.values(data.voiceByLang).find(Boolean) as string | undefined) ?? ""
+        : "",
+    showCaptions: data.showCaptions === true,
+    showTopProgress: data.showTopProgress === true,
+    fontId: isStageFontId(data.fontId) ? data.fontId : DEFAULT_FONT_ID,
+    titleFontId: isStageFontId(data.titleFontId) ? data.titleFontId : DEFAULT_TITLE_FONT_ID,
+    subtitleFontId: isStageFontId(data.subtitleFontId) ? data.subtitleFontId : isStageFontId(data.fontId) ? data.fontId : DEFAULT_SUBTITLE_FONT_ID,
+    quoteFontId: isStageFontId(data.quoteFontId) ? data.quoteFontId : isStageFontId(data.titleFontId) ? data.titleFontId : DEFAULT_QUOTE_FONT_ID,
+    captionFontId: isStageFontId(data.captionFontId) ? data.captionFontId : isStageFontId(data.fontId) ? data.fontId : DEFAULT_CAPTION_FONT_ID,
+    captionStyle: captionStyleOf(data.captionStyle),
+    progressStyle: progressStyleOf(data.progressStyle),
+    exportSettings: exportSettingsOf(data.exportSettings),
     holdMs: finiteMs(data.holdMs) ?? DEFAULT_HOLD_MS,
     openPadBeforeMs: finiteMs(data.openPadBeforeMs) ?? DEFAULT_OPEN_PAD_BEFORE_MS,
     openPadAfterMs: finiteMs(data.openPadAfterMs) ?? DEFAULT_OPEN_PAD_AFTER_MS,

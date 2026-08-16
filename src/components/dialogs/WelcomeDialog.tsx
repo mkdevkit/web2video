@@ -20,7 +20,7 @@ export function WelcomeDialog() {
     <Modal title="开始一份口播视频" wide onClose={() => useEditor.getState().setDialog(null)}>
       <div className="space-y-4">
         <p className="text-sm leading-relaxed text-ink-200">
-          把科普口播做成网页场景，配上 TTS 与时间轴动画，再按语言导出视频。建议使用 Chrome 或 Edge。
+          把科普口播做成网页场景，配上 TTS 与时间轴动画，再按语言导出视频。顶栏「AI」配置接口，右侧「AI」页签生成各场。建议使用 Chrome 或 Edge。
         </p>
         <div className="grid grid-cols-2 gap-2">
           <Field label="作品名称">

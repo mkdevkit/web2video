@@ -168,8 +168,29 @@ function json(res: ServerResponse, status: number, body: unknown) {
   res.end(JSON.stringify(body));
 }
 
+function dashscopeOrigin(base: string): string {
+  const b = (base || "https://dashscope.aliyuncs.com").trim().replace(/\/$/, "");
+  return b.replace(/\/api\/v1.*$/, "") || "https://dashscope.aliyuncs.com";
+}
+
+async function packQwenAudio(audio?: { data?: string; url?: string }): Promise<{ audioBase64: string; contentType: string } | null> {
+  const raw = audio?.data ?? "";
+  if (raw) {
+    const m = /^data:([^;]+);base64,(.+)$/.exec(raw);
+    if (m) return { audioBase64: m[2], contentType: m[1] || "audio/wav" };
+    return { audioBase64: raw, contentType: "audio/wav" };
+  }
+  const href = audio?.url?.trim();
+  if (!href) return null;
+  const file = await fetch(href);
+  if (!file.ok) throw new Error(`下载千问音频失败 ${file.status}`);
+  const buf = Buffer.from(await file.arrayBuffer());
+  const ct = file.headers.get("content-type") || "audio/wav";
+  return { audioBase64: buf.toString("base64"), contentType: ct.startsWith("audio/") ? ct.split(";")[0] : "audio/wav" };
+}
+
 async function handle(req: IncomingMessage, res: ServerResponse, next: () => void) {
-  const url = req.url ?? "";
+  const url = (req.url ?? "").split("?")[0];
   if (!url.startsWith("/__edge_tts/") && !url.startsWith("/__tts/")) return next();
 
   if (req.method === "OPTIONS") {
@@ -255,6 +276,70 @@ async function handle(req: IncomingMessage, res: ServerResponse, next: () => voi
       json(res, 200, { audioBase64: buf.toString("base64"), contentType: "audio/mpeg", words: [] });
     } catch (e) {
       json(res, 502, { error: e instanceof Error ? e.message : "OpenAI TTS 失败" });
+    }
+    return;
+  }
+
+  if (url.startsWith("/__tts/qwen-voice") && req.method === "POST") {
+    try {
+      const key = String(req.headers["x-tts-key"] ?? "");
+      if (!key) return json(res, 400, { error: "缺少千问 API Key" });
+      const origin = dashscopeOrigin(String(req.headers["x-tts-base"] ?? ""));
+      const payload = JSON.parse(await readBody(req)) as unknown;
+      const upstream = await fetch(`${origin}/api/v1/services/audio/tts/customization`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const text = await upstream.text();
+      res.statusCode = upstream.status;
+      res.setHeader("Content-Type", upstream.headers.get("content-type") || "application/json; charset=utf-8");
+      res.end(text);
+    } catch (e) {
+      json(res, 502, { error: e instanceof Error ? e.message : "千问音色接口失败" });
+    }
+    return;
+  }
+
+  if (url.startsWith("/__tts/qwen") && req.method === "POST") {
+    try {
+      const key = String(req.headers["x-tts-key"] ?? "");
+      if (!key) return json(res, 400, { error: "缺少千问 API Key" });
+      const origin = dashscopeOrigin(String(req.headers["x-tts-base"] ?? ""));
+      const body = JSON.parse(await readBody(req)) as {
+        text?: string;
+        voice?: string;
+        model?: string;
+        language_type?: string;
+      };
+      const text = (body.text ?? "").trim();
+      if (!text) return json(res, 400, { error: "文本为空" });
+      if (!body.voice) return json(res, 400, { error: "缺少音色" });
+      const upstream = await fetch(`${origin}/api/v1/services/aigc/multimodal-generation/generation`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: body.model || "qwen3-tts-vd-2026-01-26",
+          input: {
+            text,
+            voice: body.voice,
+            language_type: body.language_type || "Chinese",
+          },
+        }),
+      });
+      const data = (await upstream.json()) as {
+        code?: string;
+        message?: string;
+        output?: { audio?: { data?: string; url?: string } };
+      };
+      if (!upstream.ok || data.code) {
+        return json(res, 502, { error: data.message || `千问 TTS ${upstream.status}` });
+      }
+      const packed = await packQwenAudio(data.output?.audio);
+      if (!packed) return json(res, 502, { error: "千问未返回音频" });
+      json(res, 200, { ...packed, words: [] });
+    } catch (e) {
+      json(res, 502, { error: e instanceof Error ? e.message : "千问 TTS 失败" });
     }
     return;
   }

@@ -1,14 +1,25 @@
 import type { LangId } from "./langs";
-import type { TtsProvider, VoiceProfile } from "../types";
-import { DEFAULT_VOICE, VOICES } from "./voices";
+import type { VoiceProfile } from "../types";
 
 const KEY = "web2video.tts-secrets";
+
+export const QWEN_REGIONS = [
+  { id: "beijing", label: "北京", baseUrl: "https://dashscope.aliyuncs.com" },
+  { id: "singapore", label: "新加坡", baseUrl: "https://dashscope-intl.aliyuncs.com" },
+] as const;
+
+export const QWEN_VD_MODELS = ["qwen3-tts-vd-2026-01-26"] as const;
+export const QWEN_VC_MODELS = ["qwen3-tts-vc-2026-01-22"] as const;
 
 export interface TtsSecrets {
   azureKey: string;
   azureRegion: string;
   openaiKey: string;
   openaiModel: string;
+  dashscopeKey: string;
+  dashscopeBaseUrl: string;
+  qwenVdModel: string;
+  qwenVcModel: string;
 }
 
 const EMPTY: TtsSecrets = {
@@ -16,6 +27,10 @@ const EMPTY: TtsSecrets = {
   azureRegion: "eastasia",
   openaiKey: "",
   openaiModel: "tts-1-hd",
+  dashscopeKey: "",
+  dashscopeBaseUrl: QWEN_REGIONS[0].baseUrl,
+  qwenVdModel: QWEN_VD_MODELS[0],
+  qwenVcModel: QWEN_VC_MODELS[0],
 };
 
 export function loadTtsSecrets(): TtsSecrets {
@@ -33,25 +48,15 @@ export function saveTtsSecrets(patch: Partial<TtsSecrets>) {
   localStorage.setItem(KEY, JSON.stringify(next));
 }
 
-export function defaultVoiceProfiles(): VoiceProfile[] {
-  return (Object.keys(DEFAULT_VOICE) as LangId[]).map((lang) => {
-    const id = DEFAULT_VOICE[lang];
-    const meta = VOICES[lang].find((v) => v.id === id);
-    return {
-      id: `vp-${lang}`,
-      name: meta ? `${meta.label}` : id,
-      lang,
-      provider: "edge" as TtsProvider,
-      voiceId: id,
-      gender: meta?.gender,
-    };
-  });
+export function dashscopeOrigin(baseUrl: string): string {
+  const b = (baseUrl || EMPTY.dashscopeBaseUrl).trim().replace(/\/$/, "");
+  return b.replace(/\/api\/v1.*$/, "") || EMPTY.dashscopeBaseUrl;
 }
 
-export function defaultVoiceByLang(voices: VoiceProfile[]): Partial<Record<LangId, string>> {
-  const out: Partial<Record<LangId, string>> = {};
-  for (const v of voices) {
-    if (!out[v.lang]) out[v.lang] = v.id;
-  }
-  return out;
+export function defaultVoiceProfiles(): VoiceProfile[] {
+  return [];
+}
+
+export function defaultVoiceByLang(_voices?: VoiceProfile[]): Partial<Record<LangId, string>> {
+  return {};
 }

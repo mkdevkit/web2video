@@ -1,6 +1,6 @@
-import { Hash, Image, List, Quote, Square, Type, User } from "lucide-react";
+import { Hash, Image, List, MessageSquare, Quote, Square, Type, User } from "lucide-react";
 import { sceneBlocks } from "../lib/blocks";
-import { itemText, sourceLangOf, textOf } from "../lib/textI18n";
+import { blockNameOf, itemText, sourceLangOf, textOf } from "../lib/textI18n";
 import { itemSpeakKey, speakText } from "../lib/narration";
 import type { LangId } from "../lib/langs";
 import { BLOCK_TYPES, type BlockType, type LayoutBlock, type Scene } from "../types";
@@ -15,6 +15,7 @@ const TYPE_ICON: Record<BlockType, typeof Type> = {
   author: User,
   number: Hash,
   list: List,
+  dialogue: MessageSquare,
   image: Image,
   shape: Square,
 };
@@ -27,6 +28,7 @@ function previewOf(scene: Scene, block: LayoutBlock, lang: LangId, source: LangI
   if (block.type === "image") return "配图";
   if (block.type === "shape") return "色块";
   if (block.type === "list") return `${scene.slots.items?.length ?? 0} 项`;
+  if (block.type === "dialogue") return `${scene.slots.dialogue?.length ?? 0} 句`;
   const key = block.type as "title" | "subtitle" | "body" | "caption" | "quote" | "author" | "number";
   const text = textOf(scene.slots[key], lang, source);
   return text.replace(/\s+/g, " ").trim() || typeLabel(block.type);
@@ -76,7 +78,8 @@ export function OutlinePanel() {
         {blocks.map((block) => {
           const Icon = TYPE_ICON[block.type];
           const active = selectedBlockId === block.id;
-          const items = block.type === "list" ? (scene.slots.items ?? []) : [];
+          const items =
+            block.type === "list" ? (scene.slots.items ?? []) : block.type === "dialogue" ? (scene.slots.dialogue ?? []) : [];
           return (
             <div key={block.id} className="mb-0.5">
               <button
@@ -88,7 +91,7 @@ export function OutlinePanel() {
                 <Icon className="h-3 w-3 shrink-0 text-ink-400" />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[11px] font-medium text-paper">
-                    {block.name || typeLabel(block.type)}
+                    {blockNameOf(block, lang, source) || typeLabel(block.type)}
                     {speakText(scene, block.id, lang, source).trim() ? " ·口" : ""}
                   </span>
                   <span className="block truncate text-[10px] text-ink-400">{previewOf(scene, block, lang, source)}</span>
@@ -107,7 +110,9 @@ export function OutlinePanel() {
                   >
                     <span className="w-3 shrink-0 text-center text-[10px] text-ink-400">{i + 1}</span>
                     <span className="truncate text-[11px] text-ink-200">
-                      {itemText(it, lang, source) || `条目 ${i + 1}`}
+                      {block.type === "dialogue"
+                        ? `${"name" in it && it.name ? `${it.name} · ` : ""}${itemText(it, lang, source) || `对白 ${i + 1}`}`
+                        : itemText(it, lang, source) || `条目 ${i + 1}`}
                       {speakText(scene, itemSpeakKey(it.id), lang, source).trim() ? " ·口" : ""}
                     </span>
                   </button>

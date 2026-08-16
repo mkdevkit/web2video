@@ -3,8 +3,9 @@ import { pickImageFile } from "../lib/insertImage";
 import { sceneBlocks } from "../lib/blocks";
 import { cueBind, cueKeyProgress, cueStay, resolveCueOnScene } from "../lib/cues";
 import { mergedSettings, restPose } from "../lib/interpolate";
-import { itemText, sourceLangOf, textOf } from "../lib/textI18n";
-import { composeNarration, itemSpeakKey, speakText } from "../lib/narration";
+import { itemText, sourceLangOf, textOf, writeI18n } from "../lib/textI18n";
+import { composeNarration, itemSpeakKey, speakText, SPEAK_CLOSE, SPEAK_OPEN } from "../lib/narration";
+import { asCssHex, sceneBgDim, sceneBgFit } from "../lib/templates";
 import {
   formatMs,
   sceneAt,
@@ -19,11 +20,14 @@ import {
   sceneTransitionMs,
 } from "../lib/timeline";
 import { synthScenes } from "../lib/synthProject";
-import { BLOCK_TYPES, LAYOUTS, type AnimKind, type CueBind, type Scene, type SceneTransition } from "../types";
+import { BLOCK_TYPES, LAYOUTS, type AnimKind, type CueBind, type DialogueSide, type Scene, type SceneTransition, type StageFontId } from "../types";
 import { useEditor } from "../store/useEditor";
 import { Field } from "./ui";
 import type { LangId } from "../lib/langs";
 import type { LayoutBlock } from "../types";
+import { STAGE_FONTS, blockFontId, stageFont } from "../lib/fonts";
+import { defaultRoleForLang } from "../lib/tts";
+import { profileLabel, qwenRoles } from "../lib/voices";
 
 const ANIMS: { id: AnimKind; label: string }[] = [
   { id: "fade", label: "淡入" },
@@ -51,6 +55,32 @@ function parseSignedSec(raw: string, min = -5, max = 10) {
 
 function secSigned(ms: number) {
   return Number((ms / 1000).toFixed(2));
+}
+
+function SpeakRoleSelect({ sceneId, speakKey }: { sceneId: string; speakKey: string }) {
+  const project = useEditor((s) => s.project);
+  const scene = project.scenes.find((s) => s.id === sceneId);
+  const roles = qwenRoles(project.voices);
+  if (!roles.length || !scene) return null;
+  const raw = scene.speakRole?.[speakKey] ?? "";
+  const value = roles.some((r) => r.id === raw) ? raw : "";
+  const fallback = defaultRoleForLang(project, project.previewLang);
+  return (
+    <Field label="配音角色">
+      <select
+        className="field"
+        value={value}
+        onChange={(e) => useEditor.getState().patchSpeakRole(sceneId, speakKey, e.target.value)}
+      >
+        <option value="">默认（{fallback ? profileLabel(fallback) : "语言默认"}）</option>
+        {roles.map((r) => (
+          <option key={r.id} value={r.id}>
+            {profileLabel(r)}
+          </option>
+        ))}
+      </select>
+    </Field>
+  );
 }
 
 function SlotField({
@@ -92,6 +122,7 @@ function SceneInspector({ scene }: { scene: Scene }) {
   const source = sourceLangOf(project);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [synthLine, setSynthLine] = useState("");
 
   return (
     <>
@@ -114,6 +145,83 @@ function SceneInspector({ scene }: { scene: Scene }) {
           </select>
         </Field>
       </div>
+      <div className="mt-3 space-y-2">
+        <div className="section-label">背景</div>
+        <div className="grid grid-cols-2 gap-1">
+          <Field label="背景色">
+            <div className="flex gap-1">
+              <input
+                className="field h-8 w-10 shrink-0 p-0.5"
+                type="color"
+                value={asCssHex(scene.bg)}
+                onChange={(e) => useEditor.getState().patchScene(scene.id, { bg: e.target.value }, false)}
+              />
+              <input
+                className="field"
+                value={scene.bg}
+                onChange={(e) => useEditor.getState().patchScene(scene.id, { bg: e.target.value }, false)}
+              />
+            </div>
+          </Field>
+          <Field label="铺满">
+            <select
+              className="field"
+              value={sceneBgFit(scene)}
+              disabled={!scene.bgImage}
+              onChange={(e) =>
+                useEditor.getState().patchScene(scene.id, { bgFit: e.target.value as "cover" | "contain" }, false)
+              }
+            >
+              <option value="cover">铺满裁切</option>
+              <option value="contain">完整显示</option>
+            </select>
+          </Field>
+        </div>
+        <Field label={`遮罩 ${Math.round(sceneBgDim(scene) * 100)}%`}>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
+            className="w-full"
+            value={sceneBgDim(scene)}
+            onChange={(e) => useEditor.getState().patchScene(scene.id, { bgDim: Number(e.target.value) }, false)}
+          />
+        </Field>
+        {scene.bgImage && (
+          <img src={scene.bgImage} alt="" className="h-16 w-full rounded border border-ink-600 object-cover" />
+        )}
+        <div className="flex gap-1">
+          <button
+            className="btn flex-1"
+            onClick={() =>
+              void pickImageFile().then((src) => src && useEditor.getState().patchScene(scene.id, { bgImage: src }))
+            }
+          >
+            {scene.bgImage ? "更换背景图" : "选择背景图"}
+          </button>
+          {scene.bgImage && (
+            <button
+              className="btn"
+              onClick={() =>
+                useEditor.getState().patchScene(scene.id, (s) => {
+                  const next = { ...s };
+                  delete next.bgImage;
+                  return next;
+                })
+              }
+            >
+              清除
+            </button>
+          )}
+        </div>
+        <p className="text-[10px] leading-relaxed text-ink-400">
+          背景图铺在整场后面，和版面里的「图片」元件分开。无图时显示底色。遮罩压暗背景，方便看清文字。
+        </p>
+      </div>
+      <button className="btn mt-2 w-full" onClick={() => useEditor.getState().setDialog("prefs")}>
+        全局配置：字体 / 字幕 / 画幅
+      </button>
       <div className="mt-3 space-y-2">
         <div className="section-label">切场</div>
         <Field label="片级默认 · 口播后停留（秒）">
@@ -297,19 +405,28 @@ function SceneInspector({ scene }: { scene: Scene }) {
         disabled={busy}
         onClick={() => {
           setErr("");
+          setSynthLine("");
           setBusy(true);
-          void synthScenes([scene.id], lang)
+          void synthScenes([scene.id], lang, (p) => setSynthLine(p.text))
             .catch((e) => setErr(e instanceof Error ? e.message : "合成失败"))
-            .finally(() => setBusy(false));
+            .finally(() => {
+              setBusy(false);
+              setSynthLine("");
+            });
         }}
       >
         {busy ? "合成中…" : "合成此场景配音"}
       </button>
+      {busy && synthLine && (
+        <p className="mt-1 max-h-20 overflow-auto whitespace-pre-wrap text-[11px] leading-relaxed text-ink-300">{synthLine}</p>
+      )}
       {err && <p className="mt-1 text-[11px] text-red-400">{err}</p>}
       <div className="mt-3 space-y-2">
         <div className="section-label">口播</div>
         <SlotField scene={scene} lang={lang} source={source} field="narration" label="开场口播（钉在第一帧）" rows={3} />
+        <SpeakRoleSelect sceneId={scene.id} speakKey={SPEAK_OPEN} />
         <SlotField scene={scene} lang={lang} source={source} field="narrationClose" label="结束口播（钉在最后一帧）" rows={2} />
+        <SpeakRoleSelect sceneId={scene.id} speakKey={SPEAK_CLOSE} />
         <div className="grid grid-cols-2 gap-1">
           <Field label="片级 · 开场前空白（秒）">
             <input
@@ -384,7 +501,10 @@ function BlockInspector({ scene, block }: { scene: Scene; block: LayoutBlock }) 
   const set = mergedSettings(block);
   const typeLabel = BLOCK_TYPES.find((t) => t.type === block.type)?.label ?? block.type;
   const cues = scene.cues.filter(
-    (c) => c.target === block.id || (block.type === "list" && c.target.startsWith("item:")),
+    (c) =>
+      c.target === block.id ||
+      (block.type === "list" && (scene.slots.items ?? []).some((it) => c.target === itemSpeakKey(it.id))) ||
+      (block.type === "dialogue" && (scene.slots.dialogue ?? []).some((it) => c.target === itemSpeakKey(it.id))),
   );
 
   return (
@@ -398,17 +518,21 @@ function BlockInspector({ scene, block }: { scene: Scene; block: LayoutBlock }) 
       <Field label="名称">
         <input
           className="field"
-          value={block.name ?? ""}
+          value={textOf(block.name, lang, source)}
           placeholder={typeLabel}
-          onChange={(e) => useEditor.getState().patchBlock(scene.id, block.id, { name: e.target.value })}
+          onChange={(e) =>
+            useEditor.getState().patchBlock(scene.id, block.id, {
+              name: { i18n: writeI18n(block.name?.i18n, lang, source, e.target.value) },
+            })
+          }
         />
       </Field>
-      {block.type !== "image" && block.type !== "shape" && block.type !== "list" && (
+      {block.type !== "image" && block.type !== "shape" && block.type !== "list" && block.type !== "dialogue" && (
         <div className="mt-2">
           <SlotField scene={scene} lang={lang} source={source} field={block.type as "title"} label="内容" />
         </div>
       )}
-      {block.type !== "list" && (
+      {block.type !== "list" && block.type !== "dialogue" && (
         <div className="mt-2">
           <Field label="口播（空则跳过）">
             <textarea
@@ -418,6 +542,7 @@ function BlockInspector({ scene, block }: { scene: Scene; block: LayoutBlock }) 
               onChange={(e) => useEditor.getState().patchSpeak(scene.id, block.id, e.target.value)}
             />
           </Field>
+          <SpeakRoleSelect sceneId={scene.id} speakKey={block.id} />
           {block.type !== "image" && block.type !== "shape" && (
             <button
               className="btn mt-1 w-full"
@@ -441,6 +566,7 @@ function BlockInspector({ scene, block }: { scene: Scene; block: LayoutBlock }) 
               onChange={(e) => useEditor.getState().patchSpeak(scene.id, block.id, e.target.value)}
             />
           </Field>
+          <SpeakRoleSelect sceneId={scene.id} speakKey={block.id} />
           <div className="mb-1 mt-2 flex items-center justify-between">
             <span className="text-[10px] text-ink-400">列表项（画面 + 口播）</span>
             <button className="btn py-0.5" onClick={() => useEditor.getState().addItem(scene.id)}>
@@ -474,6 +600,7 @@ function BlockInspector({ scene, block }: { scene: Scene; block: LayoutBlock }) 
                   value={speakText(scene, key, lang, source)}
                   onChange={(e) => useEditor.getState().patchSpeak(scene.id, key, e.target.value)}
                 />
+                <SpeakRoleSelect sceneId={scene.id} speakKey={key} />
                 <button
                   className="btn w-full py-0.5"
                   onClick={() => {
@@ -501,6 +628,81 @@ function BlockInspector({ scene, block }: { scene: Scene; block: LayoutBlock }) 
           </Field>
         </div>
       )}
+      {block.type === "dialogue" && (
+        <div className="mt-2">
+          <Field label="对话导语口播（空则跳过）">
+            <textarea
+              className="field min-h-[44px]"
+              rows={2}
+              value={speakText(scene, block.id, lang, source)}
+              onChange={(e) => useEditor.getState().patchSpeak(scene.id, block.id, e.target.value)}
+            />
+          </Field>
+          <SpeakRoleSelect sceneId={scene.id} speakKey={block.id} />
+          <div className="mb-1 mt-2 flex items-center justify-between">
+            <span className="text-[10px] text-ink-400">对白（左右气泡 + 口播）</span>
+            <button className="btn py-0.5" onClick={() => useEditor.getState().addDialogueLine(scene.id)}>
+              添加
+            </button>
+          </div>
+          {(scene.slots.dialogue ?? []).map((it, i) => {
+            const cue = scene.cues.find((c) => c.target === `item:${it.id}`);
+            const active = selectedCueId === cue?.id;
+            const key = itemSpeakKey(it.id);
+            return (
+              <div
+                key={it.id}
+                className={`mb-2 space-y-1 rounded border px-1.5 py-1.5 ${active ? "border-brass/50 bg-ink-700" : "border-ink-600"}`}
+                onClick={() => cue && useEditor.getState().setSelectedCue(cue.id)}
+              >
+                <div className="flex gap-1">
+                  <select
+                    className="field w-[4.5rem] shrink-0 py-0.5"
+                    value={it.side}
+                    onChange={(e) =>
+                      useEditor.getState().patchDialogueLine(scene.id, it.id, { side: e.target.value as DialogueSide })
+                    }
+                  >
+                    <option value="left">左</option>
+                    <option value="right">右</option>
+                  </select>
+                  <input
+                    className="field"
+                    placeholder="说话人"
+                    value={it.name ?? ""}
+                    onChange={(e) => useEditor.getState().patchDialogueLine(scene.id, it.id, { name: e.target.value })}
+                  />
+                  <button className="btn shrink-0 px-1.5" onClick={() => useEditor.getState().removeDialogueLine(scene.id, it.id)}>
+                    ×
+                  </button>
+                </div>
+                <textarea
+                  className="field min-h-[36px]"
+                  placeholder={`对白 ${i + 1}`}
+                  value={itemText(it, lang, source)}
+                  onChange={(e) => useEditor.getState().patchDialogueText(scene.id, it.id, e.target.value)}
+                />
+                <textarea
+                  className="field min-h-[36px]"
+                  placeholder="口播（空则跳过）"
+                  value={speakText(scene, key, lang, source)}
+                  onChange={(e) => useEditor.getState().patchSpeak(scene.id, key, e.target.value)}
+                />
+                <SpeakRoleSelect sceneId={scene.id} speakKey={key} />
+                <button
+                  className="btn w-full py-0.5"
+                  onClick={() => {
+                    const copy = itemText(it, lang, source);
+                    if (copy.trim()) useEditor.getState().patchSpeak(scene.id, key, copy);
+                  }}
+                >
+                  用画面填口播
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
       {block.type === "image" && (
         <button className="btn mt-2 w-full" onClick={() => void pickImageFile().then((src) => src && useEditor.getState().setImage(scene.id, src))}>
           更换配图
@@ -513,8 +715,28 @@ function BlockInspector({ scene, block }: { scene: Scene; block: LayoutBlock }) 
         block.type === "quote" ||
         block.type === "author" ||
         block.type === "number" ||
-        block.type === "list") && (
+        block.type === "list" ||
+        block.type === "dialogue") && (
         <>
+          <Field label="字体">
+            <select
+              className="field"
+              value={block.settings?.fontId ?? ""}
+              onChange={(e) => {
+                const v = e.target.value;
+                useEditor.getState().patchBlockSettings(scene.id, block.id, {
+                  fontId: v ? (v as StageFontId) : undefined,
+                });
+              }}
+            >
+              <option value="">默认（{stageFont(blockFontId(project, block.type)).label}）</option>
+              {STAGE_FONTS.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+          </Field>
           <Field label={`字号 ${set.fontSize}`}>
             <input
               type="range"
@@ -756,13 +978,9 @@ export function Inspector() {
   const selectedBlockId = useEditor((s) => s.selectedBlockId);
   const scene = project.scenes.find((s) => s.id === currentSceneId);
 
-  if (!scene) return <aside className="w-72 shrink-0 border-l border-ink-600 bg-ink-900" />;
+  if (!scene) return <div className="p-3 text-[11px] text-ink-400">还没有场景</div>;
 
   const block = selectedBlockId ? sceneBlocks(scene).find((b) => b.id === selectedBlockId) : undefined;
 
-  return (
-    <aside className="flex w-72 shrink-0 flex-col overflow-auto border-l border-ink-600 bg-ink-900 p-3">
-      {block ? <BlockInspector scene={scene} block={block} /> : <SceneInspector scene={scene} />}
-    </aside>
-  );
+  return block ? <BlockInspector scene={scene} block={block} /> : <SceneInspector scene={scene} />;
 }

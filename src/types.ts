@@ -16,6 +16,7 @@ export type LayoutId =
   | "threeCol"
   | "qa"
   | "cards"
+  | "dialogue"
   | "custom";
 export type AnimKind = "fade" | "slide" | "scale" | "highlight" | "kenburns";
 export type BlockType =
@@ -27,10 +28,63 @@ export type BlockType =
   | "author"
   | "number"
   | "list"
+  | "dialogue"
   | "image"
   | "shape";
-export type TtsProvider = "edge" | "azure" | "openai";
+export type TtsProvider = "edge" | "azure" | "openai" | "qwen";
 export type SceneTransition = "cut" | "crossfade";
+export type StageFontId = "noto-sans" | "noto-serif" | "source-sans" | "ibm-plex" | "nunito" | "literata";
+export type CaptionBox = "pill" | "bar" | "none";
+
+export interface CaptionStyle {
+  box: CaptionBox;
+  bg: string;
+  bgOpacity: number;
+  color: string;
+  fontSize: number;
+  fontWeight: "normal" | "medium" | "bold";
+  align: "left" | "center" | "right";
+  position: "bottom" | "top";
+  insetX: number;
+  insetY: number;
+  paddingX: number;
+  paddingY: number;
+  outline: boolean;
+  blur: boolean;
+}
+
+export type ExportFormatId = "webm-vp9" | "webm-vp8" | "mp4-h264";
+export type ExportHeightId = 1080 | 720 | 480;
+
+export interface ExportSettings {
+  format: ExportFormatId;
+  height: ExportHeightId;
+  fps: number;
+  videoMbps: number;
+  audioKbps: number;
+  exportSubtitles: boolean;
+  subtitleFormat: "srt" | "vtt";
+}
+
+export interface ProgressStyle {
+  position: "top" | "bottom";
+  height: number;
+  bg: string;
+  bgOpacity: number;
+  fill: string;
+  fillOpacity: number;
+  playhead: string;
+  color: string;
+  activeColor: string;
+  fontSize: number;
+  fontWeight: "normal" | "medium" | "bold";
+  fontId?: StageFontId;
+  showNames: boolean;
+  showPlayhead: boolean;
+  showDividers: boolean;
+  blur: boolean;
+  insetX: number;
+}
 
 export interface TextI18n {
   i18n: Partial<Record<LangId, string>>;
@@ -38,6 +92,17 @@ export interface TextI18n {
 
 export interface ListItem {
   id: string;
+  i18n: Partial<Record<LangId, string>>;
+}
+
+export type DialogueSide = "left" | "right";
+
+/** One line in a two-speaker game-style dialogue window. */
+export interface DialogueLine {
+  id: string;
+  side: DialogueSide;
+  /** Display name above the bubble. */
+  name?: string;
   i18n: Partial<Record<LangId, string>>;
 }
 
@@ -96,6 +161,8 @@ export interface BlockSettings {
   fill?: string;
   fontSize?: number;
   fontWeight?: "normal" | "medium" | "bold";
+  /** If unset, inherit the project default for this block type. */
+  fontId?: StageFontId;
   lineHeight?: number;
   padding?: number;
   radius?: number;
@@ -109,7 +176,7 @@ export interface BlockSettings {
 export interface LayoutBlock {
   id: string;
   type: BlockType;
-  name?: string;
+  name?: TextI18n;
   x: number;
   y: number;
   w: number;
@@ -128,6 +195,7 @@ export interface SceneSlots {
   author?: TextI18n;
   number?: TextI18n;
   items?: ListItem[];
+  dialogue?: DialogueLine[];
   image?: string;
 }
 
@@ -141,11 +209,19 @@ export interface Scene {
   narrationClose?: TextI18n;
   /** Per-element spoken lines. Keys are block ids or `item:{id}`. */
   speak?: Partial<Record<string, TextI18n>>;
+  /** Per-line TTS character (VoiceProfile.id). Missing = language default. */
+  speakRole?: Partial<Record<string, string>>;
   audioByLang?: Partial<Record<LangId, SceneAudio>>;
   slots: SceneSlots;
   cues: Cue[];
   blocks?: LayoutBlock[];
+  /** Solid fill behind the stage. */
   bg: string;
+  /** Full-frame backdrop photo; independent of the layout image block. */
+  bgImage?: string;
+  bgFit?: "cover" | "contain";
+  /** Black overlay 0–1 on top of the backdrop, to keep type readable. */
+  bgDim?: number;
   /** Extra ms after speech before the next scene. Undefined inherits the project default. */
   holdMs?: number;
   /** Silence before opening narration. Ignored if there is no opening line. */
@@ -165,10 +241,13 @@ export interface Scene {
 export interface VoiceProfile {
   id: string;
   name: string;
-  lang: LangId;
-  provider: TtsProvider;
+  /** @deprecated Roles are language-agnostic. Kept for old project files. */
+  lang?: LangId;
+  provider?: TtsProvider;
   voiceId: string;
   gender?: "女" | "男";
+  /** Qwen custom voice: synthesis model bound at enrollment/design time. */
+  targetModel?: string;
 }
 
 export interface Project {
@@ -178,8 +257,21 @@ export interface Project {
   aspect: AspectId;
   ttsProvider: TtsProvider;
   voices: VoiceProfile[];
+  /** Fallback character when a language has no default. */
+  voiceId: string;
+  /** Default character per preview language. Missing = `voiceId`. */
   voiceByLang: Partial<Record<LangId, string>>;
   showCaptions: boolean;
+  /** Thin global playhead at the top of the stage column. */
+  showTopProgress: boolean;
+  fontId: StageFontId;
+  titleFontId: StageFontId;
+  subtitleFontId: StageFontId;
+  quoteFontId: StageFontId;
+  captionFontId: StageFontId;
+  captionStyle: CaptionStyle;
+  progressStyle: ProgressStyle;
+  exportSettings: ExportSettings;
   /** Extra ms after each scene's speech before cutting away. */
   holdMs: number;
   openPadBeforeMs: number;
@@ -217,6 +309,7 @@ export const LAYOUTS: { id: LayoutId; label: string; desc: string }[] = [
   { id: "threeCol", label: "三栏卡片", desc: "三个要点并排" },
   { id: "qa", label: "问答", desc: "问题 + 回答" },
   { id: "cards", label: "宫格卡片", desc: "多条目网格" },
+  { id: "dialogue", label: "对话窗", desc: "左右双人对话，像游戏对白" },
   { id: "custom", label: "自定义", desc: "自由摆放公共元件" },
 ];
 
@@ -229,6 +322,7 @@ export const BLOCK_TYPES: { type: BlockType; label: string }[] = [
   { type: "author", label: "署名" },
   { type: "number", label: "数字" },
   { type: "list", label: "列表" },
+  { type: "dialogue", label: "对话窗" },
   { type: "image", label: "图片" },
   { type: "shape", label: "色块" },
 ];

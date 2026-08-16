@@ -11,6 +11,8 @@ import {
   Redo2,
   RotateCcw,
   Save,
+  Settings2,
+  Sparkles,
   Undo2,
 } from "lucide-react";
 import { LANGS, langZhName, type LangId } from "../lib/langs";
@@ -57,11 +59,24 @@ export function TopBar() {
         <button className="btn shrink-0" onClick={() => useEditor.getState().setDialog("script")}>
           <FileText className="h-3.5 w-3.5" /> 口播稿
         </button>
+        <button
+          className="btn btn-accent shrink-0"
+          onClick={() => {
+            const s = useEditor.getState();
+            s.setRightTab("ai");
+            s.setDialog("ai");
+          }}
+        >
+          <Sparkles className="h-3.5 w-3.5" /> AI
+        </button>
         <button className="btn shrink-0" onClick={() => useEditor.getState().setDialog("texts")}>
           <Languages className="h-3.5 w-3.5" /> 文本
         </button>
         <button className="btn shrink-0" onClick={() => useEditor.getState().setDialog("tts")}>
           <Mic className="h-3.5 w-3.5" /> 配音
+        </button>
+        <button className="btn shrink-0" title="字体、字幕、画幅" onClick={() => useEditor.getState().setDialog("prefs")}>
+          <Settings2 className="h-3.5 w-3.5" /> 配置
         </button>
         <AddBlockMenu />
         <button className="btn btn-accent shrink-0" onClick={() => useEditor.getState().setDialog("export")}>

@@ -122,7 +122,7 @@ export function TextI18nDialog() {
         </label>
       </div>
       <p className="mb-3 text-[11px] leading-relaxed text-ink-400">
-        使用 Microsoft Edge 免费翻译（无需密钥）。开场/结束口播、元件口播与画面文案分开翻译；合成配音后会按各段口播写入场时间。机翻请校对专有名词。
+        使用 Microsoft Edge 免费翻译（无需密钥）。开场/结束口播、元件名称、元件口播与画面文案分开翻译；合成配音后会按各段口播写入场时间。机翻请校对专有名词。
       </p>
       {error && <p className="mb-2 text-xs text-red-400">{error}</p>}
       {!rows.length && <p className="py-8 text-center text-sm text-ink-400">还没有可翻译的文本。</p>}

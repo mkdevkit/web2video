@@ -1,5 +1,6 @@
 import type { LangId } from "./langs";
 import type { TtsProvider, VoiceProfile } from "../types";
+import { loadTimbres } from "./voiceLibrary";
 
 export interface VoiceOpt {
   id: string;
@@ -74,10 +75,20 @@ export const PROVIDER_LABEL: Record<TtsProvider, string> = {
   edge: "Edge（免费）",
   azure: "Azure Speech",
   openai: "OpenAI TTS",
+  qwen: "千问 TTS",
 };
+
+export const PROVIDERS: TtsProvider[] = ["edge", "azure", "openai", "qwen"];
 
 export function catalogFor(provider: TtsProvider, lang: LangId): VoiceOpt[] {
   if (provider === "openai") return OPENAI_VOICES;
+  if (provider === "qwen") {
+    return loadTimbres().map((t) => ({
+      id: t.voice,
+      label: t.name,
+      gender: t.gender ?? "女",
+    }));
+  }
   return VOICES[lang];
 }
 
@@ -91,6 +102,10 @@ export function voiceLabel(id: string): string {
   return id;
 }
 
+export function qwenRoles(voices: VoiceProfile[] | undefined): VoiceProfile[] {
+  return (voices ?? []).filter((v) => !v.provider || v.provider === "qwen");
+}
+
 export function profileLabel(p: VoiceProfile): string {
-  return `${p.name} · ${PROVIDER_LABEL[p.provider]}`;
+  return p.name;
 }

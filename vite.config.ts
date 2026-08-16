@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import { edgeTtsPlugin } from "./vite-plugin-edge-tts";
+import { llmProxyPlugin } from "./vite-plugin-llm-proxy";
 
 const edgeProxy = {
   "/__edge_translate": {
@@ -12,7 +13,7 @@ const edgeProxy = {
 };
 
 export default defineConfig({
-  plugins: [react(), edgeTtsPlugin()],
+  plugins: [react(), edgeTtsPlugin(), llmProxyPlugin()],
   server: { proxy: edgeProxy },
   preview: { proxy: edgeProxy },
 });

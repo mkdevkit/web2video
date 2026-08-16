@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { ExportStage, Stage } from "./components/Stage";
-import { Inspector } from "./components/Inspector";
+import { RightDock } from "./components/RightDock";
 import { PlaybackClock, AudioEngine } from "./components/Playback";
 import { SceneList } from "./components/SceneList";
 import { StatusBar } from "./components/StatusBar";
@@ -8,6 +8,8 @@ import { Timeline } from "./components/Timeline";
 import { TopBar } from "./components/TopBar";
 import { ExportDialog } from "./components/dialogs/ExportDialog";
 import { HelpDialog } from "./components/dialogs/HelpDialog";
+import { AiDialog } from "./components/dialogs/AiDialog";
+import { PrefsDialog } from "./components/dialogs/PrefsDialog";
 import { ScriptDialog } from "./components/dialogs/ScriptDialog";
 import { TextI18nDialog } from "./components/dialogs/TextI18nDialog";
 import { TtsDialog } from "./components/dialogs/TtsDialog";
@@ -34,7 +36,7 @@ export default function App() {
         <main className="relative flex min-w-0 flex-1 flex-col">
           <Stage />
         </main>
-        <Inspector />
+        <RightDock />
       </div>
       <Timeline />
       <StatusBar />
@@ -45,6 +47,8 @@ export default function App() {
       {dialog === "script" && <ScriptDialog />}
       {dialog === "texts" && <TextI18nDialog />}
       {dialog === "tts" && <TtsDialog />}
+      {dialog === "ai" && <AiDialog />}
+      {dialog === "prefs" && <PrefsDialog />}
     </div>
   );
 }

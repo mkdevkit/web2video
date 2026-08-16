@@ -1,6 +1,6 @@
 import { uid } from "./ids";
 import { defaultSettings } from "./interpolate";
-import type { AnimKind, BlockType, Cue, CueBind, LayoutBlock, LayoutId, ListItem } from "../types";
+import type { AnimKind, BlockType, Cue, CueBind, DialogueLine, LayoutBlock, LayoutId, ListItem, SceneSlots } from "../types";
 
 export function cueUntil(cue: Cue): number {
   return cue.until ?? 1;
@@ -56,6 +56,8 @@ export function presetBlocks(layout: LayoutId): LayoutBlock[] {
       return [blk("title", 8, 18, 84, 22), blk("body", 8, 46, 84, 38)];
     case "cards":
       return [blk("title", 8, 8, 84, 12), blk("list", 6, 24, 88, 68, { listLayout: "grid" })];
+    case "dialogue":
+      return [blk("title", 8, 6, 84, 12), blk("dialogue", 8, 20, 84, 72)];
     case "custom":
       return [blk("title", 8, 10, 84, 16), blk("body", 8, 32, 84, 40)];
     default:
@@ -78,6 +80,7 @@ export function makeBlock(type: BlockType): LayoutBlock {
     author: [10, 64, 80, 10],
     number: [10, 12, 80, 22],
     list: [8, 28, 84, 56],
+    dialogue: [8, 20, 84, 72],
     image: [50, 10, 44, 80],
     shape: [8, 8, 30, 20],
   };
@@ -93,7 +96,16 @@ export function makeBlock(type: BlockType): LayoutBlock {
   };
 }
 
-export function defaultCues(layout: LayoutId, items: ListItem[] = [], blocks?: LayoutBlock[]): Cue[] {
+export function isItemLike(type: BlockType): boolean {
+  return type === "list" || type === "dialogue";
+}
+
+export function defaultCues(
+  layout: LayoutId,
+  items: ListItem[] = [],
+  blocks?: LayoutBlock[],
+  dialogue: DialogueLine[] = [],
+): Cue[] {
   const cue = (target: string, at: number, anim: AnimKind, bind: CueBind, until = 1): Cue => ({
     id: uid("cue"),
     target,
@@ -103,6 +115,8 @@ export function defaultCues(layout: LayoutId, items: ListItem[] = [], blocks?: L
     stay: bind === "speak" ? "body" : undefined,
     anim,
   });
+  const itemCues = (lines: { id: string }[], start: number) =>
+    lines.map((it, j) => cue(`item:${it.id}`, Math.min(0.85, start + j * 0.12), "slide", "speak"));
   const list = blocks ?? presetBlocks(layout);
   if (layout === "custom" || blocks?.length) {
     const out: Cue[] = [];
@@ -110,7 +124,9 @@ export function defaultCues(layout: LayoutId, items: ListItem[] = [], blocks?: L
     for (const b of list) {
       const bind: CueBind = b.type === "image" || b.type === "shape" ? "visual" : "speak";
       if (b.type === "list") {
-        items.forEach((it, j) => out.push(cue(`item:${it.id}`, Math.min(0.85, 0.12 + i * 0.08 + j * 0.12), "slide", "speak")));
+        out.push(...itemCues(items, 0.12 + i * 0.08));
+      } else if (b.type === "dialogue") {
+        out.push(...itemCues(dialogue, 0.12 + i * 0.08));
       } else {
         const anim: AnimKind = b.type === "image" ? "kenburns" : b.type === "title" || b.type === "number" ? "scale" : "fade";
         out.push(cue(b.id, Math.min(0.8, i * 0.1), anim, bind));
@@ -129,7 +145,9 @@ export function defaultCues(layout: LayoutId, items: ListItem[] = [], blocks?: L
     case "steps":
     case "threeCol":
     case "cards":
-      return [cue("title", 0, "slide", "speak"), ...items.map((it, i) => cue(`item:${it.id}`, Math.min(0.85, 0.14 + i * 0.14), "slide", "speak"))];
+      return [cue("title", 0, "slide", "speak"), ...itemCues(items, 0.14)];
+    case "dialogue":
+      return [cue("title", 0, "slide", "speak"), ...itemCues(dialogue, 0.14)];
     case "quote":
       return [cue("number", 0, "scale", "speak"), cue("quote", 0.08, "scale", "speak"), cue("author", 0.45, "fade", "speak")];
     case "fullImage":
@@ -147,6 +165,15 @@ export function defaultCues(layout: LayoutId, items: ListItem[] = [], blocks?: L
     default:
       return [cue("title", 0, "fade", "speak")];
   }
+}
+
+export function rebuildCues(scene: { layoutId: LayoutId; slots: SceneSlots; blocks?: LayoutBlock[] }): Cue[] {
+  return defaultCues(
+    scene.layoutId,
+    scene.slots.items ?? [],
+    scene.blocks?.length ? scene.blocks : undefined,
+    scene.slots.dialogue ?? [],
+  );
 }
 
 export function ensureCues(cues: Cue[]): Cue[] {

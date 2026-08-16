@@ -4,9 +4,15 @@ interface FileSystemHandlePermissionDescriptor {
   mode?: "read" | "readwrite";
 }
 
+interface FileSystemHandle {
+  readonly kind: "file" | "directory";
+  readonly name: string;
+}
+
 interface FileSystemDirectoryHandle {
   queryPermission(descriptor?: FileSystemHandlePermissionDescriptor): Promise<PermissionState>;
   requestPermission(descriptor?: FileSystemHandlePermissionDescriptor): Promise<PermissionState>;
+  values(): AsyncIterableIterator<FileSystemHandle>;
 }
 
 interface Window {
