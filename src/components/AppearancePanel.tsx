@@ -1,6 +1,8 @@
 import { STAGE_FONTS, captionStyleOf, fontStack, progressStyleOf, stageFont } from "../lib/fonts";
+import { listMarkerRadius, listMarkerStyleOf } from "../lib/listMarker";
+import { pickImageFile } from "../lib/insertImage";
 import { useEditor } from "../store/useEditor";
-import type { CaptionBox, StageFontId } from "../types";
+import type { CaptionBox, ListMarkerKind, ListMarkerShape, StageFontId } from "../types";
 import { Field } from "./ui";
 import type { LangId } from "../lib/langs";
 
@@ -333,6 +335,129 @@ export function ProgressFields() {
               <input type="checkbox" checked={st.blur} onChange={(e) => patch({ blur: e.target.checked }, true)} />
               毛玻璃
             </label>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+export function ListMarkerFields() {
+  const project = useEditor((s) => s.project);
+  const st = listMarkerStyleOf(project.listMarkerStyle);
+  const patch = (next: Partial<typeof st>, history = false) => {
+    useEditor.getState().updateProject({ listMarkerStyle: { ...st, ...next } }, history);
+  };
+  const preview = [1, 2, 3];
+
+  return (
+    <div className="space-y-2">
+      <label className="flex items-center gap-2 text-xs text-ink-200">
+        <input type="checkbox" checked={st.show} onChange={(e) => patch({ show: e.target.checked }, true)} />
+        显示列表序号
+      </label>
+      <p className="text-[10px] text-ink-500">作用于全片所有列表元件。可改成色块数字，或上传一张图当序号底。</p>
+      {st.show && (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="样式">
+              <select
+                className="field"
+                value={st.kind}
+                onChange={(e) => patch({ kind: e.target.value as ListMarkerKind }, true)}
+              >
+                <option value="number">数字色块</option>
+                <option value="image">上传图片</option>
+              </select>
+            </Field>
+            <Field label="形状">
+              <select
+                className="field"
+                value={st.shape}
+                onChange={(e) => patch({ shape: e.target.value as ListMarkerShape }, true)}
+              >
+                <option value="circle">圆形</option>
+                <option value="rounded">圆角</option>
+                <option value="square">方形</option>
+              </select>
+            </Field>
+            <Field label="底色">
+              <input className="field h-8" type="color" value={st.bg} onChange={(e) => patch({ bg: e.target.value })} />
+            </Field>
+            <Field label="数字色">
+              <input className="field h-8" type="color" value={st.color} onChange={(e) => patch({ color: e.target.value })} />
+            </Field>
+          </div>
+          <Field label={`大小 ${st.size.toFixed(1)}`}>
+            <input
+              type="range"
+              min={1.2}
+              max={5}
+              step={0.1}
+              className="w-full"
+              value={st.size}
+              onChange={(e) => patch({ size: Number(e.target.value) })}
+            />
+          </Field>
+          {st.kind === "image" && (
+            <>
+              {st.image && (
+                <img
+                  src={st.image}
+                  alt=""
+                  className="h-12 w-12 object-contain"
+                  style={{ borderRadius: listMarkerRadius(st.shape) }}
+                />
+              )}
+              <div className="flex gap-1">
+                <button
+                  className="btn flex-1"
+                  onClick={() => {
+                    void pickImageFile().then((src) => {
+                      if (src) patch({ kind: "image", image: src }, true);
+                    });
+                  }}
+                >
+                  {st.image ? "更换图片" : "选择图片"}
+                </button>
+                {st.image && (
+                  <button className="btn" onClick={() => patch({ image: undefined }, true)}>
+                    清除
+                  </button>
+                )}
+              </div>
+              <label className="flex items-center gap-2 text-xs text-ink-200">
+                <input
+                  type="checkbox"
+                  checked={st.overlayIndex}
+                  onChange={(e) => patch({ overlayIndex: e.target.checked }, true)}
+                />
+                在图上叠 1、2、3
+              </label>
+              <p className="text-[10px] text-ink-500">同一张图用在每一项。要当数字底就勾叠字；只要图标当项目符号就关掉。</p>
+            </>
+          )}
+          <div className="flex items-center gap-2 rounded-md border border-ink-700 bg-ink-900 px-3 py-2">
+            {preview.map((n) => (
+              <span
+                key={n}
+                className="relative flex items-center justify-center overflow-hidden font-bold"
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: st.shape === "square" ? 0 : st.shape === "rounded" ? 6 : 999,
+                  background: st.kind === "image" && st.image ? "transparent" : st.bg,
+                  color: st.color,
+                  fontSize: 13,
+                }}
+              >
+                {st.kind === "image" && st.image ? (
+                  <img src={st.image} alt="" className="absolute inset-0 h-full w-full object-contain" />
+                ) : null}
+                {st.kind === "number" || st.overlayIndex ? <span className="relative z-[1]">{n}</span> : null}
+              </span>
+            ))}
+            <span className="text-[11px] text-ink-400">预览</span>
           </div>
         </>
       )}

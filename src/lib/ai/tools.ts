@@ -1,6 +1,7 @@
-import { BLOCK_TYPES, LAYOUTS, type AnimKind, type AspectId, type BlockType, type CaptionStyle, type CueBind, type CueStay, type LayoutId, type ProgressStyle, type StageFontId } from "../../types";
+import { BLOCK_TYPES, LAYOUTS, type AnimKind, type AspectId, type BlockType, type CaptionStyle, type CueBind, type CueStay, type LayoutId, type ListMarkerStyle, type ProgressStyle, type StageFontId } from "../../types";
 import { sceneBlocks } from "../blocks";
 import { captionStyleOf, isStageFontId, progressStyleOf, STAGE_FONTS } from "../fonts";
+import { listMarkerStyleOf } from "../listMarker";
 import { exportSettingsOf } from "../exportSettings";
 import { itemSpeakKey, speakText } from "../narration";
 import { textOf, itemText, sourceLangOf, blockNameOf, writeI18n } from "../textI18n";
@@ -123,6 +124,16 @@ const progressStyleProperties = {
   insetX: { type: "number", description: "左右边距百分比" },
 };
 
+const listMarkerStyleProperties = {
+  show: { type: "boolean", description: "是否显示列表序号" },
+  kind: { type: "string", enum: ["number", "image"], description: "数字色块或用户上传的图片" },
+  bg: { type: "string", description: "色块底色" },
+  color: { type: "string", description: "数字颜色" },
+  size: { type: "number", description: "相对画幅宽度，约 1.2–5" },
+  shape: { type: "string", enum: ["circle", "rounded", "square"] },
+  overlayIndex: { type: "boolean", description: "图片样式时是否叠 1、2、3" },
+};
+
 export const AI_TOOLS: ChatTool[] = [
   {
     type: "function",
@@ -157,7 +168,7 @@ export const AI_TOOLS: ChatTool[] = [
     type: "function",
     function: {
       name: "set_project",
-      description: "修改片级设置：名称、画幅、停留、切场、字体、字幕条、画布进度条、导出规格。只传要改的字段。",
+      description: "修改片级设置：名称、画幅、停留、切场、字体、字幕条、画布进度条、列表序号、导出规格。只传要改的字段。",
       parameters: {
         type: "object",
         properties: {
@@ -179,6 +190,7 @@ export const AI_TOOLS: ChatTool[] = [
           captionFontId: { type: "string", enum: FONT_IDS, description: "口播字幕" },
           captionStyle: { type: "object", properties: captionStyleProperties },
           progressStyle: { type: "object", properties: progressStyleProperties },
+          listMarkerStyle: { type: "object", properties: listMarkerStyleProperties },
           exportSettings: {
             type: "object",
             description: "导出规格，浏览器录制",
@@ -418,6 +430,10 @@ export function executeTool(name: string, rawArgs: unknown): string {
         },
         captionStyle: captionStyleOf(p.captionStyle),
         progressStyle: progressStyleOf(p.progressStyle),
+        listMarkerStyle: (() => {
+          const { image, ...rest } = listMarkerStyleOf(p.listMarkerStyle);
+          return { ...rest, hasImage: Boolean(image) };
+        })(),
         exportSettings: exportSettingsOf(p.exportSettings),
         voices: p.voices.map((v) => ({ id: v.id, name: v.name, gender: v.gender })),
         voiceId: p.voiceId,
@@ -449,6 +465,7 @@ export function executeTool(name: string, rawArgs: unknown): string {
           media: "video、gif 元件用 manage_blocks 添加后，src 由用户在检视里选择，存在 settings.src",
           captions: "showCaptions 只控制预览字幕条，默认关。导出烧录在导出窗勾选；exportSettings.exportSubtitles 另存字幕文件",
           progress: "showTopProgress + progressStyle 控制画布进度条，画在画布上会进导出，不是工作区装饰",
+          listMarker: "listMarkerStyle 控制全片列表序号：show 开关，kind=number 色块或 image 用户上传图，不要编造图片 URL",
           speakRole: "speakRole 填 get_project.voices 的 id；缺省用 voiceByLang 该语言默认",
         },
       });
@@ -472,6 +489,11 @@ export function executeTool(name: string, rawArgs: unknown): string {
       }
       if (args.progressStyle && typeof args.progressStyle === "object") {
         patch.progressStyle = progressStyleOf({ ...store.project.progressStyle, ...(args.progressStyle as Partial<ProgressStyle>) });
+      }
+      if (args.listMarkerStyle && typeof args.listMarkerStyle === "object") {
+        const raw = args.listMarkerStyle as Partial<ListMarkerStyle>;
+        const { image: _ignore, ...rest } = raw;
+        patch.listMarkerStyle = listMarkerStyleOf({ ...store.project.listMarkerStyle, ...rest });
       }
       if (args.exportSettings && typeof args.exportSettings === "object") {
         patch.exportSettings = exportSettingsOf({ ...store.project.exportSettings, ...(args.exportSettings as object) });
@@ -643,6 +665,7 @@ export const SYSTEM_PROMPT = `你是 Web2Video 的分镜助手。这是本地口
 外观：
 - 口播字幕条：showCaptions 默认关，只影响预览。导出烧录在导出窗勾选；exportSettings.exportSubtitles 可另存 SRT/VTT。
 - 全片进度条：showTopProgress + progressStyle，画在画布顶/底，导出会带上。
+- 列表序号：listMarkerStyle.show / kind / 颜色 / 形状。图片只能用户在全局配置里上传，不要编造 URL。
 - 字体用 fontId / titleFontId / subtitleFontId / quoteFontId / captionFontId，取值见 list_catalog。
 - 每句口播可指定角色：dialogue[].role 或 speakRole，id 来自 get_project.voices。
 

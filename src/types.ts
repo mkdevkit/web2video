@@ -88,6 +88,24 @@ export interface ProgressStyle {
   insetX: number;
 }
 
+export type ListMarkerKind = "number" | "image";
+export type ListMarkerShape = "circle" | "rounded" | "square";
+
+/** Project-wide list index badge (1, 2, 3…). */
+export interface ListMarkerStyle {
+  show: boolean;
+  kind: ListMarkerKind;
+  bg: string;
+  color: string;
+  /** Size in cqw. */
+  size: number;
+  shape: ListMarkerShape;
+  /** Data URL when kind is image. */
+  image?: string;
+  /** Draw 1, 2, 3 on top of the image. */
+  overlayIndex: boolean;
+}
+
 export interface TextI18n {
   i18n: Partial<Record<LangId, string>>;
 }
@@ -277,6 +295,7 @@ export interface Project {
   captionFontId: StageFontId;
   captionStyle: CaptionStyle;
   progressStyle: ProgressStyle;
+  listMarkerStyle: ListMarkerStyle;
   exportSettings: ExportSettings;
   /** Extra ms after each scene's speech before cutting away. */
   holdMs: number;

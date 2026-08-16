@@ -1,15 +1,16 @@
 import { useState } from "react";
 import { ASPECT_PX, type AspectId } from "../../types";
-import { CaptionFields, FontFields, ProgressFields } from "../AppearancePanel";
+import { CaptionFields, FontFields, ListMarkerFields, ProgressFields } from "../AppearancePanel";
 import { Field, Modal } from "../ui";
 import { useEditor } from "../../store/useEditor";
 
-type Tab = "fonts" | "captions" | "progress" | "film";
+type Tab = "fonts" | "captions" | "progress" | "list" | "film";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "fonts", label: "字体" },
   { id: "captions", label: "字幕" },
   { id: "progress", label: "进度" },
+  { id: "list", label: "列表" },
   { id: "film", label: "片子" },
 ];
 
@@ -33,6 +34,7 @@ export function PrefsDialog() {
       {tab === "fonts" && <FontFields />}
       {tab === "captions" && <CaptionFields />}
       {tab === "progress" && <ProgressFields />}
+      {tab === "list" && <ListMarkerFields />}
       {tab === "film" && (
         <div className="space-y-3">
           <Field label="画幅">

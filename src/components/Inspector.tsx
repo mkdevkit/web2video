@@ -1,6 +1,19 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import {
+  AlignCenter,
+  AlignHorizontalJustifyCenter,
+  AlignHorizontalJustifyEnd,
+  AlignHorizontalJustifyStart,
+  AlignLeft,
+  AlignRight,
+  AlignVerticalJustifyCenter,
+  AlignVerticalJustifyEnd,
+  AlignVerticalJustifyStart,
+  StretchHorizontal,
+  StretchVertical,
+} from "lucide-react";
 import { pickGifFile, pickImageFile, pickVideoFile } from "../lib/insertImage";
-import { sceneBlocks } from "../lib/blocks";
+import { alignBlockBox, boxAlignActive, sceneBlocks, type BoxAlign } from "../lib/blocks";
 import { cueBind, cueKeyProgress, cueStay, resolveCueOnScene } from "../lib/cues";
 import { mergedSettings, restPose } from "../lib/interpolate";
 import { itemText, sourceLangOf, textOf, writeI18n } from "../lib/textI18n";
@@ -59,6 +72,29 @@ function secSigned(ms: number) {
 
 function isMediaType(type: string) {
   return type === "image" || type === "video" || type === "gif";
+}
+
+function AlignBtn({
+  title,
+  active,
+  onClick,
+  children,
+}: {
+  title: string;
+  active?: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      className={`btn h-7 flex-1 p-0 ${active ? "border-brass/50 bg-ink-600" : ""}`}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
 }
 
 function SpeakRoleSelect({ sceneId, speakKey }: { sceneId: string; speakKey: string }) {
@@ -224,7 +260,7 @@ function SceneInspector({ scene }: { scene: Scene }) {
         </p>
       </div>
       <button className="btn mt-2 w-full" onClick={() => useEditor.getState().setDialog("prefs")}>
-        全局配置：字体 / 字幕 / 画幅
+        全局配置：字体 / 字幕 / 列表
       </button>
       <div className="mt-3 space-y-2">
         <div className="section-label">切场</div>
@@ -510,6 +546,11 @@ function BlockInspector({ scene, block }: { scene: Scene; block: LayoutBlock }) 
       (block.type === "list" && (scene.slots.items ?? []).some((it) => c.target === itemSpeakKey(it.id))) ||
       (block.type === "dialogue" && (scene.slots.dialogue ?? []).some((it) => c.target === itemSpeakKey(it.id))),
   );
+  const applyBoxAlign = (kind: BoxAlign) => {
+    const store = useEditor.getState();
+    store.commit();
+    store.patchBlock(scene.id, block.id, alignBlockBox(block, kind));
+  };
 
   return (
     <>
@@ -531,6 +572,37 @@ function BlockInspector({ scene, block }: { scene: Scene; block: LayoutBlock }) 
           }
         />
       </Field>
+      <div className="mt-2">
+        <span className="mb-1 block text-[10px] text-ink-400">画布对齐</span>
+        <div className="flex gap-0.5">
+          {(
+            [
+              ["left", "左对齐", AlignHorizontalJustifyStart],
+              ["hcenter", "水平居中", AlignHorizontalJustifyCenter],
+              ["right", "右对齐", AlignHorizontalJustifyEnd],
+              ["stretchX", "铺满宽度", StretchHorizontal],
+            ] as const
+          ).map(([kind, title, Icon]) => (
+            <AlignBtn key={kind} title={title} active={boxAlignActive(block, kind)} onClick={() => applyBoxAlign(kind)}>
+              <Icon className="h-3.5 w-3.5" />
+            </AlignBtn>
+          ))}
+        </div>
+        <div className="mt-0.5 flex gap-0.5">
+          {(
+            [
+              ["top", "顶对齐", AlignVerticalJustifyStart],
+              ["vcenter", "垂直居中", AlignVerticalJustifyCenter],
+              ["bottom", "底对齐", AlignVerticalJustifyEnd],
+              ["stretchY", "铺满高度", StretchVertical],
+            ] as const
+          ).map(([kind, title, Icon]) => (
+            <AlignBtn key={kind} title={title} active={boxAlignActive(block, kind)} onClick={() => applyBoxAlign(kind)}>
+              <Icon className="h-3.5 w-3.5" />
+            </AlignBtn>
+          ))}
+        </div>
+      </div>
       {block.type !== "image" &&
         block.type !== "video" &&
         block.type !== "gif" &&
@@ -635,6 +707,7 @@ function BlockInspector({ scene, block }: { scene: Scene; block: LayoutBlock }) 
               <option value="grid">宫格</option>
             </select>
           </Field>
+          <p className="text-[10px] text-ink-500">序号样式（颜色、图片、是否显示）在全局配置「列表」里改，全片共用。</p>
         </div>
       )}
       {block.type === "dialogue" && (
@@ -798,29 +871,34 @@ function BlockInspector({ scene, block }: { scene: Scene; block: LayoutBlock }) 
               onChange={(e) => useEditor.getState().patchBlockSettings(scene.id, block.id, { fontSize: Number(e.target.value) })}
             />
           </Field>
-          <div className="grid grid-cols-2 gap-1">
-            <Field label="颜色">
-              <input
-                className="field h-8"
-                type="color"
-                value={set.color ?? "#f3eee3"}
-                onChange={(e) => useEditor.getState().patchBlockSettings(scene.id, block.id, { color: e.target.value })}
-              />
-            </Field>
-            <Field label="对齐">
-              <select
-                className="field"
-                value={set.align}
-                onChange={(e) =>
-                  useEditor.getState().patchBlockSettings(scene.id, block.id, { align: e.target.value as "left" | "center" | "right" })
-                }
-              >
-                <option value="left">左</option>
-                <option value="center">中</option>
-                <option value="right">右</option>
-              </select>
-            </Field>
-          </div>
+          <Field label="颜色">
+            <input
+              className="field h-8"
+              type="color"
+              value={set.color ?? "#f3eee3"}
+              onChange={(e) => useEditor.getState().patchBlockSettings(scene.id, block.id, { color: e.target.value })}
+            />
+          </Field>
+          <Field label="文字对齐">
+            <div className="flex gap-0.5">
+              {(
+                [
+                  ["left", "左对齐", AlignLeft],
+                  ["center", "居中", AlignCenter],
+                  ["right", "右对齐", AlignRight],
+                ] as const
+              ).map(([id, title, Icon]) => (
+                <AlignBtn
+                  key={id}
+                  title={title}
+                  active={set.align === id}
+                  onClick={() => useEditor.getState().patchBlockSettings(scene.id, block.id, { align: id })}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                </AlignBtn>
+              ))}
+            </div>
+          </Field>
         </>
       )}
       {block.type === "shape" && (

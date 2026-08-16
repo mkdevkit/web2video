@@ -10,7 +10,6 @@ import { ExportDialog } from "./components/dialogs/ExportDialog";
 import { HelpDialog } from "./components/dialogs/HelpDialog";
 import { AiDialog } from "./components/dialogs/AiDialog";
 import { PrefsDialog } from "./components/dialogs/PrefsDialog";
-import { ScriptDialog } from "./components/dialogs/ScriptDialog";
 import { TextI18nDialog } from "./components/dialogs/TextI18nDialog";
 import { TtsDialog } from "./components/dialogs/TtsDialog";
 import { WelcomeDialog } from "./components/dialogs/WelcomeDialog";
@@ -44,7 +43,6 @@ export default function App() {
       {dialog === "welcome" && <WelcomeDialog />}
       {dialog === "export" && <ExportDialog />}
       {dialog === "help" && <HelpDialog />}
-      {dialog === "script" && <ScriptDialog />}
       {dialog === "texts" && <TextI18nDialog />}
       {dialog === "tts" && <TtsDialog />}
       {dialog === "ai" && <AiDialog />}

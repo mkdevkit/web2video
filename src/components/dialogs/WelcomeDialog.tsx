@@ -41,7 +41,7 @@ export function WelcomeDialog() {
           </button>
           <button className="rounded-lg border border-ink-600 bg-ink-900 p-3 text-left transition hover:border-brass/60" onClick={() => start(false)}>
             <div className="font-medium text-paper">空白工程</div>
-            <div className="mt-1 text-[11px] text-ink-400">从一个封面场景开始，或稍后导入口播稿</div>
+            <div className="mt-1 text-[11px] text-ink-400">从一个封面场景开始，再用 AI 或右侧属性填内容</div>
           </button>
         </div>
         <button className="btn w-full" onClick={() => void openProjectFolder()}>

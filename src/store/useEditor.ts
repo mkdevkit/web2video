@@ -40,7 +40,7 @@ function persist(project: Project, currentSceneId: string) {
 
 const boot = sampleProject();
 
-export type DialogId = null | "welcome" | "export" | "texts" | "script" | "tts" | "help" | "ai" | "prefs";
+export type DialogId = null | "welcome" | "export" | "texts" | "tts" | "help" | "ai" | "prefs";
 
 interface EditorState {
   project: Project;

@@ -3,6 +3,7 @@ import { defaultCues } from "./blocks";
 import { t18 } from "./scriptSplit";
 import { defaultVoiceByLang, defaultVoiceProfiles } from "./ttsSecrets";
 import { DEFAULT_CAPTION_STYLE, DEFAULT_PROGRESS_STYLE, DEFAULT_CAPTION_FONT_ID, DEFAULT_FONT_ID, DEFAULT_QUOTE_FONT_ID, DEFAULT_SUBTITLE_FONT_ID, DEFAULT_TITLE_FONT_ID, captionStyleOf, progressStyleOf, isStageFontId } from "./fonts";
+import { DEFAULT_LIST_MARKER_STYLE, listMarkerStyleOf } from "./listMarker";
 import { DEFAULT_EXPORT_SETTINGS, exportSettingsOf } from "./exportSettings";
 import { DEFAULT_HOLD_MS, DEFAULT_TRANSITION, DEFAULT_TRANSITION_MS, DEFAULT_OPEN_PAD_BEFORE_MS, DEFAULT_OPEN_PAD_AFTER_MS, DEFAULT_CLOSE_PAD_BEFORE_MS, DEFAULT_CLOSE_PAD_AFTER_MS } from "./timeline";
 import { itemSpeakKey } from "./narration";
@@ -134,6 +135,7 @@ export function sampleProject(): Project {
     captionFontId: DEFAULT_CAPTION_FONT_ID,
     captionStyle: { ...DEFAULT_CAPTION_STYLE },
     progressStyle: { ...DEFAULT_PROGRESS_STYLE },
+    listMarkerStyle: { ...DEFAULT_LIST_MARKER_STYLE },
     exportSettings: { ...DEFAULT_EXPORT_SETTINGS },
     holdMs: DEFAULT_HOLD_MS,
     openPadBeforeMs: DEFAULT_OPEN_PAD_BEFORE_MS,
@@ -255,6 +257,7 @@ export function emptyProject(name = DEFAULT_PROJECT_NAME): Project {
     captionFontId: DEFAULT_CAPTION_FONT_ID,
     captionStyle: { ...DEFAULT_CAPTION_STYLE },
     progressStyle: { ...DEFAULT_PROGRESS_STYLE },
+    listMarkerStyle: { ...DEFAULT_LIST_MARKER_STYLE },
     exportSettings: { ...DEFAULT_EXPORT_SETTINGS },
     holdMs: DEFAULT_HOLD_MS,
     openPadBeforeMs: DEFAULT_OPEN_PAD_BEFORE_MS,
@@ -361,6 +364,7 @@ export function normalizeProject(data: Project): Project {
     captionFontId: isStageFontId(data.captionFontId) ? data.captionFontId : isStageFontId(data.fontId) ? data.fontId : DEFAULT_CAPTION_FONT_ID,
     captionStyle: captionStyleOf(data.captionStyle),
     progressStyle: progressStyleOf(data.progressStyle),
+    listMarkerStyle: listMarkerStyleOf(data.listMarkerStyle),
     exportSettings: exportSettingsOf(data.exportSettings),
     holdMs: finiteMs(data.holdMs) ?? DEFAULT_HOLD_MS,
     openPadBeforeMs: finiteMs(data.openPadBeforeMs) ?? DEFAULT_OPEN_PAD_BEFORE_MS,

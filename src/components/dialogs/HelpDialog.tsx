@@ -5,7 +5,7 @@ export function HelpDialog() {
   return (
     <Modal title="快捷键与用法" onClose={() => useEditor.getState().setDialog(null)}>
       <div className="space-y-3 text-sm text-ink-200">
-        <p>建议流程：AI 或口播稿切场景 → 调版面与入场时间 → 合成配音 → 翻译 → 导出各语言视频。</p>
+        <p>建议流程：AI 分镜 → 调版面与入场时间 → 合成配音 → 翻译 → 导出各语言视频。</p>
         <ul className="space-y-1 text-xs text-ink-300">
           <li>
             <kbd className="text-paper">空格</kbd> 播放 / 暂停；顶栏重播按钮从当前场景开头再播

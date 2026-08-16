@@ -1,7 +1,6 @@
 import {
   Download,
   FilePlus,
-  FileText,
   FolderOpen,
   HelpCircle,
   Languages,
@@ -55,9 +54,6 @@ export function TopBar() {
         </button>
         <button className="btn shrink-0" onClick={() => void saveProjectFolder()}>
           <Save className="h-3.5 w-3.5" /> 保存
-        </button>
-        <button className="btn shrink-0" onClick={() => useEditor.getState().setDialog("script")}>
-          <FileText className="h-3.5 w-3.5" /> 口播稿
         </button>
         <button
           className="btn btn-accent shrink-0"

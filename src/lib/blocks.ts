@@ -6,6 +6,57 @@ export function cueUntil(cue: Cue): number {
   return cue.until ?? 1;
 }
 
+export type BoxAlign = "left" | "hcenter" | "right" | "top" | "vcenter" | "bottom" | "stretchX" | "stretchY";
+
+function roundPct(n: number) {
+  return Math.round(n * 100) / 100;
+}
+
+/** Align a block box to the 0–100 canvas. Size is kept except for stretch. */
+export function alignBlockBox(
+  box: { x: number; y: number; w: number; h: number },
+  kind: BoxAlign,
+): { x: number; y: number; w: number; h: number } {
+  const w = Math.max(1, Math.min(100, box.w));
+  const h = Math.max(1, Math.min(100, box.h));
+  let x = box.x;
+  let y = box.y;
+  let nw = w;
+  let nh = h;
+  if (kind === "left") x = 0;
+  else if (kind === "hcenter") x = roundPct((100 - w) / 2);
+  else if (kind === "right") x = roundPct(100 - w);
+  else if (kind === "top") y = 0;
+  else if (kind === "vcenter") y = roundPct((100 - h) / 2);
+  else if (kind === "bottom") y = roundPct(100 - h);
+  else if (kind === "stretchX") {
+    x = 0;
+    nw = 100;
+  } else if (kind === "stretchY") {
+    y = 0;
+    nh = 100;
+  }
+  return {
+    x: roundPct(Math.max(0, Math.min(x, 100 - nw))),
+    y: roundPct(Math.max(0, Math.min(y, 100 - nh))),
+    w: nw,
+    h: nh,
+  };
+}
+
+export function boxAlignActive(box: { x: number; y: number; w: number; h: number }, kind: BoxAlign): boolean {
+  const next = alignBlockBox(box, kind);
+  const near = (a: number, b: number) => Math.abs(a - b) < 0.05;
+  if (kind === "stretchX") return near(box.x, 0) && near(box.w, 100);
+  if (kind === "stretchY") return near(box.y, 0) && near(box.h, 100);
+  if (kind === "left" || kind === "hcenter" || kind === "right") {
+    if (near(box.w, 100) && near(box.x, 0)) return false;
+    return near(box.x, next.x);
+  }
+  if (near(box.h, 100) && near(box.y, 0)) return false;
+  return near(box.y, next.y);
+}
+
 function blk(
   type: BlockType,
   x: number,

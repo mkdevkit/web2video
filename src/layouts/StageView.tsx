@@ -9,7 +9,8 @@ import { type LangId } from "../lib/langs";
 import { cueVisible, sceneClock } from "../lib/timeline";
 import { MediaFrame } from "./MediaFrame";
 import { mediaSrcOf } from "../lib/insertImage";
-import type { Cue, LayoutBlock, Project, Scene } from "../types";
+import { listMarkerRadius, listMarkerStyleOf } from "../lib/listMarker";
+import type { Cue, LayoutBlock, ListMarkerStyle, Project, Scene } from "../types";
 
 function cueOf(scene: Scene, target: string): Cue | undefined {
   return scene.cues.find((c) => c.target === target);
@@ -17,6 +18,29 @@ function cueOf(scene: Scene, target: string): Cue | undefined {
 
 const HANDLES = ["nw", "n", "ne", "e", "se", "s", "sw", "w"] as const;
 type Handle = (typeof HANDLES)[number];
+
+function ListIndexMark({ index, style }: { index: number; style: ListMarkerStyle }) {
+  if (!style.show) return null;
+  const img = style.kind === "image" && style.image ? style.image : undefined;
+  const digit = !img || style.overlayIndex;
+  const size = `${style.size}cqw`;
+  return (
+    <span
+      className="relative flex shrink-0 items-center justify-center overflow-hidden font-bold"
+      style={{
+        width: size,
+        height: size,
+        borderRadius: listMarkerRadius(style.shape),
+        background: img ? "transparent" : style.bg,
+        color: style.color,
+        fontSize: `${style.size * 0.55}cqw`,
+      }}
+    >
+      {img ? <img src={img} alt="" className="absolute inset-0 h-full w-full object-contain" /> : null}
+      {digit ? <span className="relative z-[1]">{index}</span> : null}
+    </span>
+  );
+}
 
 export function StageView({
   scene,
@@ -90,6 +114,7 @@ export function StageView({
   const bodyFont = fontStack(project.fontId, lang);
   const captionFont = fontStack(project.captionFontId || project.fontId, lang);
   const capStyle = captionStyleOf(project.captionStyle);
+  const listMark = listMarkerStyleOf(project.listMarkerStyle);
   const cap = showCaptions
     ? captionForTime(scene, lang, source, localMs, durationMs, phase, audioMs, animLocal, animDur, (target) => {
         const cue = resolvedOf(target);
@@ -275,22 +300,18 @@ export function StageView({
             const layout = set.listLayout ?? "stack";
             const grid =
               layout === "grid" ? "grid grid-cols-2 gap-[1.4cqw]" : layout === "row" ? "flex gap-[1.4cqw]" : "flex flex-col gap-[1.4cqw]";
+            const row =
+              layout === "stack"
+                ? "flex items-start gap-[1.2cqw]"
+                : "flex flex-1 items-start gap-[1.2cqw] rounded-[1cqw] border border-white/10 bg-white/5 p-[1.4cqw]";
             return (
               <div className={`h-full ${grid}`}>
                 {items.map((it, i) => {
                   const itemCue = resolvedOf(`item:${it.id}`);
                   const ip = sampleBlock({ ...b, id: it.id, keys: undefined }, progress, itemCue, sampleOpts);
                   return (
-                    <div
-                      key={it.id}
-                      className={
-                        layout === "stack" ? "flex items-start gap-[1.2cqw]" : "flex-1 rounded-[1cqw] border border-white/10 bg-white/5 p-[1.4cqw]"
-                      }
-                      style={{ opacity: ip.opacity }}
-                    >
-                      <span className="flex h-[2.2cqw] w-[2.2cqw] shrink-0 items-center justify-center rounded-full bg-[#c45c26] text-[1.2cqw]">
-                        {i + 1}
-                      </span>
+                    <div key={it.id} className={row} style={{ opacity: ip.opacity }}>
+                      <ListIndexMark index={i + 1} style={listMark} />
                       <span className="leading-snug" style={{ fontSize: `${set.fontSize ?? 1.8}cqw`, fontFamily: typeFont }}>
                         {itemText(it, lang, source)}
                       </span>
