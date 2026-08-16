@@ -38,7 +38,7 @@ npm run dev
 | 配音 | 阿里云百炼 / 千问 TTS（设计 `qwen-voice-design`、复刻 `qwen-voice-enrollment`、合成 `qwen3-tts-vd` / `qwen3-tts-vc`） |
 | 分镜 AI | OpenAI 兼容 Chat Completions（默认 DeepSeek），function calling |
 | 翻译 | Microsoft Edge 翻译接口（Vite 反代 `/__edge_translate`） |
-| 导出画面 | `html-to-image` 逐帧截舞台 → `canvas.captureStream` + `MediaRecorder`；视频/GIF 先画到元件 canvas 再截
+| 导出画面 | `html-to-image` 逐帧截舞台 → `canvas.captureStream` + `MediaRecorder`；视频/GIF 先画到元件 canvas 再截 |
 | 导出音频 | Web Audio API 按场景时钟切片对齐口播 |
 | 工程磁盘 | File System Access API（目录句柄存 IndexedDB） |
 | 口播缓存 | IndexedDB（`web2video-audio`） |

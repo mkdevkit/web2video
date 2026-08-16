@@ -367,6 +367,7 @@ function dumpScene(sceneId?: string) {
       w: b.w,
       h: b.h,
       z: b.z ?? 1,
+      hasSrc: Boolean(b.settings?.src) || (b.type === "image" && Boolean(scene.slots.image)),
     })),
     cues: scene.cues.map((c) => ({
       id: c.id,
