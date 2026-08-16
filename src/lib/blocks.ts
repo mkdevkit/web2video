@@ -1,6 +1,6 @@
 import { uid } from "./ids";
 import { defaultSettings } from "./interpolate";
-import type { AnimKind, BlockType, Cue, LayoutBlock, LayoutId, ListItem } from "../types";
+import type { AnimKind, BlockType, Cue, CueBind, LayoutBlock, LayoutId, ListItem } from "../types";
 
 export function cueUntil(cue: Cue): number {
   return cue.until ?? 1;
@@ -94,11 +94,13 @@ export function makeBlock(type: BlockType): LayoutBlock {
 }
 
 export function defaultCues(layout: LayoutId, items: ListItem[] = [], blocks?: LayoutBlock[]): Cue[] {
-  const cue = (target: string, at: number, anim: AnimKind, until = 1): Cue => ({
+  const cue = (target: string, at: number, anim: AnimKind, bind: CueBind, until = 1): Cue => ({
     id: uid("cue"),
     target,
+    bind,
     at,
     until,
+    stay: bind === "speak" ? "body" : undefined,
     anim,
   });
   const list = blocks ?? presetBlocks(layout);
@@ -106,43 +108,44 @@ export function defaultCues(layout: LayoutId, items: ListItem[] = [], blocks?: L
     const out: Cue[] = [];
     let i = 0;
     for (const b of list) {
+      const bind: CueBind = b.type === "image" || b.type === "shape" ? "visual" : "speak";
       if (b.type === "list") {
-        items.forEach((it, j) => out.push(cue(`item:${it.id}`, Math.min(0.85, 0.12 + i * 0.08 + j * 0.12), "slide")));
+        items.forEach((it, j) => out.push(cue(`item:${it.id}`, Math.min(0.85, 0.12 + i * 0.08 + j * 0.12), "slide", "speak")));
       } else {
         const anim: AnimKind = b.type === "image" ? "kenburns" : b.type === "title" || b.type === "number" ? "scale" : "fade";
-        out.push(cue(b.id, Math.min(0.8, i * 0.1), anim));
+        out.push(cue(b.id, Math.min(0.8, i * 0.1), anim, bind));
         i += 1;
       }
     }
-    return out.length ? out : [cue("title", 0, "fade")];
+    return out.length ? out : [cue("title", 0, "fade", "speak")];
   }
   switch (layout) {
     case "cover":
-      return [cue("title", 0, "scale"), cue("subtitle", 0.18, "slide")];
+      return [cue("title", 0, "scale", "speak"), cue("subtitle", 0.18, "slide", "speak")];
     case "splitLeft":
     case "splitRight":
-      return [cue("image", 0, "kenburns"), cue("title", 0.06, "slide"), cue("body", 0.22, "fade")];
+      return [cue("image", 0, "kenburns", "visual"), cue("title", 0.06, "slide", "speak"), cue("body", 0.22, "fade", "speak")];
     case "bullets":
     case "steps":
     case "threeCol":
     case "cards":
-      return [cue("title", 0, "slide"), ...items.map((it, i) => cue(`item:${it.id}`, Math.min(0.85, 0.14 + i * 0.14), "slide"))];
+      return [cue("title", 0, "slide", "speak"), ...items.map((it, i) => cue(`item:${it.id}`, Math.min(0.85, 0.14 + i * 0.14), "slide", "speak"))];
     case "quote":
-      return [cue("number", 0, "scale"), cue("quote", 0.08, "scale"), cue("author", 0.45, "fade")];
+      return [cue("number", 0, "scale", "speak"), cue("quote", 0.08, "scale", "speak"), cue("author", 0.45, "fade", "speak")];
     case "fullImage":
-      return [cue("image", 0, "kenburns"), cue("caption", 0.2, "slide")];
+      return [cue("image", 0, "kenburns", "visual"), cue("caption", 0.2, "slide", "speak")];
     case "compare":
-      return [cue("title", 0, "fade"), cue("body", 0.12, "slide"), cue("caption", 0.28, "slide")];
+      return [cue("title", 0, "fade", "speak"), cue("body", 0.12, "slide", "speak"), cue("caption", 0.28, "slide", "speak")];
     case "bigStat":
-      return [cue("number", 0, "scale"), cue("title", 0.2, "fade"), cue("body", 0.38, "slide")];
+      return [cue("number", 0, "scale", "speak"), cue("title", 0.2, "fade", "speak"), cue("body", 0.38, "slide", "speak")];
     case "chapter":
-      return [cue("subtitle", 0, "fade"), cue("title", 0.12, "scale")];
+      return [cue("subtitle", 0, "fade", "speak"), cue("title", 0.12, "scale", "speak")];
     case "overlay":
-      return [cue("image", 0, "kenburns"), cue("title", 0.15, "slide"), cue("subtitle", 0.32, "fade")];
+      return [cue("image", 0, "kenburns", "visual"), cue("title", 0.15, "slide", "speak"), cue("subtitle", 0.32, "fade", "speak")];
     case "qa":
-      return [cue("title", 0, "slide"), cue("body", 0.28, "fade")];
+      return [cue("title", 0, "slide", "speak"), cue("body", 0.28, "fade", "speak")];
     default:
-      return [cue("title", 0, "fade")];
+      return [cue("title", 0, "fade", "speak")];
   }
 }
 

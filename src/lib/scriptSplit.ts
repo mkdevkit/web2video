@@ -63,12 +63,15 @@ export function splitScript(md: string, lang: LangId = "zh"): Scene[] {
       items: items.length ? items : undefined,
       caption: layout === "fullImage" ? t18(lang, body || title) : undefined,
     };
-    const narration = t18(lang, [title, body, ...parsed.items].filter(Boolean).join("。"));
+    const speak = Object.fromEntries(items.map((it) => [`item:${it.id}`, t18(lang, it.i18n[lang] ?? "")]));
+    const narration = t18(lang, [title, body].filter(Boolean).join("。") || parsed.items.join("。"));
     return {
       id: uid("sc"),
       name: title.slice(0, 16) || `场景 ${i + 1}`,
       layoutId: layout,
       narration,
+      narrationClose: t18(lang, ""),
+      speak,
       slots,
       cues: defaultCues(layout, items),
       bg: "#141811",

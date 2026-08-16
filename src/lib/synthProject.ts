@@ -1,7 +1,8 @@
 import type { SceneAudio } from "../types";
 import type { LangId } from "./langs";
 import { resolveVoice, synthesizeScene } from "./tts";
-import { textOf } from "./textI18n";
+import { sourceLangOf } from "./textI18n";
+import { composeNarration } from "./narration";
 import { useEditor } from "../store/useEditor";
 
 export async function synthScenes(
@@ -10,12 +11,12 @@ export async function synthScenes(
   onProgress?: (done: number, total: number) => void,
 ): Promise<void> {
   const { project } = useEditor.getState();
-  const source = project.sourceLang;
+  const source = sourceLangOf(project);
   const { provider, voiceId } = resolveVoice(project, lang);
   const scenes = project.scenes.filter((s) => sceneIds.includes(s.id));
   let done = 0;
   for (const scene of scenes) {
-    const text = textOf(scene.narration, lang, source);
+    const text = composeNarration(scene, lang, source);
     if (text.trim()) {
       const audio: SceneAudio = await synthesizeScene(scene.id, lang, text, voiceId, provider);
       useEditor.getState().markAudio(scene.id, lang, audio);

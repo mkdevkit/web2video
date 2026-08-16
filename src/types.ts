@@ -30,6 +30,7 @@ export type BlockType =
   | "image"
   | "shape";
 export type TtsProvider = "edge" | "azure" | "openai";
+export type SceneTransition = "cut" | "crossfade";
 
 export interface TextI18n {
   i18n: Partial<Record<LangId, string>>;
@@ -54,17 +55,31 @@ export interface SceneAudio {
   stale?: boolean;
 }
 
+export type CueBind = "speak" | "visual";
+export type CueStay = "speech" | "body";
+
 export interface Cue {
   id: string;
   target: string;
+  /** speak = follow this element's line in the current language. visual = 0–1 of the body, stretched per language. */
+  bind?: CueBind;
+  /** visual: start as 0–1 of body. speak: fallback if that line is missing. */
   at: number;
+  /** visual: end as 0–1 of body. speak: fallback if that line is missing. */
   until: number;
+  /** speak: appear this many ms before the line (negative = after the line starts). */
+  leadMs?: number;
+  /** speak: extra ms after the line ends, when stay is `speech`. */
+  trailMs?: number;
+  /** speak: stay until the line ends, or until the body ends. Default `body`. */
+  stay?: CueStay;
   anim: AnimKind;
 }
 
 export type EaseKind = "linear" | "ease" | "easeIn" | "easeOut";
 
 export interface BlockKeyframe {
+  /** 0–1 of this element's on-stage window. */
   t: number;
   x?: number;
   y?: number;
@@ -120,12 +135,31 @@ export interface Scene {
   id: string;
   name: string;
   layoutId: LayoutId;
+  /** Opening narration (scene start). */
   narration: TextI18n;
+  /** Closing narration (scene end). */
+  narrationClose?: TextI18n;
+  /** Per-element spoken lines. Keys are block ids or `item:{id}`. */
+  speak?: Partial<Record<string, TextI18n>>;
   audioByLang?: Partial<Record<LangId, SceneAudio>>;
   slots: SceneSlots;
   cues: Cue[];
   blocks?: LayoutBlock[];
   bg: string;
+  /** Extra ms after speech before the next scene. Undefined inherits the project default. */
+  holdMs?: number;
+  /** Silence before opening narration. Ignored if there is no opening line. */
+  openPadBeforeMs?: number;
+  /** Silence after opening narration, before body animation. */
+  openPadAfterMs?: number;
+  /** Silence after body, before closing narration. */
+  closePadBeforeMs?: number;
+  /** Silence after closing narration, before hold. */
+  closePadAfterMs?: number;
+  /** How this scene leaves. Undefined inherits the project default. */
+  transition?: SceneTransition;
+  /** Crossfade length in ms. Undefined inherits the project default. */
+  transitionMs?: number;
 }
 
 export interface VoiceProfile {
@@ -146,6 +180,14 @@ export interface Project {
   voices: VoiceProfile[];
   voiceByLang: Partial<Record<LangId, string>>;
   showCaptions: boolean;
+  /** Extra ms after each scene's speech before cutting away. */
+  holdMs: number;
+  openPadBeforeMs: number;
+  openPadAfterMs: number;
+  closePadBeforeMs: number;
+  closePadAfterMs: number;
+  transition: SceneTransition;
+  transitionMs: number;
   scenes: Scene[];
 }
 

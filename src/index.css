@@ -61,6 +61,10 @@ textarea {
     @apply border-brass/70 ring-1 ring-brass/40;
   }
 
+  input[type="range"] {
+    @apply min-w-0;
+  }
+
   .btn {
     @apply inline-flex items-center justify-center gap-1.5 rounded-md border border-ink-600 bg-ink-700 px-2.5 py-1.5 text-xs font-medium text-ink-100 transition hover:bg-ink-600 disabled:opacity-40;
   }

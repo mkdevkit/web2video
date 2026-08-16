@@ -66,22 +66,33 @@ export function restPose(block: LayoutBlock): BlockPose {
   };
 }
 
-export function sampleBlock(block: LayoutBlock, progress: number, cue?: Cue): BlockPose {
+export type SampleOpts = {
+  /** Hold the first or last body frame at full opacity (opening / closing narration). */
+  freeze?: "start" | "end";
+  /** Smallest cue.at in this scene; used so the first frame is never empty. */
+  firstAt?: number;
+};
+
+export function sampleBlock(block: LayoutBlock, progress: number, cue?: Cue, opts?: SampleOpts): BlockPose {
   const rest = restPose(block);
+  const until = cue ? (cue.until ?? 1) : 1;
+  const at = cue?.at ?? 0;
+  const frame = opts?.freeze === "start" ? 0 : opts?.freeze === "end" ? 1 : progress;
+  const keyProgress = cue ? (frame - at) / Math.max(0.0001, until - at) : frame;
   const keys = [...(block.keys ?? [])].sort((a, b) => a.t - b.t);
   let pose = rest;
   if (keys.length === 1) {
     pose = { ...rest, ...pick(rest, keys[0]) };
   } else if (keys.length >= 2) {
-    if (progress <= keys[0].t) pose = { ...rest, ...pick(rest, keys[0]) };
-    else if (progress >= keys[keys.length - 1].t) pose = { ...rest, ...pick(rest, keys[keys.length - 1]) };
+    if (keyProgress <= keys[0].t) pose = { ...rest, ...pick(rest, keys[0]) };
+    else if (keyProgress >= keys[keys.length - 1].t) pose = { ...rest, ...pick(rest, keys[keys.length - 1]) };
     else {
       let i = 0;
-      while (i < keys.length - 1 && keys[i + 1].t < progress) i += 1;
+      while (i < keys.length - 1 && keys[i + 1].t < keyProgress) i += 1;
       const a = keys[i];
       const b = keys[i + 1];
       const span = Math.max(0.0001, b.t - a.t);
-      const t = easeFn(b.ease ?? a.ease, (progress - a.t) / span);
+      const t = easeFn(b.ease ?? a.ease, (keyProgress - a.t) / span);
       const pa = pick(rest, a);
       const pb = pick(rest, b);
       pose = {
@@ -97,7 +108,12 @@ export function sampleBlock(block: LayoutBlock, progress: number, cue?: Cue): Bl
 
   let vis = 1;
   if (cue) {
-    if (!cueVisible(cue, progress)) vis = 0;
+    if (opts?.freeze === "start") {
+      const cut = (opts.firstAt ?? 0) + 0.02;
+      vis = cue.at <= cut ? 1 : 0;
+    } else if (opts?.freeze === "end") {
+      vis = cueVisible(cue, 1) ? 1 : 0;
+    } else if (!cueVisible(cue, progress)) vis = 0;
     else vis = keys.length ? 1 : cueProgress(cue, progress);
   }
   return { ...pose, opacity: pose.opacity * vis };

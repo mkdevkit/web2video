@@ -1,5 +1,7 @@
 import type { LangId } from "./langs";
 import type { ListItem, Project, Scene, TextI18n } from "../types";
+import { BLOCK_TYPES } from "../types";
+import { sceneBlocks } from "./blocks";
 
 export function sourceLangOf(project: Project): LangId {
   return project.sourceLang ?? "zh";
@@ -28,19 +30,32 @@ export function itemText(item: ListItem, lang: LangId, source: LangId): string {
   return displayI18n(item.i18n, lang, source);
 }
 
-export type I18nRowKind = "narration" | "title" | "subtitle" | "body" | "caption" | "quote" | "author" | "number" | "item";
+export type I18nRowKind =
+  | "narration"
+  | "narrationClose"
+  | "speak"
+  | "title"
+  | "subtitle"
+  | "body"
+  | "caption"
+  | "quote"
+  | "author"
+  | "number"
+  | "item";
 
 export interface I18nRow {
   sceneId: string;
   sceneName: string;
   kind: I18nRowKind;
   itemId?: string;
+  speakKey?: string;
   label: string;
   i18n: Partial<Record<LangId, string>>;
 }
 
-const KIND_LABEL: Record<Exclude<I18nRowKind, "item">, string> = {
-  narration: "口播",
+const KIND_LABEL: Record<Exclude<I18nRowKind, "item" | "speak">, string> = {
+  narration: "开场口播",
+  narrationClose: "结束口播",
   title: "标题",
   subtitle: "副标题",
   body: "正文",
@@ -53,7 +68,7 @@ const KIND_LABEL: Record<Exclude<I18nRowKind, "item">, string> = {
 export function collectI18nRows(project: Project): I18nRow[] {
   const rows: I18nRow[] = [];
   for (const scene of project.scenes) {
-    const push = (kind: Exclude<I18nRowKind, "item">, slot?: TextI18n) => {
+    const push = (kind: Exclude<I18nRowKind, "item" | "speak">, slot?: TextI18n) => {
       if (!slot) return;
       rows.push({
         sceneId: scene.id,
@@ -64,6 +79,20 @@ export function collectI18nRows(project: Project): I18nRow[] {
       });
     };
     push("narration", scene.narration);
+    push("narrationClose", scene.narrationClose);
+    for (const block of sceneBlocks(scene)) {
+      const slot = scene.speak?.[block.id];
+      if (!slot) continue;
+      const typeLabel = BLOCK_TYPES.find((b) => b.type === block.type)?.label ?? block.type;
+      rows.push({
+        sceneId: scene.id,
+        sceneName: scene.name,
+        kind: "speak",
+        speakKey: block.id,
+        label: `口播 · ${block.name || typeLabel}`,
+        i18n: slot.i18n ?? {},
+      });
+    }
     push("title", scene.slots.title);
     push("subtitle", scene.slots.subtitle);
     push("body", scene.slots.body);
@@ -80,6 +109,18 @@ export function collectI18nRows(project: Project): I18nRow[] {
         label: `条目 ${i + 1}`,
         i18n: item.i18n ?? {},
       });
+      const spoken = scene.speak?.[`item:${item.id}`];
+      if (spoken) {
+        rows.push({
+          sceneId: scene.id,
+          sceneName: scene.name,
+          kind: "speak",
+          speakKey: `item:${item.id}`,
+          itemId: item.id,
+          label: `口播 · 条目 ${i + 1}`,
+          i18n: spoken.i18n ?? {},
+        });
+      }
     }
   }
   return rows;
@@ -91,6 +132,10 @@ export function sourceTextOf(row: I18nRow, source: LangId): string {
 
 export function patchSceneI18n(scene: Scene, row: I18nRow, i18n: Partial<Record<LangId, string>>): Scene {
   if (row.kind === "narration") return { ...scene, narration: { i18n } };
+  if (row.kind === "narrationClose") return { ...scene, narrationClose: { i18n } };
+  if (row.kind === "speak" && row.speakKey) {
+    return { ...scene, speak: { ...scene.speak, [row.speakKey]: { i18n } } };
+  }
   if (row.kind === "item") {
     return {
       ...scene,

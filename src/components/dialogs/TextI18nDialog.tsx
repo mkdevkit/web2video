@@ -41,7 +41,7 @@ export function TextI18nDialog() {
 
   const ttsAfter = async (targets: LangId[]) => {
     if (!alsoTts) return;
-    const ids = [...new Set(rows.filter((r) => r.kind === "narration").map((r) => r.sceneId))];
+    const ids = [...new Set(project.scenes.map((s) => s.id))];
     for (const to of targets) await synthScenes(ids, to);
   };
 
@@ -122,7 +122,7 @@ export function TextI18nDialog() {
         </label>
       </div>
       <p className="mb-3 text-[11px] leading-relaxed text-ink-400">
-        使用 Microsoft Edge 免费翻译（无需密钥）。口播与画面文案分开翻译；时间轴按配音时长比例对齐。机翻请校对专有名词。
+        使用 Microsoft Edge 免费翻译（无需密钥）。开场/结束口播、元件口播与画面文案分开翻译；合成配音后会按各段口播写入场时间。机翻请校对专有名词。
       </p>
       {error && <p className="mb-2 text-xs text-red-400">{error}</p>}
       {!rows.length && <p className="py-8 text-center text-sm text-ink-400">还没有可翻译的文本。</p>}
@@ -145,7 +145,7 @@ export function TextI18nDialog() {
             </thead>
             <tbody>
               {shown.map((row) => (
-                <tr key={`${row.sceneId}-${row.kind}-${row.itemId ?? ""}`} className="border-t border-ink-700 align-top">
+                <tr key={`${row.sceneId}-${row.kind}-${row.itemId ?? ""}-${row.speakKey ?? ""}`} className="border-t border-ink-700 align-top">
                   <td className="max-w-[88px] truncate px-2 py-1.5 text-ink-200">{row.sceneName}</td>
                   <td className="max-w-[72px] truncate px-2 py-1.5 text-ink-400">{row.label}</td>
                   {LANGS.map((l) => (

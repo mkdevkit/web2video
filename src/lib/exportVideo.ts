@@ -1,10 +1,39 @@
 import { toCanvas } from "html-to-image";
 import { flushSync } from "react-dom";
 import { getAudio } from "./audioStore";
-import { sceneDuration, totalDuration } from "./timeline";
+import { sceneClock, totalDuration } from "./timeline";
 import { ASPECT_PX } from "../types";
 import type { LangId } from "./langs";
 import type { Project } from "../types";
+
+function copySlice(ctx: AudioContext, src: AudioBuffer, startSec: number, endSec: number): AudioBuffer | null {
+  const sr = src.sampleRate;
+  const start = Math.max(0, Math.floor(startSec * sr));
+  const end = Math.min(src.length, Math.floor(endSec * sr));
+  const len = end - start;
+  if (len < 32) return null;
+  const out = ctx.createBuffer(src.numberOfChannels, len, sr);
+  for (let c = 0; c < src.numberOfChannels; c++) {
+    out.getChannelData(c).set(src.getChannelData(c).subarray(start, start + len));
+  }
+  return out;
+}
+
+function playSlice(
+  ctx: AudioContext,
+  dest: AudioNode,
+  buf: AudioBuffer,
+  startSec: number,
+  endSec: number,
+  when: number,
+) {
+  const slice = copySlice(ctx, buf, startSec, endSec);
+  if (!slice) return;
+  const src = ctx.createBufferSource();
+  src.buffer = slice;
+  src.connect(dest);
+  src.start(Math.max(ctx.currentTime, when));
+}
 
 function pickMime(): string {
   const types = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"];
@@ -40,14 +69,15 @@ export async function recordProject(opts: {
 
   let offset = 0;
   for (const scene of project.scenes) {
-    const dur = sceneDuration(scene, lang) / 1000;
+    const clock = sceneClock(scene, lang, project);
+    const dur = clock.totalMs / 1000;
     const blob = await getAudio(scene.id, lang);
     if (blob) {
       const buf = await audioCtx.decodeAudioData(await blob.arrayBuffer());
-      const src = audioCtx.createBufferSource();
-      src.buffer = buf;
-      src.connect(dest);
-      src.start(audioCtx.currentTime + offset);
+      const t0 = audioCtx.currentTime + offset;
+      playSlice(audioCtx, dest, buf, clock.audioOpenStartMs / 1000, clock.audioOpenEndMs / 1000, t0 + clock.openBeforeMs / 1000);
+      playSlice(audioCtx, dest, buf, clock.audioBodyStartMs / 1000, clock.audioBodyEndMs / 1000, t0 + clock.bodyStartMs / 1000);
+      playSlice(audioCtx, dest, buf, clock.audioCloseStartMs / 1000, clock.audioCloseEndMs / 1000, t0 + clock.closeSpeechStartMs / 1000);
     }
     offset += dur;
   }

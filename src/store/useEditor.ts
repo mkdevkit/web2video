@@ -1,11 +1,13 @@
 import { create } from "zustand";
 import { uid } from "../lib/ids";
 import { collectI18nRows, patchSceneI18n, writeI18n } from "../lib/textI18n";
-import { defaultCues, cueUntil, ensureCues, makeBlock, presetBlocks, sceneBlocks } from "../lib/blocks";
+import { defaultCues, ensureCues, makeBlock, presetBlocks, sceneBlocks } from "../lib/blocks";
 import { upsertKey, removeKeyAt } from "../lib/interpolate";
 import { emptyScene, normalizeProject, sampleProject } from "../lib/templates";
 import { sceneAt, sceneStarts } from "../lib/timeline";
-import type { BlockSettings, BlockType, Cue, EditorSnapshot, LayoutBlock, LayoutId, Project, Scene, SceneAudio, TtsProvider, VoiceProfile } from "../types";
+import { applyResolvedCueRange, bakeCueBind } from "../lib/cues";
+import { itemSpeakKey, markLangAudioStale, ensureCuesFromBeats, writeSpeak } from "../lib/narration";
+import type { BlockSettings, BlockType, Cue, CueBind, EditorSnapshot, LayoutBlock, LayoutId, Project, Scene, SceneAudio, TtsProvider, VoiceProfile } from "../types";
 import type { LangId } from "../lib/langs";
 import type { I18nRow } from "../lib/textI18n";
 
@@ -88,13 +90,16 @@ interface EditorState {
   replaceScenes: (scenes: Scene[]) => void;
   patchScene: (id: string, patch: Partial<Scene> | ((s: Scene) => Scene), history?: boolean) => void;
   setLayout: (id: string, layout: LayoutId) => void;
-  patchSlotText: (sceneId: string, key: "title" | "subtitle" | "body" | "caption" | "quote" | "author" | "number" | "narration", value: string) => void;
+  patchSlotText: (sceneId: string, key: "title" | "subtitle" | "body" | "caption" | "quote" | "author" | "number" | "narration" | "narrationClose", value: string) => void;
   patchItemText: (sceneId: string, itemId: string, value: string) => void;
+  patchSpeak: (sceneId: string, key: string, value: string) => void;
   addItem: (sceneId: string) => void;
   removeItem: (sceneId: string, itemId: string) => void;
   setImage: (sceneId: string, src: string) => void;
   setCueAt: (sceneId: string, cueId: string, at: number) => void;
   setCueRange: (sceneId: string, cueId: string, at: number, until: number) => void;
+  setCueBind: (sceneId: string, cueId: string, bind: CueBind) => void;
+  patchCue: (sceneId: string, cueId: string, patch: Partial<Cue>) => void;
   setCueAnim: (sceneId: string, cueId: string, anim: Cue["anim"]) => void;
   addBlock: (sceneId: string, type: BlockType) => void;
   patchBlock: (sceneId: string, blockId: string, patch: Partial<LayoutBlock>) => void;
@@ -305,7 +310,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   setCurrentScene: (id, seek = true) => {
     const { project } = get();
     const lang = project.previewLang;
-    const starts = sceneStarts(project.scenes, lang);
+    const starts = sceneStarts(project, lang);
     const idx = project.scenes.findIndex((s) => s.id === id);
     set({
       currentSceneId: id,
@@ -349,15 +354,11 @@ export const useEditor = create<EditorState>((set, get) => ({
     get().patchScene(
       sceneId,
       (s) => {
-        if (key === "narration") {
-          const audio = s.audioByLang?.[lang];
-          return {
-            ...s,
-            narration: { i18n: writeI18n(s.narration.i18n, lang, source, value) },
-            audioByLang: audio
-              ? { ...s.audioByLang, [lang]: { ...audio, stale: true } }
-              : s.audioByLang,
-          };
+        if (key === "narration" || key === "narrationClose") {
+          const next = writeSpeak(s, key === "narration" ? "open" : "close", {
+            i18n: writeI18n(key === "narration" ? s.narration.i18n : s.narrationClose?.i18n, lang, source, value),
+          });
+          return markLangAudioStale(next, lang);
         }
         const slot = s.slots[key];
         return {
@@ -367,6 +368,19 @@ export const useEditor = create<EditorState>((set, get) => ({
             [key]: { i18n: writeI18n(slot?.i18n, lang, source, value) },
           },
         };
+      },
+      true,
+    );
+  },
+  patchSpeak: (sceneId, key, value) => {
+    const lang = get().project.previewLang;
+    const source = get().project.sourceLang;
+    get().patchScene(
+      sceneId,
+      (s) => {
+        const prev = key === "open" ? s.narration : key === "close" ? s.narrationClose : s.speak?.[key];
+        const next = markLangAudioStale(writeSpeak(s, key, { i18n: writeI18n(prev?.i18n, lang, source, value) }), lang);
+        return { ...next, cues: ensureCuesFromBeats(next, lang, source) };
       },
       true,
     );
@@ -405,8 +419,10 @@ export const useEditor = create<EditorState>((set, get) => ({
       sceneId,
       (s) => {
         const items = (s.slots.items ?? []).filter((it) => it.id !== itemId);
+        const speak = { ...s.speak };
+        delete speak[itemSpeakKey(itemId)];
         const blocks = sceneBlocks(s);
-        return { ...s, slots: { ...s.slots, items }, cues: defaultCues(s.layoutId, items, s.layoutId === "custom" ? blocks : undefined) };
+        return { ...s, speak, slots: { ...s.slots, items }, cues: defaultCues(s.layoutId, items, s.layoutId === "custom" ? blocks : undefined) };
       },
       true,
     );
@@ -415,19 +431,51 @@ export const useEditor = create<EditorState>((set, get) => ({
     get().patchScene(sceneId, (s) => ({ ...s, slots: { ...s.slots, image: src } }), true);
   },
   setCueAt: (sceneId, cueId, at) => {
-    const cue = get().project.scenes.find((s) => s.id === sceneId)?.cues.find((c) => c.id === cueId);
-    get().setCueRange(sceneId, cueId, at, cueUntil(cue ?? { until: 1, at: 0, id: "", target: "", anim: "fade" }));
+    const project = get().project;
+    const scene = project.scenes.find((s) => s.id === sceneId);
+    const cue = scene?.cues.find((c) => c.id === cueId);
+    if (!cue) return;
+    const resolved = scene
+      ? applyResolvedCueRange(scene, cue, at, cue.until ?? 1, project.previewLang, project.sourceLang, project)
+      : cue;
+    get().setCueRange(sceneId, cueId, resolved.at, resolved.until);
   },
   setCueRange: (sceneId, cueId, at, until) => {
-    const a = Math.min(0.98, Math.max(0, at));
-    const u = Math.min(1, Math.max(a + 0.02, until));
+    const project = get().project;
+    const lang = project.previewLang;
+    const source = project.sourceLang;
+    get().patchScene(
+      sceneId,
+      (s) => {
+        const cue = s.cues.find((c) => c.id === cueId);
+        if (!cue) return s;
+        const next = applyResolvedCueRange(s, cue, at, until, lang, source, project);
+        return { ...s, cues: ensureCues(s.cues).map((c) => (c.id === cueId ? next : c)) };
+      },
+      false,
+    );
+  },
+  setCueBind: (sceneId, cueId, bind) => {
+    const project = get().project;
+    get().patchScene(
+      sceneId,
+      (s) => {
+        const cue = s.cues.find((c) => c.id === cueId);
+        if (!cue) return s;
+        const next = bakeCueBind(s, cue, bind, project.previewLang, project.sourceLang, project);
+        return { ...s, cues: s.cues.map((c) => (c.id === cueId ? next : c)) };
+      },
+      true,
+    );
+  },
+  patchCue: (sceneId, cueId, patch) => {
     get().patchScene(
       sceneId,
       (s) => ({
         ...s,
-        cues: ensureCues(s.cues).map((c) => (c.id === cueId ? { ...c, at: a, until: u } : c)),
+        cues: s.cues.map((c) => (c.id === cueId ? { ...c, ...patch } : c)),
       }),
-      false,
+      true,
     );
   },
   setCueAnim: (sceneId, cueId, anim) => {
@@ -471,9 +519,12 @@ export const useEditor = create<EditorState>((set, get) => ({
       sceneId,
       (s) => {
         const blocks = sceneBlocks(s).filter((b) => b.id !== blockId);
+        const speak = { ...s.speak };
+        delete speak[blockId];
         return {
           ...s,
           blocks,
+          speak,
           cues: (s.cues ?? []).filter((c) => c.target !== blockId),
         };
       },
@@ -509,16 +560,14 @@ export const useEditor = create<EditorState>((set, get) => ({
       scenes: get().project.scenes.map((s) => {
         if (s.id !== row.sceneId) return s;
         const latest = collectI18nRows({ ...get().project, scenes: [s] }).find(
-          (r) => r.kind === row.kind && r.itemId === row.itemId,
+          (r) => r.kind === row.kind && r.itemId === row.itemId && r.speakKey === row.speakKey,
         );
         const i18n = writeI18n(latest?.i18n ?? row.i18n, lang, source, value);
         const next = patchSceneI18n(s, row, i18n);
-        if (row.kind === "narration" && next.audioByLang?.[lang]) {
-          return {
-            ...next,
-            audioByLang: { ...next.audioByLang, [lang]: { ...next.audioByLang[lang]!, stale: true } },
-          };
+        if ((row.kind === "narration" || row.kind === "narrationClose" || row.kind === "speak") && next.audioByLang?.[lang]) {
+          return { ...markLangAudioStale(next, lang), cues: ensureCuesFromBeats(next, lang, source) };
         }
+        if (row.kind === "speak") return { ...next, cues: ensureCuesFromBeats(next, lang, source) };
         return next;
       }),
     };
@@ -526,9 +575,14 @@ export const useEditor = create<EditorState>((set, get) => ({
     persist(project, get().currentSceneId);
   },
   markAudio: (sceneId, lang, audio) => {
+    const source = get().project.sourceLang;
     get().patchScene(
       sceneId,
-      (s) => ({ ...s, audioByLang: { ...s.audioByLang, [lang]: audio } }),
+      (s) => ({
+        ...s,
+        audioByLang: { ...s.audioByLang, [lang]: audio },
+        cues: ensureCuesFromBeats(s, lang, source),
+      }),
       false,
     );
   },

@@ -61,7 +61,18 @@ export function AudioEngine() {
   useEffect(() => {
     const el = audioRef.current;
     if (!el || !at || exporting) return;
-    const local = at.localMs / 1000;
+    const audioMs = at.audioMs;
+    if (audioMs == null) {
+      el.pause();
+      return;
+    }
+    const local = audioMs / 1000;
+    const ended = Number.isFinite(el.duration) && local >= el.duration - 0.04;
+    if (ended) {
+      el.pause();
+      el.currentTime = el.duration;
+      return;
+    }
     if (Number.isFinite(el.duration) && Math.abs(el.currentTime - local) > 0.12) {
       el.currentTime = Math.min(local, el.duration || local);
     }

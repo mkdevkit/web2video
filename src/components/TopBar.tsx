@@ -9,13 +9,15 @@ import {
   Pause,
   Play,
   Redo2,
+  RotateCcw,
   Save,
   Undo2,
 } from "lucide-react";
 import { LANGS, langZhName, type LangId } from "../lib/langs";
 import { openProjectFolder, saveProjectFolder } from "../lib/projectFolder";
-import { totalDuration, formatMs } from "../lib/timeline";
+import { sceneStarts, totalDuration, formatMs } from "../lib/timeline";
 import { useEditor } from "../store/useEditor";
+import { AddBlockMenu } from "./AddBlockMenu";
 
 export function TopBar() {
   const project = useEditor((s) => s.project);
@@ -61,6 +63,7 @@ export function TopBar() {
         <button className="btn shrink-0" onClick={() => useEditor.getState().setDialog("tts")}>
           <Mic className="h-3.5 w-3.5" /> 配音
         </button>
+        <AddBlockMenu />
         <button className="btn btn-accent shrink-0" onClick={() => useEditor.getState().setDialog("export")}>
           <Download className="h-3.5 w-3.5" /> 导出
         </button>
@@ -72,6 +75,19 @@ export function TopBar() {
         </button>
       </div>
       <div className="flex shrink-0 items-center gap-1.5">
+        <button
+          className="btn px-2"
+          title="重播当前场景"
+          onClick={() => {
+            const s = useEditor.getState();
+            const idx = s.project.scenes.findIndex((sc) => sc.id === s.currentSceneId);
+            const start = sceneStarts(s.project, s.project.previewLang)[idx] ?? 0;
+            s.setPlayhead(start);
+            s.setPlaying(true);
+          }}
+        >
+          <RotateCcw className="h-3.5 w-3.5" />
+        </button>
         <button
           className="btn btn-accent px-2"
           onClick={() => useEditor.getState().setPlaying(!playing)}
