@@ -1,4 +1,4 @@
-import { SPEAK_CLOSE, SPEAK_OPEN, beatSpansForScene } from "./narration";
+import { SPEAK_CLOSE, SPEAK_OPEN, beatSpansForScene, bilingualCaptionLangOf, captionSecondaryText } from "./narration";
 import { sourceLangOf } from "./textI18n";
 import { sceneClock, sceneStarts } from "./timeline";
 import type { LangId } from "./langs";
@@ -34,8 +34,11 @@ export function collectSubtitles(project: Project, lang: LangId): SubtitleCue[] 
     const clock = sceneClock(scene, lang, project);
     const origin = starts[i];
     for (const beat of beatSpansForScene(scene, lang, source)) {
-      const text = beat.text.replace(/\s+/g, " ").trim();
-      if (!text) continue;
+      const primary = beat.text.replace(/\s+/g, " ").trim();
+      if (!primary) continue;
+      const other = bilingualCaptionLangOf(project, lang);
+      const secondary = other ? captionSecondaryText(scene, beat.target, other, source, primary) : "";
+      const text = secondary ? `${primary}\n${secondary}` : primary;
       let start = origin + audioToLocal(clock, beat.startMs, beat.target);
       let end = origin + audioToLocal(clock, beat.endMs, beat.target);
       if (end < start) [start, end] = [end, start];

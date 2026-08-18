@@ -4,7 +4,7 @@ import { pickImageFile } from "../lib/insertImage";
 import { useEditor } from "../store/useEditor";
 import type { CaptionBox, ListMarkerKind, ListMarkerShape, StageFontId } from "../types";
 import { Field } from "./ui";
-import type { LangId } from "../lib/langs";
+import { LANGS, langZhName, type LangId } from "../lib/langs";
 
 function FontPick({
   label,
@@ -93,7 +93,37 @@ export function CaptionFields() {
         />
         显示口播字幕条
       </label>
-      <p className="text-[10px] text-ink-500">默认关闭。烧录到画面请在导出里勾选；也可另存字幕文件。字体在「字体」页选。</p>
+      <label className="flex items-center gap-2 text-xs text-ink-200">
+        <input
+          type="checkbox"
+          checked={Boolean(project.bilingualCaptions)}
+          onChange={(e) => {
+            const on = e.target.checked;
+            useEditor.getState().updateProject(on ? { bilingualCaptions: true, showCaptions: true } : { bilingualCaptions: false });
+          }}
+        />
+        双语字幕
+      </label>
+      {project.bilingualCaptions && (
+        <Field label="第二语言">
+          <select
+            className="field max-w-xs"
+            value={project.bilingualCaptionLang ?? (project.sourceLang !== project.previewLang ? project.sourceLang : project.previewLang === "zh" ? "en" : "zh")}
+            onChange={(e) =>
+              useEditor.getState().updateProject({ bilingualCaptionLang: e.target.value as LangId })
+            }
+          >
+            {LANGS.map((l) => (
+              <option key={l.id} value={l.id}>
+                {langZhName(l.id)}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
+      <p className="text-[10px] text-ink-500">
+        默认关闭。双语时主行跟当前配音语言，副行跟第二语言（同一句口播）。烧录到画面请在导出里勾选；也可另存字幕文件。字体在「字体」页选。
+      </p>
       {project.showCaptions && (
         <>
           <div className="grid grid-cols-2 gap-2">

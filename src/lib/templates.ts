@@ -9,7 +9,7 @@ import { DEFAULT_HOLD_MS, DEFAULT_TRANSITION, DEFAULT_TRANSITION_MS, DEFAULT_OPE
 import { itemSpeakKey } from "./narration";
 import { asNameI18n } from "./textI18n";
 import type { DialogueLine, DialogueSide, LayoutId, Project, Scene, SceneTransition } from "../types";
-import type { LangId } from "./langs";
+import { isLangId, type LangId } from "./langs";
 
 export const DEFAULT_PROJECT_NAME = "未命名口播";
 export const DEFAULT_SCENE_BG = "#141811";
@@ -127,6 +127,7 @@ export function sampleProject(): Project {
     voiceId: "",
     voiceByLang: defaultVoiceByLang(voices),
     showCaptions: false,
+    bilingualCaptions: false,
     showTopProgress: false,
     fontId: DEFAULT_FONT_ID,
     titleFontId: DEFAULT_TITLE_FONT_ID,
@@ -249,6 +250,7 @@ export function emptyProject(name = DEFAULT_PROJECT_NAME): Project {
     voiceId: "",
     voiceByLang: defaultVoiceByLang(voices),
     showCaptions: false,
+    bilingualCaptions: false,
     showTopProgress: false,
     fontId: DEFAULT_FONT_ID,
     titleFontId: DEFAULT_TITLE_FONT_ID,
@@ -356,6 +358,8 @@ export function normalizeProject(data: Project): Project {
         ? (Object.values(data.voiceByLang).find(Boolean) as string | undefined) ?? ""
         : "",
     showCaptions: data.showCaptions === true,
+    bilingualCaptions: data.bilingualCaptions === true,
+    bilingualCaptionLang: isLangId(data.bilingualCaptionLang as string) ? data.bilingualCaptionLang : undefined,
     showTopProgress: data.showTopProgress === true,
     fontId: isStageFontId(data.fontId) ? data.fontId : DEFAULT_FONT_ID,
     titleFontId: isStageFontId(data.titleFontId) ? data.titleFontId : DEFAULT_TITLE_FONT_ID,

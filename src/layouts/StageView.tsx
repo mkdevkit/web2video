@@ -2,7 +2,7 @@ import { useRef, type CSSProperties, type MouseEvent } from "react";
 import { sceneBlocks } from "../lib/blocks";
 import { bodyBeatSpans, resolveCue } from "../lib/cues";
 import { mergedSettings, sampleBlock } from "../lib/interpolate";
-import { captionForTime } from "../lib/narration";
+import { captionBeatForTime, bilingualCaptionLangOf, captionSecondaryText } from "../lib/narration";
 import { captionStyleOf, fontStack, hexAlpha, resolveBlockFont } from "../lib/fonts";
 import { itemText, textOf } from "../lib/textI18n";
 import { type LangId } from "../lib/langs";
@@ -115,15 +115,20 @@ export function StageView({
   const captionFont = fontStack(project.captionFontId || project.fontId, lang);
   const capStyle = captionStyleOf(project.captionStyle);
   const listMark = listMarkerStyleOf(project.listMarkerStyle);
-  const cap = showCaptions
-    ? captionForTime(scene, lang, source, localMs, durationMs, phase, audioMs, animLocal, animDur, (target) => {
+  const capBeat = showCaptions
+    ? captionBeatForTime(scene, lang, source, localMs, durationMs, phase, audioMs, animLocal, animDur, (target) => {
         const cue = resolvedOf(target);
         if (!cue) return true;
         if (freeze === "start") return cue.at <= sampleOpts.firstAt + 0.02;
         if (freeze === "end") return cueVisible(cue, 1);
         return cueVisible(cue, progress);
       })
-    : "";
+    : null;
+  const cap = capBeat?.text ?? "";
+  const capOtherLang = bilingualCaptionLangOf(project, lang);
+  const cap2 =
+    capBeat && capOtherLang ? captionSecondaryText(scene, capBeat.target, capOtherLang, source, cap) : "";
+  const cap2Font = capOtherLang ? fontStack(project.captionFontId || project.fontId, capOtherLang) : captionFont;
   const rootRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{
     id: string;
@@ -403,7 +408,20 @@ export function StageView({
             textShadow: capStyle.outline ? "0 0.06cqw 0.18cqw #000, 0 0 0.35cqw rgba(0,0,0,.85)" : undefined,
           }}
         >
-          {cap}
+          <div>{cap}</div>
+          {cap2 ? (
+            <div
+              className="mt-[0.25em]"
+              style={{
+                fontSize: "0.82em",
+                fontFamily: cap2Font,
+                fontWeight: 400,
+                opacity: 0.92,
+              }}
+            >
+              {cap2}
+            </div>
+          ) : null}
         </div>
       )}
     </div>

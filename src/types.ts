@@ -286,6 +286,10 @@ export interface Project {
   /** Default character per preview language. Missing = `voiceId`. */
   voiceByLang: Partial<Record<LangId, string>>;
   showCaptions: boolean;
+  /** Second caption line in another language (same beat as the spoken line). */
+  bilingualCaptions: boolean;
+  /** Language for the second caption line. Missing = source, or en/zh as fallback. */
+  bilingualCaptionLang?: LangId;
   /** Thin global playhead at the top of the stage column. */
   showTopProgress: boolean;
   fontId: StageFontId;

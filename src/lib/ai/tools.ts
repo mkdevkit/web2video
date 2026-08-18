@@ -7,7 +7,7 @@ import { itemSpeakKey, speakText } from "../narration";
 import { textOf, itemText, sourceLangOf, blockNameOf, writeI18n } from "../textI18n";
 import { useEditor } from "../../store/useEditor";
 import { patchSceneFromStoryboard, sceneFromStoryboard, type StoryboardScene } from "./storyboard";
-import type { LangId } from "../langs";
+import { isLangId, type LangId } from "../langs";
 
 export type ChatTool = {
   type: "function";
@@ -182,6 +182,8 @@ export const AI_TOOLS: ChatTool[] = [
           transition: { type: "string", enum: ["cut", "crossfade"] },
           transitionMs: { type: "number" },
           showCaptions: { type: "boolean", description: "预览口播字幕条，默认关。导出烧录请在导出窗勾选" },
+          bilingualCaptions: { type: "boolean", description: "双语字幕：主行当前配音语言，副行第二语言" },
+          bilingualCaptionLang: { type: "string", enum: ["zh", "en", "ja", "fr", "de", "ru", "es", "pt", "it"], description: "双语字幕的第二语言" },
           showTopProgress: { type: "boolean", description: "画布进度条，会进导出" },
           fontId: { type: "string", enum: FONT_IDS, description: "正文/列表" },
           titleFontId: { type: "string", enum: FONT_IDS, description: "标题/数字" },
@@ -420,6 +422,8 @@ export function executeTool(name: string, rawArgs: unknown): string {
         transition: p.transition,
         transitionMs: p.transitionMs,
         showCaptions: p.showCaptions,
+        bilingualCaptions: Boolean(p.bilingualCaptions),
+        bilingualCaptionLang: p.bilingualCaptionLang ?? null,
         showTopProgress: Boolean(p.showTopProgress),
         fonts: {
           fontId: p.fontId,
@@ -463,7 +467,7 @@ export function executeTool(name: string, rawArgs: unknown): string {
           dialogue: "dialogue 版面是左右双人对话窗。对白写在 dialogue 数组，口播键为 item:{id}，每句可配 role",
           bg: "bg 是场景底色；bgImage / 图片 / 视频 / GIF 只能用户本地选文件，不要编造 URL",
           media: "video、gif 元件用 manage_blocks 添加后，src 由用户在检视里选择，存在 settings.src",
-          captions: "showCaptions 只控制预览字幕条，默认关。导出烧录在导出窗勾选；exportSettings.exportSubtitles 另存字幕文件",
+          captions: "showCaptions 只控制预览字幕条，默认关。bilingualCaptions 双语，主行跟当前语言，副行 bilingualCaptionLang。导出烧录在导出窗勾选；exportSettings.exportSubtitles 另存字幕文件",
           progress: "showTopProgress + progressStyle 控制画布进度条，画在画布上会进导出，不是工作区装饰",
           listMarker: "listMarkerStyle 控制全片列表序号：show 开关，kind=number 色块或 image 用户上传图，不要编造图片 URL",
           speakRole: "speakRole 填 get_project.voices 的 id；缺省用 voiceByLang 该语言默认",
@@ -480,6 +484,8 @@ export function executeTool(name: string, rawArgs: unknown): string {
       }
       if (args.transition === "cut" || args.transition === "crossfade") patch.transition = args.transition;
       if (typeof args.showCaptions === "boolean") patch.showCaptions = args.showCaptions;
+      if (typeof args.bilingualCaptions === "boolean") patch.bilingualCaptions = args.bilingualCaptions;
+      if (isLangId(String(args.bilingualCaptionLang ?? ""))) patch.bilingualCaptionLang = args.bilingualCaptionLang as LangId;
       if (typeof args.showTopProgress === "boolean") patch.showTopProgress = args.showTopProgress;
       for (const k of ["fontId", "titleFontId", "subtitleFontId", "quoteFontId", "captionFontId"] as const) {
         if (isStageFontId(args[k])) patch[k] = args[k] as StageFontId;
@@ -663,7 +669,7 @@ export const SYSTEM_PROMPT = `你是 Web2Video 的分镜助手。这是本地口
 - 场景底色用 bg；遮罩 bgDim 0–1。不要编造图片、视频、GIF 的 URL。视频/GIF 元件让用户在检视里选本地文件。
 
 外观：
-- 口播字幕条：showCaptions 默认关，只影响预览。导出烧录在导出窗勾选；exportSettings.exportSubtitles 可另存 SRT/VTT。
+- 口播字幕条：showCaptions 默认关，只影响预览。双语：bilingualCaptions + bilingualCaptionLang。导出烧录在导出窗勾选；exportSettings.exportSubtitles 可另存 SRT/VTT。
 - 全片进度条：showTopProgress + progressStyle，画在画布顶/底，导出会带上。
 - 列表序号：listMarkerStyle.show / kind / 颜色 / 形状。图片只能用户在全局配置里上传，不要编造 URL。
 - 字体用 fontId / titleFontId / subtitleFontId / quoteFontId / captionFontId，取值见 list_catalog。

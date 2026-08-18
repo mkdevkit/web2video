@@ -1,8 +1,8 @@
 import { uid } from "./ids";
 import { sceneBlocks } from "./blocks";
 import { textOf } from "./textI18n";
-import type { LangId } from "./langs";
-import type { AnimKind, Cue, Scene, TextI18n, WordTs } from "../types";
+import { isLangId, type LangId } from "./langs";
+import type { AnimKind, Cue, Project, Scene, TextI18n, WordTs } from "../types";
 
 export const SPEAK_OPEN = "open";
 export const SPEAK_CLOSE = "close";
@@ -186,6 +186,57 @@ function targetOnStage(scene: Scene, target: string, progress: number, onStage?:
 }
 
 /** Caption for the beat currently being spoken, only if that element is on stage. */
+export function captionBeatForTime(
+  scene: Scene,
+  lang: LangId,
+  source: LangId,
+  localMs: number,
+  durationMs: number,
+  phase?: string,
+  audioMs?: number | null,
+  animLocalMs?: number,
+  animDurationMs?: number,
+  onStage?: (target: string) => boolean,
+): { target: string; text: string } | null {
+  if (phase === "openPad" || phase === "openGap" || phase === "closePad" || phase === "closeGap" || phase === "hold") {
+    return null;
+  }
+  if (phase === "open") {
+    const text = speakText(scene, SPEAK_OPEN, lang, source).replace(/\s+/g, " ").trim();
+    return text ? { target: SPEAK_OPEN, text } : null;
+  }
+  if (phase === "close") {
+    const text = speakText(scene, SPEAK_CLOSE, lang, source).replace(/\s+/g, " ").trim();
+    return text ? { target: SPEAK_CLOSE, text } : null;
+  }
+
+  const spans = beatSpansForScene(scene, lang, source);
+  if (!spans.length) return null;
+  const t = audioMs ?? localMs;
+  const lastEnd = spans[spans.length - 1]?.endMs ?? 0;
+  if (t > lastEnd + 240) return null;
+  let hit: BeatSpan | undefined;
+  for (let i = 0; i < spans.length; i++) {
+    if (spans[i].target === SPEAK_OPEN || spans[i].target === SPEAK_CLOSE) continue;
+    const start = spans[i].startMs;
+    const end = spans[i + 1]?.startMs ?? spans[i].endMs + 80;
+    if (t >= start && t < end) {
+      hit = spans[i];
+      break;
+    }
+  }
+  if (!hit) return null;
+  const progress =
+    animDurationMs && animDurationMs > 0
+      ? (animLocalMs ?? 0) / animDurationMs
+      : durationMs > 0
+        ? localMs / durationMs
+        : 0;
+  if (!targetOnStage(scene, hit.target, progress, onStage)) return null;
+  const text = hit.text.replace(/\s+/g, " ").trim();
+  return text ? { target: hit.target, text } : null;
+}
+
 export function captionForTime(
   scene: Scene,
   lang: LangId,
@@ -198,34 +249,20 @@ export function captionForTime(
   animDurationMs?: number,
   onStage?: (target: string) => boolean,
 ): string {
-  if (phase === "openPad" || phase === "openGap" || phase === "closePad" || phase === "closeGap" || phase === "hold") {
-    return "";
-  }
-  if (phase === "open") return speakText(scene, SPEAK_OPEN, lang, source);
-  if (phase === "close") return speakText(scene, SPEAK_CLOSE, lang, source);
+  return captionBeatForTime(scene, lang, source, localMs, durationMs, phase, audioMs, animLocalMs, animDurationMs, onStage)?.text ?? "";
+}
 
-  const spans = beatSpansForScene(scene, lang, source);
-  if (!spans.length) return "";
-  const t = audioMs ?? localMs;
-  const lastEnd = spans[spans.length - 1]?.endMs ?? 0;
-  if (t > lastEnd + 240) return "";
-  let hit: BeatSpan | undefined;
-  for (let i = 0; i < spans.length; i++) {
-    if (spans[i].target === SPEAK_OPEN || spans[i].target === SPEAK_CLOSE) continue;
-    const start = spans[i].startMs;
-    const end = spans[i + 1]?.startMs ?? spans[i].endMs + 80;
-    if (t >= start && t < end) {
-      hit = spans[i];
-      break;
-    }
-  }
-  if (!hit) return "";
-  const progress =
-    animDurationMs && animDurationMs > 0
-      ? (animLocalMs ?? 0) / animDurationMs
-      : durationMs > 0
-        ? localMs / durationMs
-        : 0;
-  if (!targetOnStage(scene, hit.target, progress, onStage)) return "";
-  return hit.text;
+export function bilingualCaptionLangOf(project: Pick<Project, "bilingualCaptions" | "bilingualCaptionLang" | "sourceLang">, currentLang: LangId): LangId | null {
+  if (!project.bilingualCaptions) return null;
+  const picked = project.bilingualCaptionLang;
+  if (typeof picked === "string" && isLangId(picked) && picked !== currentLang) return picked;
+  const source = project.sourceLang ?? "zh";
+  if (source !== currentLang) return source;
+  return currentLang === "zh" ? "en" : "zh";
+}
+
+export function captionSecondaryText(scene: Scene, target: string, otherLang: LangId, source: LangId, primary: string): string {
+  const text = speakText(scene, target, otherLang, source).replace(/\s+/g, " ").trim();
+  if (!text || text === primary) return "";
+  return text;
 }

@@ -167,7 +167,7 @@ export function ExportDialog() {
         </Field>
       )}
       <p className="mt-1 text-[10px] text-ink-500">
-        烧录会画进视频；字幕文件按口播时间轴另存，可给剪辑软件用。样式在顶栏「配置」里调。
+        烧录会画进视频；字幕文件按口播时间轴另存。双语在顶栏「配置 → 字幕」开关。样式也在那里调。
       </p>
 
       <div className="mt-4 border-t border-ink-700 pt-3">
