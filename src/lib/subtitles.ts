@@ -1,4 +1,4 @@
-import { SPEAK_CLOSE, SPEAK_OPEN, beatSpansForScene, bilingualCaptionLangOf, captionSecondaryText } from "./narration";
+import { SPEAK_CLOSE, SPEAK_OPEN, beatSpansForScene, bilingualCaptionLangOf, captionSecondaryText, speakText } from "./narration";
 import { sourceLangOf } from "./textI18n";
 import { sceneClock, sceneStarts } from "./timeline";
 import type { LangId } from "./langs";
@@ -25,20 +25,45 @@ function audioToLocal(clock: ReturnType<typeof sceneClock>, audioMs: number, tar
   return clock.bodyStartMs + (audioMs - clock.audioBodyStartMs);
 }
 
-export function collectSubtitles(project: Project, lang: LangId): SubtitleCue[] {
+export type CollectSubtitleOpts = {
+  /** Put the spoken / video-language line above the translation in the same cue. */
+  includeClockLang?: boolean;
+};
+
+/**
+ * Cue times follow `clockLang` (the video / spoken language).
+ * `textLang` only swaps the written line so several subtitle files can share one video timeline.
+ */
+export function collectSubtitles(
+  project: Project,
+  clockLang: LangId,
+  textLang: LangId = clockLang,
+  opts?: CollectSubtitleOpts,
+): SubtitleCue[] {
   const source = sourceLangOf(project);
-  const starts = sceneStarts(project, lang);
+  const starts = sceneStarts(project, clockLang);
   const cues: SubtitleCue[] = [];
+  const sameLang = textLang === clockLang;
+  const pair = Boolean(opts?.includeClockLang) && !sameLang;
   for (let i = 0; i < project.scenes.length; i++) {
     const scene = project.scenes[i];
-    const clock = sceneClock(scene, lang, project);
+    const clock = sceneClock(scene, clockLang, project);
     const origin = starts[i];
-    for (const beat of beatSpansForScene(scene, lang, source)) {
-      const primary = beat.text.replace(/\s+/g, " ").trim();
-      if (!primary) continue;
-      const other = bilingualCaptionLangOf(project, lang);
-      const secondary = other ? captionSecondaryText(scene, beat.target, other, source, primary) : "";
-      const text = secondary ? `${primary}\n${secondary}` : primary;
+    for (const beat of beatSpansForScene(scene, clockLang, source)) {
+      const timed = beat.text.replace(/\s+/g, " ").trim();
+      if (!timed) continue;
+      const translated = sameLang
+        ? timed
+        : speakText(scene, beat.target, textLang, source).replace(/\s+/g, " ").trim();
+      let text = "";
+      if (pair) {
+        text = translated && translated !== timed ? `${timed}\n${translated}` : timed;
+      } else {
+        if (!translated) continue;
+        const other = sameLang ? bilingualCaptionLangOf(project, clockLang) : null;
+        const secondary = other ? captionSecondaryText(scene, beat.target, other, source, translated) : "";
+        text = secondary ? `${translated}\n${secondary}` : translated;
+      }
       let start = origin + audioToLocal(clock, beat.startMs, beat.target);
       let end = origin + audioToLocal(clock, beat.endMs, beat.target);
       if (end < start) [start, end] = [end, start];
@@ -68,10 +93,17 @@ export function formatVtt(cues: SubtitleCue[]): string {
   return `WEBVTT\n\n${body}`;
 }
 
-export function subtitleFile(project: Project, lang: LangId, format: "srt" | "vtt"): { name: string; text: string; type: string } | null {
-  const cues = collectSubtitles(project, lang);
+export function subtitleFile(
+  project: Project,
+  clockLang: LangId,
+  format: "srt" | "vtt",
+  textLang: LangId = clockLang,
+  opts?: CollectSubtitleOpts,
+): { name: string; text: string; type: string } | null {
+  const cues = collectSubtitles(project, clockLang, textLang, opts);
   if (!cues.length) return null;
-  const base = `${project.name || "export"}-${lang}`;
+  const stem = project.name || "export";
+  const base = textLang === clockLang ? `${stem}-${clockLang}` : `${stem}-${clockLang}-${textLang}`;
   if (format === "vtt") return { name: `${base}.vtt`, text: formatVtt(cues), type: "text/vtt;charset=utf-8" };
   return { name: `${base}.srt`, text: formatSrt(cues), type: "application/x-subrip;charset=utf-8" };
 }

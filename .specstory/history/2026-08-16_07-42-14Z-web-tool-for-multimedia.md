@@ -31792,71 +31792,1189 @@ _**User**_
 
 _**Agent (grok-4.6)**_
 
+<think><details><summary>Thought Process</summary>
+需要为播放器添加双语字幕功能，并提供一个开关来控制是否显示。
+
+正在查看项目中现有的字幕实现方式，以便设计双语字幕的开关功能。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+先看现有字幕怎么显示、怎么配置，再加带开关的双语字幕。
+
+_**Agent (grok-4.6)**_
+
 <tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
 <summary>Tool use: **ripgrep_raw_search**</summary>
-Status: **loading**
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "glob": "*.{ts,tsx}",
+  "path": "D:\\WorkSpace\\tools\\web2video\\src",
+  "pattern": "showCaptions|captionStyle|captionForTime|previewLang|sourceLang"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\src",
+  "pattern": "showCaptions|captionStyle|captionForTime|previewLang|sourceLang",
+  "topFiles": [
+    {
+      "matchCount": 3,
+      "uri": "src/components/OutlinePanel.tsx"
+    },
+    {
+      "matchCount": 3,
+      "uri": "src/components/dialogs/TextI18nDialog.tsx"
+    },
+    {
+      "matchCount": 6,
+      "uri": "src\\components\\Inspector.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "src\\lib\\fonts.ts"
+    },
+    {
+      "matchCount": 6,
+      "uri": "src/components/Timeline.tsx"
+    },
+    {
+      "matchCount": 3,
+      "uri": "src\\lib\\textI18n.ts"
+    },
+    {
+      "matchCount": 23,
+      "uri": "src/store/useEditor.ts"
+    },
+    {
+      "matchCount": 7,
+      "uri": "src\\components\\AppearancePanel.tsx"
+    },
+    {
+      "matchCount": 3,
+      "uri": "src\\components\\TopBar.tsx"
+    },
+    {
+      "matchCount": 3,
+      "uri": "src\\components\\dialogs\\TextI18nDialog.tsx"
+    },
+    {
+      "matchCount": 12,
+      "uri": "src\\lib\\templates.ts"
+    },
+    {
+      "matchCount": 2,
+      "uri": "src\\components\\Playback.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "src/lib/fonts.ts"
+    },
+    {
+      "matchCount": 6,
+      "uri": "src/components/Stage.tsx"
+    },
+    {
+      "matchCount": 4,
+      "uri": "src\\types.ts"
+    },
+    {
+      "matchCount": 3,
+      "uri": "src/components/dialogs/TtsDialog.tsx"
+    },
+    {
+      "matchCount": 6,
+      "uri": "src\\components\\Timeline.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "src\\components\\SceneList.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "src\\lib\\tts.ts"
+    },
+    {
+      "matchCount": 8,
+      "uri": "src/layouts/StageView.tsx"
+    }
+  ],
+  "totalFiles": 48,
+  "totalMatches": 248
+}
+```
+Status: **completed**
 
 </details></tool-use>
 
 _**Agent (grok-4.6)**_
 
 <tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
-<summary>Tool use: **read_file_v2** • Read file: </summary>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\langs.ts</summary>
 
 </details></tool-use>
 
 _**Agent (grok-4.6)**_
 
 <tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
-<summary>Tool use: **read_file_v2** • Read file: </summary>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\narration.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在查看字幕渲染逻辑、样式面板和导出选项，为双语字幕功能做准备。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\narration.ts</summary>
 
 </details></tool-use>
 
 _**Agent (grok-4.6)**_
 
 <tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
-<summary>Tool use: **read_file_v2** • Read file: </summary>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\layouts\StageView.tsx</summary>
 
 </details></tool-use>
 
 _**Agent (grok-4.6)**_
 
 <tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
-<summary>Tool use: **read_file_v2** • Read file: </summary>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\components\AppearancePanel.tsx</summary>
 
 </details></tool-use>
 
 _**Agent (grok-4.6)**_
 
 <tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
-<summary>Tool use: **read_file_v2** • Read file: </summary>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\subtitles.ts</summary>
 
 </details></tool-use>
 
 _**Agent (grok-4.6)**_
 
 <tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
-<summary>Tool use: **read_file_v2** • Read file: </summary>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\components\dialogs\ExportDialog.tsx</summary>
 
 </details></tool-use>
 
 _**Agent (grok-4.6)**_
 
 <tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
-<summary>Tool use: **read_file_v2** • Read file: </summary>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\types.ts</summary>
 
 </details></tool-use>
 
 _**Agent (grok-4.6)**_
 
 <tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
-<summary>Tool use: **read_file_v2** • Read file: </summary>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\fonts.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在分析双语字幕功能的实现需求。
+
+已确定双语字幕的实现方案。将添加一个开关控制是否显示双语字幕。开启后会同时显示两行：第一行为当前预览语言（口语内容），第二行为源语言（或可配置的第二语言）。
+
+进一步细化了双语字幕的交互设计。若预览语言与源语言相同，第二行将默认切换为其他语言以避免重复显示。主字幕置于上方并放大显示，副字幕置于下方并缩小显示。该布局兼顾了中视频原文字幕与双语阅读的场景。
+
+已确定双语字幕的代码实现细节。将在 Project 模型中新增 `bilingualCaptions` 开关和 `bilingualCaptionLang` 字段，默认使用源语言作为第二语言。当两行文本相同时会自动跳过重复行。captionForTime 需要重构，使其返回同一节拍的目标语言字幕，而非独立查询另一语言，确保时间戳与原音频同步。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\narration.ts</summary>
 
 </details></tool-use>
 
 _**Agent (grok-4.6)**_
 
 <tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
-<summary>Tool use: **read_file_v2** • Read file: </summary>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\layouts\StageView.tsx</summary>
 
 </details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\components\Stage.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\components\dialogs\ExportDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\types.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\textI18n.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在查看导出对话框的字幕复选框界面，并研究双语SRT的实现方式。
+
+已确定双语SRT格式：每条字幕包含中英文两行。将为Project添加双语开关与次语言配置，若次语言与当前语言相同则隐藏重复内容。同时重构字幕查询逻辑，先获取当前语言的字幕节拍，再为另一语言生成对应文本。
+
+StageView 将按当前语言显示主字幕，次语言以较小字体和半透明显示，各自使用独立字体栈。AppearancePanel 会在字幕选项下新增双语开关与语言选择器。导出时直接读取项目双语设置，不再临时覆盖。
+
+已确定双语字幕的语言字段将放在 Project 模型上。导出 SRT/VTT 时，会按节拍目标收集双语文本并生成两行字幕。同时需要处理空项目、示例项目和项目规范化逻辑，并同步调整 AI 工具的相关实现。
+
+已确定双语语言解析规则：未设置时默认取源语言，若源语言与当前预览语言相同，则自动切换为另一语言。界面语言选择器将排除当前预览语言本身。
+
+明确了双语字幕的排版规则：主字幕始终跟随音频语言，次字幕为用户选定的第二语言。例如导出英文视频时，第一行为英文，第二行为中文；导出中文视频时则相反。次字幕将使用对应语言的独立字体栈，确保 CJK 与拉丁字符显示正确。
+
+已确定次字幕尺寸为 0.82em，透明度 0.92，顶部间距 0.2em。若主字幕为空则不显示，次字幕为空或与主字幕相同时也跳过。同时需要处理 open/close 阶段的字幕，这些阶段没有 BeatSpan，需在 captionBeatForTime 中统一支持。
+
+确认 SRT 导出采用标准格式：每条字幕仅含两行文本。双语开关将置于字幕样式配置区，仅在字幕显示时可见。导出对话框在烧录字幕时会自动读取项目全局设置，并附带简短提示说明。
+
+双语开关与画布字幕显示完全独立。即使关闭画布字幕，导出的 SRT 文件仍会保留双语内容。双语开关将常驻在字幕字段区域，不嵌套在画布字幕开关之下。
+
+已确定双语开关默认关闭，且与画布字幕显示完全独立。界面布局为“显示口播字幕条”与“双语字幕”两个并列复选框，其中第二语言选择器仅在双语开启时可见。数据规范化逻辑将确保双语开关为真时必有有效次语言值。双语语言解析函数计划放在
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\components\dialogs\ExportDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在重构 captionForTime 函数，以实现 captionBeatForTime。
+
+正在处理 open/close 阶段的字幕返回格式。准备在 narration.ts 中实现 bilingualCaptionLangOf，并在模板项目中添加 bilingualCaptions 开关与默认值。导出逻辑会将该开关规范化为布尔值及语言 ID。收集 SRT 时会把主副字幕按换行拼接。
+
+将在 narration.ts 中新增 formatCaptionPair 辅助函数来拼接双语字幕对。副字幕会使用多语言字体栈渲染。AppearancePanel 将引入 LANGS 以支持第二语言选择；若用户选择与当前预览语言相同，则在显示时自动回退。StageView 字幕框暂不调整。
+
+第二语言选择器将标注“第二语言（相对当前预览/语言）”。导出时若第二语言与当前导出语言相同则跳过重复行。captionBeatForTime 的实现已开始，先处理 open/close 阶段的空值返回。
+
+captionBeatForTime 已完成：open/close 阶段直接返回 speakText，命中阶段返回 hit.text，均过滤空字符串。captionForTime 简化为提取 text 并回退空字符串。接下来检查 captionForTime 的其他引用并处理导出。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "glob": "*.{ts,tsx}",
+  "path": "D:\\WorkSpace\\tools\\web2video\\src",
+  "pattern": "captionForTime"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\src",
+  "pattern": "captionForTime",
+  "topFiles": [
+    {
+      "matchCount": 2,
+      "uri": "src\\layouts\\StageView.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "src\\lib\\narration.ts"
+    }
+  ],
+  "totalFiles": 2,
+  "totalMatches": 3
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+发现 captionForTime 仅在 StageView 中使用。
+
+决定保留 captionForTime 作为 API 稳定的薄包装器。接下来将编写全部修改，并确认从 langs.ts 导入 isLangId。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\templates.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\narration.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+将在 narration.ts 中添加 bilingualCaptionLangOf 字段，并引入 Project 类型。
+
+空项目中 bilingualCaptionLang 的默认值设为 "en"。解析器会自动处理该字段，无需手动设置。现在开始实现全部功能。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+双语字幕做成全局开关：主行跟当前配音语言，副行跟选定的第二语言；时间和口播句对齐。
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\types.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\lib\narration.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\lib\narration.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在分析项目结构。sourceLangOf 需要 Project 对象，其中包含 sourceLang 字段。
+
+计划将 sourceLangOf 的参数类型简化为 Pick<Project, "sourceLang">，从而避免类型断言。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\lib\narration.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\lib\narration.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\layouts\StageView.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\layouts\StageView.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在完善 StageView 中 captionForTime 的调用逻辑，补充 cap 与 cap2 变量。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\layouts\StageView.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\layouts\StageView.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在修复一处三元表达式，它仍错误地将空字符串赋值给变量，应改为 null。
+
+接下来将添加 cap 与 cap2 字段，并更新渲染逻辑。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\layouts\StageView.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\layouts\StageView.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\lib\subtitles.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\lib\subtitles.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在检查 subtitles 模块中 speakText 的导入是否必要。captionSecondaryText 可能已内部调用该函数。
+
+已移除未使用的 speakText 导入。接下来继续处理模板、面板、AI 和导出对话框的提示与外观。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\lib\subtitles.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+The model provided an ambiguous search string to replace
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\lib\templates.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\templates.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+需要在 templates.ts 中导入 isLangId，并为 emptyProject 和 sampleProject 添加 bilingualCaptions 字段。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\lib\templates.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\templates.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\templates.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\templates.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+需要为 sample 和 empty 项目添加 bilingualCaptions: false 配置。
+
+将使用 replace_all 处理 showCaptions 与 TopProgress 的配对显示。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\lib\templates.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\components\AppearancePanel.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\components\AppearancePanel.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在检查 AppearancePanel 是否仍需单独导入 LangId。该导入已合并到 langs 中。
+
+FontPick 仍需单独导入 LangId。
+
+将更新 AI 工具和导出对话框的提示文案。双语字幕开关与字幕条显示可独立控制，预览时建议同时开启。
+
+AI 工具需要新增 bilingualCaptions、bilingualCaptionLang 等字段，并复用 langs.ts 中的 LANG_IDS 枚举。正在核对 tools.ts 的 FONT_IDS 模式。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+需要在 tools.ts 中引入 isLangId，目前仅导入了 LangId 类型。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+考虑将语言 ID 的导入合并为一行。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\components\dialogs\ExportDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在检查 AppearancePanel 中未使用的 LangId。FontPick 仍需要该类型。
+
+修复了 `isLangId` 的调用：先判断 `picked` 为字符串且不等于当前语言。同时处理了 `bilingualCaptionLang` 的类型转换，避免 TypeScript 报错。
+
+确认空项目类型定义已将 bilingualCaptions 设为必填。运行 tsc 检查类型错误。
+
+验证了双语字幕的回退逻辑：若副语言文本回退到源语言且与主语言相同，则跳过显示；否则正常展示翻译文本。
+
+接下来检查 AppearancePanel CaptionFields 的代码，确保双语界面正确嵌入。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\components\AppearancePanel.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\components\AppearancePanel.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\narration.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+用户开启双语时，通常也会希望显示字幕。
+
+开启双语时会自动同步显示字幕，避免开关不可见。未翻译时副标题为空是预期行为。正在检查 subtitles.ts 的循环逻辑并运行类型检查。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\subtitles.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\components\AppearancePanel.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在检查 isLangId 是否已在模板中使用。
+
+运行 tsc 验证类型。确认旧项目自动保存时正确处理 bilingualCaptions 字段。检查了 AppearancePanel 中的 LangId 引用和导出情况。未添加 HelpDialog 和 README 的改动。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2"><details>
+<summary>Tool use: **run_terminal_command_v2** • Run command: npx tsc --noEmit</summary>
+```bash
+npx tsc --noEmit
+```
+
+```
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+src/lib/narration.ts(258,61): error TS2322: Type 'LangId | undefined' is not assignable to type 'LangId | null'.
+  Type 'undefined' is not assignable to type 'LangId | null'.
+npm notice
+npm notice New minor version of npm available! 11.11.0 -> 11.19.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.19.0
+npm notice To update run: npm install -g npm@11.19.0
+npm notice
+
+```
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在修复 TypeScript 类型推断问题。`picked` 在 `isLangId` 检查后仍被 TypeScript 判定为可能为 undefined。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\narration.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+修复了语言切换的判断逻辑，确保仅在选中语言与当前语言不同时才返回新值。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\lib\narration.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2"><details>
+<summary>Tool use: **run_terminal_command_v2** • Run command: npx tsc --noEmit</summary>
+```bash
+npx tsc --noEmit
+```
+
+```
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+```
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+TypeScript 编译已通过。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+双语字幕已经加上，开关在 **配置 → 字幕**。
+
+- **双语字幕**：打开后主行跟当前配音语言，副行跟选定的第二语言（同一句口播、同一时间轴）。
+- 打开双语时会同时打开字幕条，方便预览。
+- 第二语言没译文、或和主行相同，就只显示一行。
+- 导出烧录画面、另存 SRT/VTT 时都会带上这两行。
+
+先把第二语言的口播译好（文本窗），再开双语。
+
+---
+
+_**User**_
+
+增加一种导出模式，可以只导出一个语言的视频及这个视频对应的多个语言的字幕文件（同时间标记）。
+
+---
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+用户希望新增一种导出模式：仅导出单个语言的视频，以及该视频对应的多语言字幕文件（时间标记保持一致）。
+
+正在查看现有的导出对话框和字幕生成逻辑，以便实现该功能。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+先看现有导出和字幕时间轴怎么对齐，再加「单语言视频 + 多语言字幕」模式。
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\components\dialogs\ExportDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\subtitles.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\types.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\exportSettings.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+核心需求是导出单一语言的视频。
+
+新导出模式需将视频语言的时间戳与各字幕语言的文本对应。计划重构 `collectSubtitles` 以支持分别指定视频语言和字幕语言，并在界面中新增"逐语言视频"与"单语言视频+多语言字幕"两种导出选项。
+
+该模式下始终导出字幕文件。视频使用视频语言音频，字幕沿用其时间戳并各自包含不同语言的翻译文本。若启用双语字幕，每份字幕文件不再重复显示原文，因为每份文件本身已是单一语言版本。此模式下字幕文件按视频语言的时间节奏生成，各文件仅承载对应语言的译文。
+
+具体实现上，先以视频语言提取节拍时长与目标文本，再将各字幕语言的翻译文本映射到对应节拍。若某语言缺少翻译，则回退至源文本。场景时间基准统一采用视频语言，确保所有字幕文件严格对齐同一时间轴。
+
+时间轴完全由视频语言的节拍决定，即使某字幕语言缺少对应翻译，也仅回退为源文本，不会额外生成空节拍。正在考虑字幕语言存在视频语言未覆盖的额外行时的处理方式。
+
+已确定 `collectSubtitles` 的函数签名：以视频语言作为时间基准，新增可选参数指定字幕语言，默认与视频语言相同。双语字幕仅在字幕语言与视频语言一致且全局开关开启时生效，避免多语言字幕模式下重复显示原文。
+
+正在设计导出文件的命名规则。视频文件将直接标注视频语言，例如 `片名-英语.webm`。字幕文件则同时标注视频语言与字幕语言，例如 `片名-英语-中文.srt`，以便用户清晰区分各文件归属的视频语言。
+
+字幕文件命名规则已细化：当字幕语言与视频语言不同时，格式为 `片名-视频语言-字幕语言.格式`；两者相同时沿用现有命名。界面拟提供两个导出选项，其中“单语言视频+多语言字幕”默认勾选，视频语言单选、字幕语言多选（视频语言预选），并强制导出字幕文件。该模式是否持久化保存仍在权衡。
+
+导出模式将保留在对话框本地状态，不扩展 ExportSettings。默认视频语言取预览语言，字幕语言默认包含预览语言与源语言。切换至该模式时自动勾选导出字幕。
+
+已明确烧录字幕仍使用视频语言，额外字幕文件仅为旁路文件。跳过 AI 工具与帮助文档的改动。开始编写 `collectSubtitles` 的具体实现，以视频语言提取场景起始时间，再按字幕语言替换文本。
+
+正在编写 `collectSubtitles` 的具体实现。遍历视频语言的节拍，若字幕语言与视频语言相同则直接复用原文，否则调用 `speakText` 获取翻译；空节拍会被跳过。即使某语言翻译缺失，`speakText` 也会回退到源文本，因此不会生成空字幕。
+
+正在实现 `subtitleFile` 函数。该函数接收项目、视频语言、格式及字幕语言参数，通过 `collectSubtitles` 生成对应字幕内容。当字幕语言与视频语言相同时，文件名仅保留项目名与视频语言标识。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\narration.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "glob": "*.{ts,tsx}",
+  "path": "D:\\WorkSpace\\tools\\web2video",
+  "pattern": "subtitleFile|collectSubtitles|exportSubtitles"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video",
+  "pattern": "subtitleFile|collectSubtitles|exportSubtitles",
+  "topFiles": [
+    {
+      "matchCount": 3,
+      "uri": ".\\src\\lib\\ai\\tools.ts"
+    },
+    {
+      "matchCount": 6,
+      "uri": ".\\src\\components\\dialogs\\ExportDialog.tsx"
+    },
+    {
+      "matchCount": 3,
+      "uri": ".\\src\\lib\\subtitles.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": ".\\src\\types.ts"
+    },
+    {
+      "matchCount": 2,
+      "uri": ".\\src\\lib\\exportSettings.ts"
+    }
+  ],
+  "totalFiles": 5,
+  "totalMatches": 15
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+将实现 collectSubtitles 函数，以 clockLang 为主语言，并支持可选的 textLang。
+
+ExportDialog 将新增两种导出模式。subtitleFile 返回文件名时会根据语言组合调整命名：clockLang 与 textLang 相同时保持旧格式兼容；两者不同时则附加对应语言名称。saveSub 辅助函数负责生成并保存字幕文件。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+字幕时间轴改成跟视频语言对齐，导出窗加「一段视频 + 多语言字幕」模式。
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\lib\subtitles.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\lib\subtitles.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\lib\subtitles.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在重写导出对话框，为其添加多种导出模式。
+
+计划提取合成与字幕保存的辅助函数。新增“视频加字幕”模式：仅选单个视频语言，同时导出该视频对应的所有字幕文件，且各字幕的时间标记与视频保持一致。默认字幕语言列表会自动包含预览和源语言；进入该模式时若未选择字幕语言，则默认设为视频语言。界面将使用两个按钮来切换不同导出模式。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+Invalid arguments:
+old_string: Required
+new_string: Required
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在确定代码修改方式：直接写入整个文件，或通过 StrReplace 替换旧内容。
+
+已确定采用 Write 方式完整重写文件。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\components\dialogs\ExportDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+简要更新 AI 笔记，记录新增的单语言导出模式。
+
+跳过 README 更新。微调 AI 目录说明，并在帮助对话框中补充导出功能描述。确认导出逻辑：不同语言时跳过双语叠加；同语言时仍保留双语。切换视频语言会自动将其加入字幕语言列表，用户可手动取消勾选。运行 TypeScript 编译检查。
+
+空字幕文本将静默跳过，无需警告。导出模式切换时会同步更新项目状态，此行为安全。已完成导出对话框的类型检查。帮助对话框和 AI 工具导出说明的补充为可选操作。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\components\dialogs\HelpDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\README.md</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2"><details>
+<summary>Tool use: **run_terminal_command_v2** • Run command: npx tsc --noEmit</summary>
+```bash
+npx tsc --noEmit
+```
+
+```
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+npm notice
+npm notice New minor version of npm available! 11.11.0 -> 11.19.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.19.0
+npm notice To update run: npm install -g npm@11.19.0
+npm notice
+
+```
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+TypeScript 编译通过。README 中已列出导出功能，只需补充一行说明。
+
+HelpDialog 的 Ctrl+E 快捷键说明也会简要提及该导出模式。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\README.md</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在梳理用户提出的单语言导出需求。该模式需输出单一语言视频及其对应多语言字幕文件，并确保各语言字幕的时间标记完全一致。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+导出窗现在有两种模式。
+
+**每种语言各一段视频**（原来的行为）  
+每种语言单独配音、单独录一段。
+
+**一段视频 + 多语言字幕**（新）  
+- 只录 **一种视频语言**（配音和时间轴都跟它走）  
+- 另存多份字幕，**起止时间和视频完全一致**，只换文案  
+- 文件名例如：`片名-英语.webm`、`片名-英语-中文.srt`、`片名-英语-日语.srt`
+
+字幕语言请先在「文本」里译好对应口播。没译文的句子会回落到源语言。
+
+---
+
+_**User**_
+
+现在是支持模式一导出多语言视频和每种语言对应的字幕文件，和模式二导出一个语言视频和同步的多语言字字幕两种模式吗？
+
+---
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在确认当前导出是否同时支持模式一（多语言视频与字幕）和模式二（单一语言视频与同步多语言字幕）。
+
+需要查看刚写的 ExportDialog 代码来核实实际实现，不能仅凭猜测回答。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\components\dialogs\ExportDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\src\lib\subtitles.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+用户在确认系统是否同时支持模式一（多语言视频与字幕）和模式二（单语言视频与同步多语言字幕）。
+
+确认支持两种模式。模式一导出多语言视频时，字幕文件为可选功能，需手动勾选“同时导出字幕文件”才能生成。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+对，就是这两种。
+
+**模式一：每种语言各一段视频**  
+勾选几种语言，就会各录一段（配音、画面、时间轴都按该语言）。若再勾选「同时导出字幕文件」，每种语言会多一份 **对应自己时间轴** 的字幕，例如英语视频配英语字幕。
+
+**模式二：一段视频 + 多语言字幕**  
+只录 **一种视频语言**，再另存多份字幕。这些字幕的 **起止时间和这段视频相同**，只换文案，例如英语视频 + 中/英/日字幕。
+
+补充两点：
+- 模式一的字幕默认关，要勾「同时导出字幕文件」才会出。
+- 模式二的字幕时间跟视频语言走，请先把各语言口播译好，否则会回落到源语言。
+
+---
+
+_**User**_
+
+模式二支持视频语言字幕和其它语言字字幕双语言字幕模式吗？就是每个字字幕文件里有视频言和其它多语言字字幕。支持是否添加视频语言字幕开关。

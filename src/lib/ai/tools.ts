@@ -467,7 +467,7 @@ export function executeTool(name: string, rawArgs: unknown): string {
           dialogue: "dialogue 版面是左右双人对话窗。对白写在 dialogue 数组，口播键为 item:{id}，每句可配 role",
           bg: "bg 是场景底色；bgImage / 图片 / 视频 / GIF 只能用户本地选文件，不要编造 URL",
           media: "video、gif 元件用 manage_blocks 添加后，src 由用户在检视里选择，存在 settings.src",
-          captions: "showCaptions 只控制预览字幕条，默认关。bilingualCaptions 双语，主行跟当前语言，副行 bilingualCaptionLang。导出烧录在导出窗勾选；exportSettings.exportSubtitles 另存字幕文件",
+          captions: "showCaptions 只控制预览字幕条。bilingualCaptions 双语。导出窗可选：每种语言各一段视频，或一段视频+多语言字幕（时间轴跟视频语言走）",
           progress: "showTopProgress + progressStyle 控制画布进度条，画在画布上会进导出，不是工作区装饰",
           listMarker: "listMarkerStyle 控制全片列表序号：show 开关，kind=number 色块或 image 用户上传图，不要编造图片 URL",
           speakRole: "speakRole 填 get_project.voices 的 id；缺省用 voiceByLang 该语言默认",

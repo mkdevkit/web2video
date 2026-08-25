@@ -17,16 +17,41 @@ import { synthScenes } from "../../lib/synthProject";
 import { getAudio } from "../../lib/audioStore";
 import { subtitleFile } from "../../lib/subtitles";
 import { useEditor } from "../../store/useEditor";
-import type { ExportSettings } from "../../types";
+import type { ExportSettings, Project } from "../../types";
 import { Field, Modal } from "../ui";
+
+type ExportMode = "perLang" | "videoPlusSubs";
+
+function saveSubtitle(
+  project: Project,
+  clockLang: LangId,
+  textLang: LangId,
+  format: "srt" | "vtt",
+  includeClockLang = false,
+) {
+  const sub = subtitleFile(project, clockLang, format, textLang, { includeClockLang });
+  if (!sub) return;
+  const video = langZhName(clockLang);
+  const line = langZhName(textLang);
+  const name =
+    clockLang === textLang ? `${project.name}-${line}.${format}` : `${project.name}-${video}-${line}.${format}`;
+  saveAs(new Blob([sub.text], { type: sub.type }), name);
+}
 
 export function ExportDialog() {
   const project = useEditor((s) => s.project);
   const source = sourceLangOf(project);
   const st = exportSettingsOf(project.exportSettings);
   const size = exportPx(project.aspect, st.height);
-  const [langs, setLangs] = useState<LangId[]>([project.previewLang ?? source]);
+  const defaultLang = project.previewLang ?? source;
+  const [mode, setMode] = useState<ExportMode>("perLang");
+  const [langs, setLangs] = useState<LangId[]>([defaultLang]);
+  const [videoLang, setVideoLang] = useState<LangId>(defaultLang);
+  const [subLangs, setSubLangs] = useState<LangId[]>(
+    source !== defaultLang ? [defaultLang, source] : [defaultLang],
+  );
   const [captions, setCaptions] = useState(false);
+  const [includeVideoLangInSubs, setIncludeVideoLangInSubs] = useState(true);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -38,9 +63,62 @@ export function ExportDialog() {
     setLangs((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
   };
 
+  const toggleSub = (id: LangId) => {
+    setSubLangs((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+  };
+
+  const pickMode = (next: ExportMode) => {
+    setMode(next);
+    setErr("");
+    if (next === "videoPlusSubs" && !st.exportSubtitles) patch({ exportSubtitles: true });
+  };
+
+  const ensureAudio = async (lang: LangId) => {
+    const store = useEditor.getState();
+    store.setExportHint(`${langZhName(lang)}：检查配音…`);
+    const latest = useEditor.getState().project;
+    const need: string[] = [];
+    for (const scene of latest.scenes) {
+      const blob = await getAudio(scene.id, lang);
+      if (!blob || scene.audioByLang?.[lang]?.stale) need.push(scene.id);
+    }
+    if (need.length) {
+      store.setExportHint(`${langZhName(lang)}：正在合成 ${need.length} 段配音…`);
+      await synthScenes(need, lang, (p) => {
+        const line = p.text.replace(/\s+/g, " ").trim();
+        const snippet = line.length > 48 ? `${line.slice(0, 48)}…` : line;
+        store.setExportHint(
+          `${langZhName(lang)}：${p.sceneIndex + 1}/${p.sceneCount} ${p.sceneName}${p.roleName ? ` · ${p.roleName}` : ""}${snippet ? ` · ${snippet}` : ""}`,
+        );
+      });
+    }
+  };
+
+  const recordLang = async (lang: LangId) => {
+    const store = useEditor.getState();
+    store.setPreviewLang(lang);
+    store.setPlayhead(0);
+    await new Promise((r) => setTimeout(r, 120));
+    const stage = document.getElementById("export-stage");
+    if (!stage) throw new Error("找不到导出舞台");
+    store.setExportHint(`${langZhName(lang)}：正在录制…`);
+    const { blob, ext } = await recordProject({
+      project: useEditor.getState().project,
+      lang,
+      stage,
+      setPlayhead: (ms) => useEditor.getState().setPlayhead(ms),
+      onProgress: (p) => store.setExportHint(`${langZhName(lang)}：${Math.round(p * 100)}%`),
+    });
+    saveAs(blob, `${useEditor.getState().project.name}-${langZhName(lang)}.${ext}`);
+  };
+
   const run = async () => {
-    if (!langs.length) {
+    if (mode === "perLang" && !langs.length) {
       setErr("请至少选择一种语言");
+      return;
+    }
+    if (mode === "videoPlusSubs" && !subLangs.length) {
+      setErr("请至少选择一种字幕语言");
       return;
     }
     if (!formatSupported(st.format)) {
@@ -57,45 +135,21 @@ export function ExportDialog() {
     store.setExporting(true);
     store.setExportHint("准备导出…");
     try {
-      for (const lang of langs) {
-        store.setExportHint(`${langZhName(lang)}：检查配音…`);
-        const latest = useEditor.getState().project;
-        const need: string[] = [];
-        for (const scene of latest.scenes) {
-          const blob = await getAudio(scene.id, lang);
-          if (!blob || scene.audioByLang?.[lang]?.stale) need.push(scene.id);
-        }
-        if (need.length) {
-          store.setExportHint(`${langZhName(lang)}：正在合成 ${need.length} 段配音…`);
-          await synthScenes(need, lang, (p) => {
-            const line = p.text.replace(/\s+/g, " ").trim();
-            const snippet = line.length > 48 ? `${line.slice(0, 48)}…` : line;
-            store.setExportHint(
-              `${langZhName(lang)}：${p.sceneIndex + 1}/${p.sceneCount} ${p.sceneName}${p.roleName ? ` · ${p.roleName}` : ""}${snippet ? ` · ${snippet}` : ""}`,
-            );
-          });
-        }
+      if (mode === "videoPlusSubs") {
+        await ensureAudio(videoLang);
         const ready = useEditor.getState().project;
-        if (st.exportSubtitles) {
-          const sub = subtitleFile(ready, lang, st.subtitleFormat);
-          if (sub) {
-            saveAs(new Blob([sub.text], { type: sub.type }), `${ready.name}-${langZhName(lang)}.${st.subtitleFormat}`);
-          }
+        store.setExportHint("写出字幕…");
+        for (const subLang of subLangs) {
+          saveSubtitle(ready, videoLang, subLang, st.subtitleFormat, includeVideoLangInSubs);
         }
-        store.setPreviewLang(lang);
-        store.setPlayhead(0);
-        await new Promise((r) => setTimeout(r, 120));
-        const stage = document.getElementById("export-stage");
-        if (!stage) throw new Error("找不到导出舞台");
-        store.setExportHint(`${langZhName(lang)}：正在录制…`);
-        const { blob, ext } = await recordProject({
-          project: useEditor.getState().project,
-          lang,
-          stage,
-          setPlayhead: (ms) => useEditor.getState().setPlayhead(ms),
-          onProgress: (p) => store.setExportHint(`${langZhName(lang)}：${Math.round(p * 100)}%`),
-        });
-        saveAs(blob, `${useEditor.getState().project.name}-${langZhName(lang)}.${ext}`);
+        await recordLang(videoLang);
+      } else {
+        for (const lang of langs) {
+          await ensureAudio(lang);
+          const ready = useEditor.getState().project;
+          if (st.exportSubtitles) saveSubtitle(ready, lang, lang, st.subtitleFormat);
+          await recordLang(lang);
+        }
       }
     } catch (e) {
       window.alert(e instanceof Error ? e.message : "导出失败");
@@ -108,6 +162,14 @@ export function ExportDialog() {
     }
   };
 
+  const canRun = mode === "videoPlusSubs" ? subLangs.length > 0 : langs.length > 0;
+  const runLabel =
+    mode === "videoPlusSubs"
+      ? `导出 ${langZhName(videoLang)} 视频 + ${subLangs.length} 份字幕`
+      : langs.length > 1
+        ? `导出 ${langs.length} 种语言`
+        : "开始导出";
+
   return (
     <Modal
       title="导出视频"
@@ -118,43 +180,115 @@ export function ExportDialog() {
           <button className="btn" onClick={() => useEditor.getState().setDialog(null)}>
             取消
           </button>
-          <button className="btn btn-accent" disabled={busy || !langs.length} onClick={() => void run()}>
-            {busy ? "正在导出…" : langs.length > 1 ? `导出 ${langs.length} 种语言` : "开始导出"}
+          <button className="btn btn-accent" disabled={busy || !canRun} onClick={() => void run()}>
+            {busy ? "正在导出…" : runLabel}
           </button>
         </>
       }
     >
       <p className="mb-3 text-xs text-ink-400">
-        逐语言播放舞台并录制（画面 + TTS）。请使用 Chrome / Edge。缺配音时会先自动合成。规格会写入工程。
+        播放舞台并录制（画面 + TTS）。请使用 Chrome / Edge。缺配音时会先自动合成。规格会写入工程。
       </p>
       {err && <p className="mb-2 text-xs text-red-400">{err}</p>}
-      <Field label="语言">
+      <Field label="导出模式">
         <div className="flex flex-wrap gap-1.5">
-          {LANGS.map((l) => (
-            <button
-              key={l.id}
-              type="button"
-              className={`btn py-1 ${langs.includes(l.id) ? "btn-accent" : ""}`}
-              onClick={() => toggle(l.id)}
-            >
-              {langZhName(l.id)}
-            </button>
-          ))}
+          <button
+            type="button"
+            className={`btn py-1 ${mode === "perLang" ? "btn-accent" : ""}`}
+            onClick={() => pickMode("perLang")}
+          >
+            每种语言各一段视频
+          </button>
+          <button
+            type="button"
+            className={`btn py-1 ${mode === "videoPlusSubs" ? "btn-accent" : ""}`}
+            onClick={() => pickMode("videoPlusSubs")}
+          >
+            一段视频 + 多语言字幕
+          </button>
         </div>
       </Field>
+      {mode === "perLang" ? (
+        <Field label="语言">
+          <div className="flex flex-wrap gap-1.5">
+            {LANGS.map((l) => (
+              <button
+                key={l.id}
+                type="button"
+                className={`btn py-1 ${langs.includes(l.id) ? "btn-accent" : ""}`}
+                onClick={() => toggle(l.id)}
+              >
+                {langZhName(l.id)}
+              </button>
+            ))}
+          </div>
+        </Field>
+      ) : (
+        <>
+          <Field label="视频语言（配音与时间轴）">
+            <div className="flex flex-wrap gap-1.5">
+              {LANGS.map((l) => (
+                <button
+                  key={l.id}
+                  type="button"
+                  className={`btn py-1 ${videoLang === l.id ? "btn-accent" : ""}`}
+                  onClick={() => {
+                    setVideoLang(l.id);
+                    setSubLangs((cur) => (cur.includes(l.id) ? cur : [...cur, l.id]));
+                  }}
+                >
+                  {langZhName(l.id)}
+                </button>
+              ))}
+            </div>
+          </Field>
+          <Field label="字幕语言（共用视频时间标记）">
+            <div className="flex flex-wrap gap-1.5">
+              {LANGS.map((l) => (
+                <button
+                  key={l.id}
+                  type="button"
+                  className={`btn py-1 ${subLangs.includes(l.id) ? "btn-accent" : ""}`}
+                  onClick={() => toggleSub(l.id)}
+                >
+                  {langZhName(l.id)}
+                </button>
+              ))}
+            </div>
+            <p className="mt-1 text-[10px] text-ink-500">
+              只录 {langZhName(videoLang)} 这一段。各字幕文件的起止时间跟这段视频一致。请先译好对应口播。
+            </p>
+          </Field>
+          <label className="mt-2 flex items-center gap-2 text-xs text-ink-200">
+            <input
+              type="checkbox"
+              checked={includeVideoLangInSubs}
+              onChange={(e) => setIncludeVideoLangInSubs(e.target.checked)}
+            />
+            字幕文件附带视频语言（双语）
+          </label>
+          <p className="text-[10px] text-ink-500">
+            {includeVideoLangInSubs
+              ? `打开后，每种其它语言的字幕文件里先写 ${langZhName(videoLang)}，再写该语言，时间标记相同。与视频语言相同的那一份仍只有一行。`
+              : "关闭后，每种字幕文件只含该语言文案。"}
+          </p>
+        </>
+      )}
       <label className="mt-3 flex items-center gap-2 text-xs text-ink-200">
         <input type="checkbox" checked={captions} onChange={(e) => setCaptions(e.target.checked)} />
         烧录字幕条到画面
       </label>
-      <label className="mt-2 flex items-center gap-2 text-xs text-ink-200">
-        <input
-          type="checkbox"
-          checked={st.exportSubtitles}
-          onChange={(e) => patch({ exportSubtitles: e.target.checked })}
-        />
-        同时导出字幕文件
-      </label>
-      {st.exportSubtitles && (
+      {mode === "perLang" && (
+        <label className="mt-2 flex items-center gap-2 text-xs text-ink-200">
+          <input
+            type="checkbox"
+            checked={st.exportSubtitles}
+            onChange={(e) => patch({ exportSubtitles: e.target.checked })}
+          />
+          同时导出字幕文件
+        </label>
+      )}
+      {(mode === "videoPlusSubs" || st.exportSubtitles) && (
         <Field label="字幕格式">
           <select
             className="field max-w-[8rem]"
@@ -167,7 +301,9 @@ export function ExportDialog() {
         </Field>
       )}
       <p className="mt-1 text-[10px] text-ink-500">
-        烧录会画进视频；字幕文件按口播时间轴另存。双语在顶栏「配置 → 字幕」开关。样式也在那里调。
+        {mode === "videoPlusSubs"
+          ? `将得到 1 个视频和 ${subLangs.length} 个字幕文件（时间轴相同${includeVideoLangInSubs ? "，其它语言文件为双语" : ""}）。烧录只影响画面上的字幕条。`
+          : "烧录会画进视频；字幕文件按该语言口播时间轴另存。双语在顶栏「配置 → 字幕」开关。"}
       </p>
 
       <div className="mt-4 border-t border-ink-700 pt-3">
