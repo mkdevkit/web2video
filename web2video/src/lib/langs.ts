@@ -16,7 +16,7 @@ export const LANGS: LangMeta[] = [
     native: "中文",
     html: "zh-CN",
     cjk: true,
-    sans: '"Noto Sans SC", "Microsoft YaHei", sans-serif',
+    sans: '"Noto Sans SC", sans-serif',
   },
   {
     id: "en",

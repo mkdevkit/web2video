@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Script2Video scene</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #10120e; color: #f3eee3; font-family: "Noto Sans SC", sans-serif; /* SIL OFL */ }
+      .clip { position: absolute; inset: 0; }
+      #title { top: 28%; left: 8%; font-size: 64px; font-weight: 700; opacity: 0; }
+      #stat { top: 52%; left: 8%; font-size: 36px; color: #d4a84b; opacity: 0; }
+      #ring { right: 12%; top: 30%; width: 180px; height: 180px; border: 6px solid #c45c26; border-radius: 50%; opacity: 0; }
+    </style>
+  </head>
+  <body
+    data-composition-id="script2video-scene"
+    data-duration="8"
+    data-width="1920"
+    data-height="1080"
+  >
+    <div class="clip" id="title">黑洞不是洞</div>
+    <div class="clip" id="stat">c = 3×10⁸ m/s</div>
+    <div class="clip" id="ring"></div>
+    <script type="module">
+      /**
+       * HyperFrames seeks this paused timeline.
+       * Replace data-duration with sceneDurationMs(script, audio)/1000 per language after TTS.
+       * Do not call timeline.play().
+       */
+      import { bindGsapTimeline, registerHyperframes } from "./bind-gsap.ts";
+      import { sceneDurationMs } from "../../src/clock.ts";
+      import { sampleAudio, sampleScript } from "../../src/sample.ts";
+
+      const params = new URLSearchParams(location.search);
+      const lang = params.get("lang") === "en" || params.get("lang") === "ja" ? params.get("lang") : "zh";
+      const audio = sampleAudio.find((a) => a.lang === lang) ?? sampleAudio[0];
+      const root = document.body;
+      root.dataset.duration = String(sceneDurationMs(sampleScript, audio) / 1000);
+
+      const tl = bindGsapTimeline(sampleScript, audio, {
+        "title-in": "#title",
+        "stat-in": "#stat",
+        "ring-in": "#ring",
+      });
+      registerHyperframes("script2video-scene", tl);
+    </script>
+  </body>
+</html>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { saveAs } from "file-saver";
 import { recordProject } from "../../lib/exportVideo";
+import { progressStyleOf, waitStageFonts } from "../../lib/fonts";
 import {
   EXPORT_FORMATS,
   EXPORT_FPS,
@@ -101,6 +102,15 @@ export function ExportDialog() {
     await new Promise((r) => setTimeout(r, 120));
     const stage = document.getElementById("export-stage");
     if (!stage) throw new Error("找不到导出舞台");
+    const p = useEditor.getState().project;
+    await waitStageFonts(
+      p.fontId,
+      p.titleFontId,
+      p.subtitleFontId,
+      p.quoteFontId,
+      p.captionFontId,
+      progressStyleOf(p.progressStyle).fontId,
+    );
     store.setExportHint(`${langZhName(lang)}：正在录制…`);
     const { blob, ext } = await recordProject({
       project: useEditor.getState().project,
@@ -276,7 +286,7 @@ export function ExportDialog() {
       )}
       <label className="mt-3 flex items-center gap-2 text-xs text-ink-200">
         <input type="checkbox" checked={captions} onChange={(e) => setCaptions(e.target.checked)} />
-        烧录字幕条到画面
+        烧录字幕条到画面（字体在「配置 → 字体」）
       </label>
       {mode === "perLang" && (
         <label className="mt-2 flex items-center gap-2 text-xs text-ink-200">
@@ -303,7 +313,7 @@ export function ExportDialog() {
       <p className="mt-1 text-[10px] text-ink-500">
         {mode === "videoPlusSubs"
           ? `将得到 1 个视频和 ${subLangs.length} 个字幕文件（时间轴相同${includeVideoLangInSubs ? "，其它语言文件为双语" : ""}）。烧录只影响画面上的字幕条。`
-          : "烧录会画进视频；字幕文件按该语言口播时间轴另存。双语在顶栏「配置 → 字幕」开关。"}
+          : "烧录会画进视频；字幕文件按该语言口播时间轴另存。双语在「配置 → 字幕」，字体在「配置 → 字体」。"}
       </p>
 
       <div className="mt-4 border-t border-ink-700 pt-3">

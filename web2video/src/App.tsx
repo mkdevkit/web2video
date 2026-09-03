@@ -15,15 +15,26 @@ import { TtsDialog } from "./components/dialogs/TtsDialog";
 import { WelcomeDialog } from "./components/dialogs/WelcomeDialog";
 import { useKeyboard } from "./hooks/useKeyboard";
 import { restoreBoundDir } from "./lib/projectFolder";
+import { ensureStageFonts, progressStyleOf } from "./lib/fonts";
 import { useEditor } from "./store/useEditor";
 
 export default function App() {
   useKeyboard();
   const dialog = useEditor((s) => s.dialog);
+  const fontId = useEditor((s) => s.project.fontId);
+  const titleFontId = useEditor((s) => s.project.titleFontId);
+  const subtitleFontId = useEditor((s) => s.project.subtitleFontId);
+  const quoteFontId = useEditor((s) => s.project.quoteFontId);
+  const captionFontId = useEditor((s) => s.project.captionFontId);
+  const progressFontId = useEditor((s) => progressStyleOf(s.project.progressStyle).fontId);
 
   useEffect(() => {
     void restoreBoundDir();
   }, []);
+
+  useEffect(() => {
+    ensureStageFonts(fontId, titleFontId, subtitleFontId, quoteFontId, captionFontId, progressFontId);
+  }, [fontId, titleFontId, subtitleFontId, quoteFontId, captionFontId, progressFontId]);
 
   return (
     <div className="flex h-full flex-col bg-ink-950 text-ink-100">

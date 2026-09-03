@@ -18,7 +18,7 @@ export type ChatTool = {
   };
 };
 
-const FONT_IDS = ["noto-sans", "noto-serif", "source-sans", "ibm-plex", "nunito", "literata"] as const;
+const FONT_IDS = STAGE_FONTS.map((f) => f.id);
 
 const sceneSpecProperties = {
   name: { type: "string", description: "场景短名，时间轴与进度条上显示" },
@@ -189,7 +189,7 @@ export const AI_TOOLS: ChatTool[] = [
           titleFontId: { type: "string", enum: FONT_IDS, description: "标题/数字" },
           subtitleFontId: { type: "string", enum: FONT_IDS, description: "副标题/署名" },
           quoteFontId: { type: "string", enum: FONT_IDS, description: "金句" },
-          captionFontId: { type: "string", enum: FONT_IDS, description: "口播字幕" },
+          captionFontId: { type: "string", enum: FONT_IDS, description: "口播字幕条（预览和烧录）" },
           captionStyle: { type: "object", properties: captionStyleProperties },
           progressStyle: { type: "object", properties: progressStyleProperties },
           listMarkerStyle: { type: "object", properties: listMarkerStyleProperties },
@@ -459,7 +459,7 @@ export function executeTool(name: string, rawArgs: unknown): string {
       return ok({
         layouts: LAYOUTS.map((l) => ({ id: l.id, label: l.label, desc: l.desc })),
         blocks: BLOCK_TYPES.map((b) => ({ type: b.type, label: b.label })),
-        fonts: STAGE_FONTS.map((f) => ({ id: f.id, label: f.label, hint: f.hint })),
+        fonts: STAGE_FONTS.map((f) => ({ id: f.id, label: f.label, langs: f.langs, hint: f.hint, license: f.license })),
         notes: {
           open: "开场口播钉在第一帧，播完才开始动画和元件口播",
           close: "结束口播钉在最后一帧，排在全部元件口播之后",
@@ -467,7 +467,7 @@ export function executeTool(name: string, rawArgs: unknown): string {
           dialogue: "dialogue 版面是左右双人对话窗。对白写在 dialogue 数组，口播键为 item:{id}，每句可配 role",
           bg: "bg 是场景底色；bgImage / 图片 / 视频 / GIF 只能用户本地选文件，不要编造 URL",
           media: "video、gif 元件用 manage_blocks 添加后，src 由用户在检视里选择，存在 settings.src",
-          captions: "showCaptions 只控制预览字幕条。bilingualCaptions 双语。导出窗可选：每种语言各一段视频，或一段视频+多语言字幕（时间轴跟视频语言走）",
+          captions: "showCaptions 只控制预览字幕条。captionFontId 是烧录/预览字幕字体（SIL OFL）。bilingualCaptions 双语。导出窗可选：每种语言各一段视频，或一段视频+多语言字幕（时间轴跟视频语言走）",
           progress: "showTopProgress + progressStyle 控制画布进度条，画在画布上会进导出，不是工作区装饰",
           listMarker: "listMarkerStyle 控制全片列表序号：show 开关，kind=number 色块或 image 用户上传图，不要编造图片 URL",
           speakRole: "speakRole 填 get_project.voices 的 id；缺省用 voiceByLang 该语言默认",
@@ -669,7 +669,7 @@ export const SYSTEM_PROMPT = `你是 Web2Video 的分镜助手。这是本地口
 - 场景底色用 bg；遮罩 bgDim 0–1。不要编造图片、视频、GIF 的 URL。视频/GIF 元件让用户在检视里选本地文件。
 
 外观：
-- 口播字幕条：showCaptions 默认关，只影响预览。双语：bilingualCaptions + bilingualCaptionLang。导出烧录在导出窗勾选；exportSettings.exportSubtitles 可另存 SRT/VTT。
+- 口播字幕条：showCaptions 默认关，只影响预览。烧录字体用 captionFontId（SIL OFL，见 list_catalog.fonts）。双语：bilingualCaptions + bilingualCaptionLang。导出烧录在导出窗勾选；exportSettings.exportSubtitles 可另存 SRT/VTT。
 - 全片进度条：showTopProgress + progressStyle，画在画布顶/底，导出会带上。
 - 列表序号：listMarkerStyle.show / kind / 颜色 / 形状。图片只能用户在全局配置里上传，不要编造 URL。
 - 字体用 fontId / titleFontId / subtitleFontId / quoteFontId / captionFontId，取值见 list_catalog。

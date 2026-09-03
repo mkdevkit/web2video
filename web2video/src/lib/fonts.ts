@@ -6,10 +6,12 @@ export interface StageFont {
   label: string;
   license: "SIL OFL";
   hint: string;
+  langs: string;
   latin: string;
   zh: string;
   ja: string;
   generic: "sans-serif" | "serif";
+  google: string[];
 }
 
 /** All SIL Open Font License, free for commercial use. CJK falls back to Noto. */
@@ -19,61 +21,141 @@ export const STAGE_FONTS: StageFont[] = [
     label: "Noto Sans",
     license: "SIL OFL",
     hint: "谷歌多语种无衬线，中英日欧俄都完整",
+    langs: "中英日法德俄西葡意",
     latin: '"Noto Sans"',
     zh: '"Noto Sans SC"',
     ja: '"Noto Sans JP"',
     generic: "sans-serif",
+    google: ["Noto+Sans:wght@400;500;700", "Noto+Sans+SC:wght@400;500;700", "Noto+Sans+JP:wght@400;500;700"],
   },
   {
     id: "noto-serif",
     label: "Noto Serif",
     license: "SIL OFL",
     hint: "谷歌多语种衬线，适合标题和金句",
+    langs: "中英日法德俄西葡意",
     latin: '"Noto Serif"',
     zh: '"Noto Serif SC"',
     ja: '"Noto Serif JP"',
     generic: "serif",
+    google: ["Noto+Serif:wght@400;700", "Noto+Serif+SC:wght@400;700", "Noto+Serif+JP:wght@400;700"],
   },
   {
     id: "source-sans",
     label: "Source Sans 3",
     license: "SIL OFL",
     hint: "Adobe 开源西文 + Noto 中日文",
+    langs: "英欧俄 + 中日",
     latin: '"Source Sans 3"',
     zh: '"Noto Sans SC"',
     ja: '"Noto Sans JP"',
     generic: "sans-serif",
+    google: ["Source+Sans+3:wght@400;600;700", "Noto+Sans+SC:wght@400;500;700", "Noto+Sans+JP:wght@400;500;700"],
+  },
+  {
+    id: "source-serif",
+    label: "Source Serif 4",
+    license: "SIL OFL",
+    hint: "Adobe 开源衬线，西文/俄文，中日文回落 Noto Serif",
+    langs: "英欧俄 + 中日",
+    latin: '"Source Serif 4"',
+    zh: '"Noto Serif SC"',
+    ja: '"Noto Serif JP"',
+    generic: "serif",
+    google: ["Source+Serif+4:opsz,wght@8..60,400;8..60,700", "Noto+Serif+SC:wght@400;700", "Noto+Serif+JP:wght@400;700"],
   },
   {
     id: "ibm-plex",
     label: "IBM Plex",
     license: "SIL OFL",
     hint: "IBM 开源，西文/俄文 + 日文，中文走 Noto",
+    langs: "英欧俄日 + 中",
     latin: '"IBM Plex Sans"',
     zh: '"Noto Sans SC"',
     ja: '"IBM Plex Sans JP"',
     generic: "sans-serif",
+    google: [
+      "IBM+Plex+Sans:wght@400;500;600;700",
+      "IBM+Plex+Sans+JP:wght@400;500;700",
+      "Noto+Sans+SC:wght@400;500;700",
+    ],
+  },
+  {
+    id: "pt-sans",
+    label: "PT Sans",
+    license: "SIL OFL",
+    hint: "ParaType 开源，西里尔文口碑好，中日文回落 Noto",
+    langs: "英欧俄 + 中日",
+    latin: '"PT Sans"',
+    zh: '"Noto Sans SC"',
+    ja: '"Noto Sans JP"',
+    generic: "sans-serif",
+    google: ["PT+Sans:wght@400;700", "Noto+Sans+SC:wght@400;500;700", "Noto+Sans+JP:wght@400;500;700"],
   },
   {
     id: "nunito",
     label: "Nunito Sans",
     license: "SIL OFL",
     hint: "圆润无衬线，中日文回落到 Noto",
+    langs: "英欧俄 + 中日",
     latin: '"Nunito Sans"',
     zh: '"Noto Sans SC"',
     ja: '"Noto Sans JP"',
     generic: "sans-serif",
+    google: ["Nunito+Sans:wght@400;600;700", "Noto+Sans+SC:wght@400;500;700", "Noto+Sans+JP:wght@400;500;700"],
+  },
+  {
+    id: "inter",
+    label: "Inter",
+    license: "SIL OFL",
+    hint: "界面向无衬线，西文/俄文清晰，中日文回落 Noto",
+    langs: "英欧俄 + 中日",
+    latin: '"Inter"',
+    zh: '"Noto Sans SC"',
+    ja: '"Noto Sans JP"',
+    generic: "sans-serif",
+    google: ["Inter:wght@400;500;600;700", "Noto+Sans+SC:wght@400;500;700", "Noto+Sans+JP:wght@400;500;700"],
   },
   {
     id: "literata",
     label: "Literata",
     license: "SIL OFL",
     hint: "阅读向衬线，中日文回落到 Noto Serif",
+    langs: "英欧俄 + 中日",
     latin: '"Literata"',
     zh: '"Noto Serif SC"',
     ja: '"Noto Serif JP"',
     generic: "serif",
+    google: ["Literata:wght@400;700", "Noto+Serif+SC:wght@400;700", "Noto+Serif+JP:wght@400;700"],
   },
+  {
+    id: "dm-sans",
+    label: "DM Sans",
+    license: "SIL OFL",
+    hint: "和工作台 UI 同一套西文，中日文回落 Noto",
+    langs: "英欧 + 中日",
+    latin: '"DM Sans"',
+    zh: '"Noto Sans SC"',
+    ja: '"Noto Sans JP"',
+    generic: "sans-serif",
+    google: ["DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700", "Noto+Sans+SC:wght@400;500;700", "Noto+Sans+JP:wght@400;500;700"],
+  },
+];
+
+export const STAGE_FONT_IDS = STAGE_FONTS.map((f) => f.id);
+
+/** Where each font is used. All SIL OFL — free for commercial use. */
+export const FONT_USAGE: { where: string; fonts: string; license: "SIL OFL" }[] = [
+  { where: "工作台界面（按钮、表单、检视）", fonts: "DM Sans、Noto Sans SC", license: "SIL OFL" },
+  { where: "工作台标题（顶栏品牌、对话框标题）", fonts: "Fraunces、Noto Serif SC", license: "SIL OFL" },
+  { where: "画面正文、列表", fonts: "配置 → 字体 → 正文 / 列表（默认 Noto Sans）", license: "SIL OFL" },
+  { where: "画面标题、数字", fonts: "配置 → 字体 → 标题 / 数字（默认 Noto Serif）", license: "SIL OFL" },
+  { where: "副标题、署名", fonts: "配置 → 字体 → 副标题 / 署名（默认 Noto Sans）", license: "SIL OFL" },
+  { where: "金句", fonts: "配置 → 字体 → 金句（默认 Noto Serif）", license: "SIL OFL" },
+  { where: "口播字幕条（预览与烧录到画面）", fonts: "配置 → 字体 → 口播字幕（默认 Noto Sans）", license: "SIL OFL" },
+  { where: "画布进度条场次名", fonts: "配置 → 字体 → 进度条场次名（可回落字幕字体）", license: "SIL OFL" },
+  { where: "单个元件覆盖", fonts: "检视里可选；缺省跟该类型全局字体", license: "SIL OFL" },
+  { where: "中日文缺字回落", fonts: "Noto Sans/Serif SC、JP；IBM Plex 日文走 IBM Plex Sans JP", license: "SIL OFL" },
 ];
 
 export const DEFAULT_FONT_ID: StageFontId = "noto-sans";
@@ -124,6 +206,37 @@ export function isStageFontId(v: unknown): v is StageFontId {
 
 export function stageFont(id: string | undefined): StageFont {
   return STAGE_FONTS.find((f) => f.id === id) ?? STAGE_FONTS[0];
+}
+
+/** Load only the selected families (plus Noto CJK fallbacks). */
+export function ensureStageFonts(...ids: Array<StageFontId | undefined>) {
+  if (typeof document === "undefined") return;
+  const families = new Set<string>(["Noto+Sans:wght@400;500;700", "Noto+Sans+SC:wght@400;500;700", "Noto+Sans+JP:wght@400;500;700"]);
+  for (const id of ids) {
+    if (!isStageFontId(id)) continue;
+    for (const g of stageFont(id).google) families.add(g);
+  }
+  const key = [...families].sort().join("|");
+  let link = document.getElementById("stage-fonts") as HTMLLinkElement | null;
+  if (!link) {
+    link = document.createElement("link");
+    link.id = "stage-fonts";
+    link.rel = "stylesheet";
+    document.head.appendChild(link);
+  }
+  if (link.dataset.key === key) return;
+  link.dataset.key = key;
+  link.href = `https://fonts.googleapis.com/css2?${[...families].map((f) => `family=${f}`).join("&")}&display=swap`;
+}
+
+export async function waitStageFonts(...ids: Array<StageFontId | undefined>) {
+  ensureStageFonts(...ids);
+  if (typeof document === "undefined" || !document.fonts) return;
+  try {
+    await Promise.race([document.fonts.ready, new Promise<void>((r) => window.setTimeout(r, 4000))]);
+  } catch {
+    /* ignore */
+  }
 }
 
 export function fontStack(id: string | undefined, lang: LangId): string {

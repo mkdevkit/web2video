@@ -35,7 +35,17 @@ export type BlockType =
   | "shape";
 export type TtsProvider = "edge" | "azure" | "openai" | "qwen";
 export type SceneTransition = "cut" | "crossfade";
-export type StageFontId = "noto-sans" | "noto-serif" | "source-sans" | "ibm-plex" | "nunito" | "literata";
+export type StageFontId =
+  | "noto-sans"
+  | "noto-serif"
+  | "source-sans"
+  | "source-serif"
+  | "ibm-plex"
+  | "pt-sans"
+  | "nunito"
+  | "literata"
+  | "inter"
+  | "dm-sans";
 export type CaptionBox = "pill" | "bar" | "none";
 
 export interface CaptionStyle {

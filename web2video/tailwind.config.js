@@ -19,6 +19,7 @@ export default {
         paper: "#f3eee3",
       },
       fontFamily: {
+        /* SIL OFL — UI only, not burned into video unless also chosen as a stage font. */
         sans: ['"DM Sans"', '"Noto Sans SC"', "system-ui", "sans-serif"],
         display: ['"Fraunces"', '"Noto Serif SC"', "serif"],
       },

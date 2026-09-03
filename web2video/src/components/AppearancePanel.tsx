@@ -1,4 +1,4 @@
-import { STAGE_FONTS, captionStyleOf, fontStack, progressStyleOf, stageFont } from "../lib/fonts";
+import { STAGE_FONTS, FONT_USAGE, captionStyleOf, fontStack, progressStyleOf, stageFont } from "../lib/fonts";
 import { listMarkerRadius, listMarkerStyleOf } from "../lib/listMarker";
 import { pickImageFile } from "../lib/insertImage";
 import { useEditor } from "../store/useEditor";
@@ -27,7 +27,7 @@ function FontPick({
       >
         {STAGE_FONTS.map((f) => (
           <option key={f.id} value={f.id} style={{ fontFamily: fontStack(f.id, lang) }}>
-            {f.label}
+            {f.label} · {f.langs}
           </option>
         ))}
       </select>
@@ -43,7 +43,7 @@ export function FontFields() {
   return (
     <div className="space-y-2">
       <p className="text-xs leading-relaxed text-ink-400">
-        均为 SIL OFL，可商用。中日文不足时回落到 Noto。当前预览语言：按该语言优先选字形。
+        均为 SIL OFL，可商用。中日文不足时回落到 Noto。当前预览语言：按该语言优先选字形。口播字幕条（预览和烧录）用「口播字幕」这一项。
       </p>
       <div className="grid gap-2 md:grid-cols-2">
         <FontPick label="正文 / 列表" value={project.fontId} lang={lang} onChange={(fontId) => set({ fontId })} />
@@ -71,6 +71,30 @@ export function FontFields() {
         style={{ fontFamily: fontStack(project.captionFontId, lang) }}
       >
         字幕预览：黑洞并不是宇宙里的一个洞。
+      </p>
+      <p className="pt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-400">各处用字</p>
+      <div className="overflow-auto rounded border border-ink-700">
+        <table className="w-full text-[11px]">
+          <thead>
+            <tr className="bg-ink-800 text-ink-400">
+              <th className="px-2 py-1 text-left font-medium">用在哪</th>
+              <th className="px-2 py-1 text-left font-medium">字体</th>
+              <th className="px-2 py-1 text-left font-medium">许可</th>
+            </tr>
+          </thead>
+          <tbody>
+            {FONT_USAGE.map((row) => (
+              <tr key={row.where} className="border-t border-ink-700">
+                <td className="px-2 py-1">{row.where}</td>
+                <td className="px-2 py-1 text-ink-300">{row.fonts}</td>
+                <td className="px-2 py-1">{row.license}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-[10px] leading-relaxed text-ink-500">
+        上表可选字体均为 SIL OFL，免费可商用。不随工具分发任何专有字体。system-ui 只是系统回落，不是捆绑字体。
       </p>
     </div>
   );
