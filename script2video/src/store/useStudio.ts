@@ -4,6 +4,7 @@ import { emptyScript, normalizeProject, sampleProject } from "../sample";
 import { uid } from "../lib/ids";
 import { isLangId } from "../lib/langs";
 import { patchSource, switchEngine } from "../lib/engines";
+import { DEFAULT_GAP_MS, isGapBeat } from "../lib/beats";
 
 const AUTOSAVE = "script2video.autosave";
 
@@ -55,6 +56,7 @@ interface Studio {
   patchBeat: (scriptId: string, beatId: string, patch: Partial<Beat>) => void;
   renameBeat: (scriptId: string, beatId: string, nextId: string) => void;
   addBeat: (scriptId: string) => void;
+  addGap: (scriptId: string) => void;
   removeBeat: (scriptId: string, beatId: string) => void;
   addEvent: (scriptId: string) => void;
   patchEvent: (scriptId: string, eventId: string, patch: Partial<VisualEvent>) => void;
@@ -153,10 +155,17 @@ export const useStudio = create<Studio>((set, get) => {
       const prev = script.beats.find((b) => b.id === beatId);
       const beats = script.beats.map((b) => (b.id === beatId ? { ...b, ...patch } : b));
       let audioByLang = script.audioByLang;
-      if (patch.text && prev) {
+      if (patch.text && prev && !isGapBeat(prev)) {
         audioByLang = { ...audioByLang };
         for (const lang of Object.keys(patch.text).filter(isLangId)) {
           if ((patch.text[lang] ?? "") === (prev.text[lang] ?? "")) continue;
+          const existing = audioByLang[lang];
+          if (existing) audioByLang[lang] = { ...existing, stale: true };
+        }
+      }
+      if (patch.gapMs != null && prev && patch.gapMs !== prev.gapMs) {
+        audioByLang = { ...audioByLang };
+        for (const lang of Object.keys(audioByLang).filter(isLangId)) {
           const existing = audioByLang[lang];
           if (existing) audioByLang[lang] = { ...existing, stale: true };
         }
@@ -176,7 +185,14 @@ export const useStudio = create<Studio>((set, get) => {
       const script = get().project.scripts.find((s) => s.id === scriptId);
       if (!script) return;
       get().patchScript(scriptId, {
-        beats: [...script.beats, { id: uid("b"), text: { [get().project.sourceLang]: "" } }],
+        beats: [...script.beats, { id: uid("b"), kind: "speech", text: { [get().project.sourceLang]: "" } }],
+      });
+    },
+    addGap: (scriptId) => {
+      const script = get().project.scripts.find((s) => s.id === scriptId);
+      if (!script) return;
+      get().patchScript(scriptId, {
+        beats: [...script.beats, { id: uid("wait"), kind: "gap", text: {}, gapMs: DEFAULT_GAP_MS }],
       });
     },
     removeBeat: (scriptId, beatId) => {

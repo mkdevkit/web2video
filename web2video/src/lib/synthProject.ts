@@ -1,12 +1,14 @@
 import type { LangId } from "./langs";
-import { concatAudioBlobs, measureDuration, putAudioBlob } from "./audioStore";
-import { resolveSpeakRole, synthesizeClip, synthesizeScene, voiceSynthParams } from "./tts";
+import { concatParts, measureDuration, mixClips, putAudioBlob, putBeatAudio } from "./audioStore";
+import { resolveSpeakRole, synthesizeClip, voiceSynthParams } from "./tts";
 import { sourceLangOf } from "./textI18n";
-import { collectNarrationBeats, joinBeatTexts } from "./narration";
+import { speakText } from "./narration";
+import { driveOf, isPlayBlock } from "./calendar";
+import { isGapSpeak, lineDurationMs, speakLineText, speaksOf } from "./speaks";
+import { sceneBlocks } from "./blocks";
+import { sceneCalendar } from "./timeline";
 import { useEditor } from "../store/useEditor";
-import type { SceneAudio, VoiceProfile } from "../types";
-
-type RoleGroup = { role: VoiceProfile; texts: string[] };
+import type { Scene, SceneAudio, VoiceProfile } from "../types";
 
 export type SynthProgress = {
   lang: LangId;
@@ -19,14 +21,28 @@ export type SynthProgress = {
   text: string;
 };
 
-function groupByRole(beats: { text: string; role: VoiceProfile }[]): RoleGroup[] {
-  const groups: RoleGroup[] = [];
-  for (const beat of beats) {
-    const last = groups[groups.length - 1];
-    if (last && last.role.id === beat.role.id) last.texts.push(beat.text);
-    else groups.push({ role: beat.role, texts: [beat.text] });
+function uniqueTargets(scene: Scene, lang: LangId, source: LangId): string[] {
+  if (driveOf(scene) === "config") {
+    const out: string[] = [];
+    const seen = new Set<string>();
+    for (const b of sceneBlocks(scene).filter(isPlayBlock)) {
+      const t = (b.settings?.playTarget ?? "").trim();
+      if (!t || seen.has(t)) continue;
+      if (!speakText(scene, t, lang, source).trim()) continue;
+      seen.add(t);
+      out.push(t);
+    }
+    return out;
   }
-  return groups;
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const line of speaksOf(scene)) {
+    if (isGapSpeak(line) || seen.has(line.id)) continue;
+    if (!speakLineText(line, lang, source).trim()) continue;
+    seen.add(line.id);
+    out.push(line.id);
+  }
+  return out;
 }
 
 export async function synthScenes(
@@ -39,12 +55,7 @@ export async function synthScenes(
   const scenes = project.scenes.filter((s) => sceneIds.includes(s.id));
   for (let si = 0; si < scenes.length; si++) {
     const scene = scenes[si];
-    const beats = collectNarrationBeats(scene, lang, source);
-    const resolved = beats.map((b) => {
-      const role = resolveSpeakRole(project, scene, lang, b.target);
-      if (!role) throw new Error("请先在配音窗口添加角色并指定音色");
-      return { ...b, role };
-    });
+    const targets = uniqueTargets(scene, lang, source);
     const report = (clipIndex: number, clipCount: number, roleName: string, text: string) => {
       onProgress?.({
         lang,
@@ -57,37 +68,93 @@ export async function synthScenes(
         text,
       });
     };
-    if (!resolved.length) {
+    if (!targets.length) {
       report(0, 0, "", "（本场无口播，跳过）");
       continue;
     }
-    const groups = groupByRole(resolved);
-    let audio: SceneAudio;
-    if (groups.length === 1) {
-      const text = joinBeatTexts(groups[0].texts);
-      const { voiceId, provider, targetModel } = voiceSynthParams(groups[0].role);
-      report(0, 1, groups[0].role.name, text);
-      audio = await synthesizeScene(scene.id, lang, text, voiceId, provider, targetModel);
-    } else {
-      const blobs: Blob[] = [];
-      for (let gi = 0; gi < groups.length; gi++) {
-        const group = groups[gi];
-        const text = joinBeatTexts(group.texts);
-        const { voiceId, targetModel } = voiceSynthParams(group.role);
-        report(gi, groups.length, group.role.name, text);
-        blobs.push(await synthesizeClip(lang, text, voiceId, targetModel));
-      }
-      const blob = await concatAudioBlobs(blobs);
-      const stored = await putAudioBlob(scene.id, lang, blob);
-      const durationMs = await measureDuration(stored);
-      audio = {
-        src: `media/${lang}/${scene.id}.mp3`,
-        durationMs,
-        voice: groups.map((g) => g.role.voiceId).join(","),
-        words: [],
-        stale: false,
-      };
+
+    const blobs = new Map<string, Blob>();
+    const beatMs: Record<string, number> = {};
+    for (let i = 0; i < targets.length; i++) {
+      const target = targets[i];
+      const text = speakText(scene, target, lang, source).replace(/\s+/g, " ").trim();
+      const role = resolveSpeakRole(project, scene, lang, target);
+      if (!role) throw new Error("请先在配音窗口添加角色并指定音色");
+      report(i, targets.length, role.name, text);
+      const { voiceId, targetModel } = voiceSynthParams(role);
+      const blob = await synthesizeClip(lang, text, voiceId, targetModel);
+      blobs.set(target, blob);
+      await putBeatAudio(scene.id, lang, target, blob);
+      beatMs[target] = await measureDuration(blob);
     }
+
+    useEditor.getState().patchScene(
+      scene.id,
+      (s) => ({
+        ...s,
+        speaks: speaksOf(s).map((line) =>
+          isGapSpeak(line) || line.durationMs
+            ? line
+            : beatMs[line.id]
+              ? { ...line, durationMs: beatMs[line.id] }
+              : line,
+        ),
+        audioByLang: {
+          ...s.audioByLang,
+          [lang]: {
+            src: `media/${lang}/${scene.id}.wav`,
+            durationMs: Object.values(beatMs).reduce((n, v) => n + v, 0),
+            voice: [...new Set(targets.map((t) => resolveSpeakRole(project, s, lang, t)?.voiceId).filter(Boolean))].join(","),
+            words: [],
+            beatMs,
+            stale: false,
+          },
+        },
+      }),
+      false,
+    );
+
+    const fresh = useEditor.getState().project.scenes.find((x) => x.id === scene.id) ?? scene;
+    let stored: Blob;
+    let durationMs: number;
+    if (driveOf(fresh) === "config") {
+      const cal = sceneCalendar(fresh, lang, useEditor.getState().project);
+      const clips: { blob: Blob; startMs: number }[] = [];
+      for (const span of cal.spans) {
+        const blob = blobs.get(span.target);
+        if (blob) clips.push({ blob, startMs: span.startMs });
+      }
+      stored = await mixClips(clips, Math.max(1, cal.bodyEndMs));
+      durationMs = await measureDuration(stored);
+    } else {
+      const parts: { blob?: Blob; silenceMs?: number }[] = [];
+      for (const line of speaksOf(fresh)) {
+        if (isGapSpeak(line)) {
+          parts.push({ silenceMs: lineDurationMs(fresh, line, lang, source) });
+          continue;
+        }
+        const blob = blobs.get(line.id);
+        if (blob) parts.push({ blob });
+      }
+      if (!parts.some((p) => p.blob)) {
+        report(0, 0, "", "（本场无口播，跳过）");
+        continue;
+      }
+      stored = await concatParts(parts);
+      durationMs = await measureDuration(stored);
+    }
+    await putAudioBlob(scene.id, lang, stored);
+    const voices = targets
+      .map((t) => resolveSpeakRole(project, scene, lang, t))
+      .filter((r): r is VoiceProfile => Boolean(r));
+    const audio: SceneAudio = {
+      src: `media/${lang}/${scene.id}.wav`,
+      durationMs,
+      voice: [...new Set(voices.map((r) => r.voiceId))].join(","),
+      words: [],
+      beatMs,
+      stale: false,
+    };
     useEditor.getState().markAudio(scene.id, lang, audio);
   }
 }

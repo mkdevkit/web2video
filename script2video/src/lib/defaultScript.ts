@@ -1,10 +1,11 @@
 export { DEFAULT_STAGE_HTML, stageHtmlOf } from "./stage";
 
 export const DEFAULT_CODE = `// 用口播 id 取时长，不要写死秒数。
-// speech.s("hook") = 这一句的总时长（随语言 TTS 变）
-// 入场用固定秒（各语言一样快）；holdS(id, fade) = 该句总长 − fade，画面停到这句说完。
-// 暂停可写多次：每次 speech.sleepS(n) 都加进全长。totalS = bodyS + Σ sleepS。
-// 不要在口播表里填毫秒。startS / endS 仍是口播轴（不含暂停）。
+// 口播驱动：列表顺序即时钟，句间留白用口播表「加延时」。
+//   speech.startS("hook") / speech.s("hook") / speech.holdS("hook", fade)
+// 脚本驱动：台词库 + speech.play("hook") 排期（返回开始秒，可当 GSAP position）。
+//   speech.sleepS(0.4) 插在两次 play 之间。不要 timeline.play()。
+// 入场用固定秒；holdS(id, fade) = 该句总长 − fade。
 
 const fade = 0.48;
 
@@ -23,4 +24,7 @@ timeline.to({}, { duration: pauseA }, speech.bodyS());
 timeline.to({}, { duration: pauseB }, speech.bodyS() + pauseA);
 
 // 画面文案可跟口播：root.querySelector("#title").textContent = speech.text("hook");
+// 脚本驱动示例：
+// const t = speech.play("hook");
+// timeline.fromTo("#title", { opacity: 0 }, { opacity: 1, duration: fade }, t);
 `;

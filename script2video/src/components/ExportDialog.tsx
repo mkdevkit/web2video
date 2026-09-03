@@ -15,6 +15,7 @@ import {
 import { LANGS, langZhName, type LangId } from "../lib/langs";
 import { synthScript } from "../lib/synthScript";
 import { getAudio } from "../lib/audioStore";
+import { bakeSoundtrack } from "../lib/soundtrack";
 import { subtitleFile } from "../lib/subtitles";
 import { engineMeta, engineOf } from "../lib/engines";
 import { useStudio } from "../store/useStudio";
@@ -70,6 +71,7 @@ export function ExportDialog() {
         store.setStatus(`${langZhName(lang)}：正在合成「${script.name}」…`);
         await synthScript(script.id, lang, store.setStatus);
       }
+      await bakeSoundtrack(useStudio.getState().project.scripts.find((s) => s.id === script.id) ?? script, useStudio.getState().project, lang);
     }
   };
 

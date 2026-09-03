@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import { useStudio } from "../store/useStudio";
 import { beatOrder, langAudioOf, sceneDurationMs } from "../lib/clock";
 import { createSpeech } from "../lib/speech";
+import { persistSpeechRun, mixScriptSoundtrack } from "../lib/soundtrack";
+import { driveOf } from "../lib/beats";
 import { runGsapScript } from "../lib/runGsap";
 import { LANGS } from "../lib/langs";
 import { audioObjectUrl } from "../lib/audioStore";
@@ -87,15 +89,15 @@ export function PreviewPane() {
     if (!root) return;
     mountStage(root, script, project);
     const speech = createSpeech(script, lang);
-    const { timeline, revert, error: err, sleepMs } = runGsapScript(sourceOf(script), speech, root);
+    const { timeline, revert, error: err } = runGsapScript(sourceOf(script), speech, root);
     revertRef.current?.();
     revertRef.current = revert;
     tlRef.current = timeline;
     setError(err ?? "");
     timeline.seek(localMs / 1000, false);
-    const nextSleep = Math.round(sleepMs);
-    if (Math.round(script.holdMs ?? 0) !== nextSleep) {
-      useStudio.getState().patchScript(script.id, { holdMs: nextSleep });
+    persistSpeechRun(script, speech);
+    if (driveOf(script) === "script") {
+      void mixScriptSoundtrack(script, lang, speech).then(() => audioObjectUrl(script.id, lang).then(setAudioUrl));
     }
     return () => {
       revert();
@@ -103,7 +105,7 @@ export function PreviewPane() {
     };
     // localMs is applied via seek below; rebuild when script/lang/code changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [script?.id, script?.engine, script?.code, script?.sources, script?.beats, script?.audioByLang, script?.holdMs, script?.stageHtml, project.stageCss, project.stageTheme, lang]);
+  }, [script?.id, script?.engine, script?.code, script?.sources, script?.beats, script?.audioByLang, script?.holdMs, script?.stageHtml, script?.drive, project.stageCss, project.stageTheme, lang]);
 
   useEffect(() => {
     tlRef.current?.seek(localMs / 1000, false);
@@ -261,12 +263,8 @@ export function PreviewPane() {
         {audioUrl && <audio className="mt-2 w-full" controls src={audioUrl} />}
         <p className="mt-2 min-h-[2.4em] text-sm">
           {(() => {
-            let t0 = 0;
-            for (const b of beats) {
-              if (localMs >= t0 && localMs < t0 + b.ms) return b.text;
-              t0 += b.ms;
-            }
-            return beats[beats.length - 1]?.text ?? "—";
+            const hit = beats.find((b) => b.kind === "speech" && localMs >= b.startMs && localMs < b.startMs + b.ms);
+            return hit?.text || "—";
           })()}
         </p>
         <p className="text-[11px] text-ink-400">
@@ -278,16 +276,22 @@ export function PreviewPane() {
           <thead>
             <tr className="text-ink-400">
               <th className="pb-1 text-left">口播 id</th>
+              <th className="pb-1 text-left">startS</th>
               <th className="pb-1 text-left">speech.s</th>
             </tr>
           </thead>
           <tbody>
-            {speech.ids().map((id) => (
+            {speech.ids().map((id) => {
+              const hit = beats.find((b) => b.id === id);
+              const start = hit ? hit.startMs / 1000 : speech.startS(id);
+              return (
               <tr key={id}>
                 <td className="py-0.5 font-mono">{id}</td>
+                <td>{start.toFixed(2)}s</td>
                 <td>{speech.s(id).toFixed(2)}s</td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>

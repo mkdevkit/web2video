@@ -1,17 +1,15 @@
 import { uid } from "./ids";
-import { sceneBlocks } from "./blocks";
 import { textOf } from "./textI18n";
 import { isLangId, type LangId } from "./langs";
 import type { AnimKind, Cue, Project, Scene, TextI18n, WordTs } from "../types";
+import { findSpeak, isGapSpeak, speakLineText, speaksOf, SPEAK_CLOSE, SPEAK_OPEN } from "./speaks";
+import { sceneBlocks } from "./blocks";
 
-export const SPEAK_OPEN = "open";
-export const SPEAK_CLOSE = "close";
-
-export function itemSpeakKey(itemId: string) {
-  return `item:${itemId}`;
-}
+export { SPEAK_CLOSE, SPEAK_OPEN, itemSpeakKey } from "./speaks";
 
 export function speakText(scene: Scene, key: string, lang: LangId, source: LangId): string {
+  const line = findSpeak(scene, key);
+  if (line) return speakLineText(line, lang, source);
   if (key === SPEAK_OPEN) return textOf(scene.narration, lang, source);
   if (key === SPEAK_CLOSE) return textOf(scene.narrationClose, lang, source);
   return textOf(scene.speak?.[key], lang, source);
@@ -25,25 +23,11 @@ export type NarrationBeat = {
 /** Open → each element (list items nested) → close. Empty lines are skipped. */
 export function collectNarrationBeats(scene: Scene, lang: LangId, source: LangId): NarrationBeat[] {
   const beats: NarrationBeat[] = [];
-  const push = (target: string, text: string) => {
-    const t = text.replace(/\s+/g, " ").trim();
-    if (t) beats.push({ target, text: t });
-  };
-  push(SPEAK_OPEN, speakText(scene, SPEAK_OPEN, lang, source));
-  for (const block of sceneBlocks(scene)) {
-    push(block.id, speakText(scene, block.id, lang, source));
-    if (block.type === "list") {
-      for (const it of scene.slots.items ?? []) {
-        push(itemSpeakKey(it.id), speakText(scene, itemSpeakKey(it.id), lang, source));
-      }
-    }
-    if (block.type === "dialogue") {
-      for (const it of scene.slots.dialogue ?? []) {
-        push(itemSpeakKey(it.id), speakText(scene, itemSpeakKey(it.id), lang, source));
-      }
-    }
+  for (const line of speaksOf(scene)) {
+    if (isGapSpeak(line)) continue;
+    const t = speakLineText(line, lang, source).replace(/\s+/g, " ").trim();
+    if (t) beats.push({ target: line.id, text: t });
   }
-  push(SPEAK_CLOSE, speakText(scene, SPEAK_CLOSE, lang, source));
   return beats;
 }
 
@@ -120,8 +104,10 @@ export function ensureCuesFromBeats(scene: Scene, lang: LangId, source: LangId):
   const beats = collectNarrationBeats(scene, lang, source);
   const next = [...(scene.cues ?? [])];
   const seen = new Set(next.map((c) => c.target));
+  const visual = new Set(sceneBlocks(scene).map((b) => b.id));
   for (const beat of beats) {
-    if (beat.target === SPEAK_OPEN || beat.target === SPEAK_CLOSE) continue;
+    const visualTarget = beat.target.startsWith("item:") || visual.has(beat.target);
+    if (!visualTarget) continue;
     if (seen.has(beat.target)) continue;
     seen.add(beat.target);
     next.push({
@@ -138,9 +124,19 @@ export function ensureCuesFromBeats(scene: Scene, lang: LangId, source: LangId):
 }
 
 export function writeSpeak(scene: Scene, key: string, slot: TextI18n): Scene {
-  if (key === SPEAK_OPEN) return { ...scene, narration: slot };
-  if (key === SPEAK_CLOSE) return { ...scene, narrationClose: slot };
-  return { ...scene, speak: { ...scene.speak, [key]: slot } };
+  const speaks = speaksOf(scene);
+  const hit = speaks.find((s) => s.id === key);
+  if (hit) {
+    return persistSpeakList(
+      scene,
+      speaks.map((s) => (s.id === key ? { ...s, i18n: slot.i18n } : s)),
+    );
+  }
+  return persistSpeakList(scene, [...speaks, { id: key, kind: "speech", i18n: slot.i18n }]);
+}
+
+function persistSpeakList(scene: Scene, speaks: Scene["speaks"]): Scene {
+  return { ...scene, speaks, speakTrack: undefined };
 }
 
 export function markLangAudioStale(scene: Scene, lang: LangId): Scene {

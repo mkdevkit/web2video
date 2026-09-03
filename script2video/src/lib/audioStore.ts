@@ -18,6 +18,10 @@ export function audioKey(scriptId: string, lang: LangId): string {
   return `${scriptId}:${lang}`;
 }
 
+export function beatAudioKey(scriptId: string, lang: LangId, beatId: string): string {
+  return `${scriptId}:${lang}:beat:${beatId}`;
+}
+
 export async function putAudio(scriptId: string, lang: LangId, blob: Blob): Promise<void> {
   const db = await openDb();
   await new Promise<void>((resolve, reject) => {
@@ -66,6 +70,26 @@ export async function putAudioBlob(scriptId: string, lang: LangId, blob: Blob): 
   return blob;
 }
 
+export async function putBeatAudio(scriptId: string, lang: LangId, beatId: string, blob: Blob): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite");
+    tx.objectStore(STORE).put(blob, beatAudioKey(scriptId, lang, beatId));
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+export async function getBeatAudio(scriptId: string, lang: LangId, beatId: string): Promise<Blob | undefined> {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readonly");
+    const req = tx.objectStore(STORE).get(beatAudioKey(scriptId, lang, beatId));
+    req.onsuccess = () => resolve(req.result as Blob | undefined);
+    req.onerror = () => reject(req.error);
+  });
+}
+
 export async function measureDuration(blob: Blob): Promise<number> {
   const url = URL.createObjectURL(blob);
   try {
@@ -84,20 +108,42 @@ export async function measureDuration(blob: Blob): Promise<number> {
 
 export async function concatAudioBlobs(blobs: Blob[]): Promise<Blob> {
   if (!blobs.length) throw new Error("没有可拼接的音频");
-  if (blobs.length === 1) return blobs[0];
+  return concatParts(blobs.map((blob) => ({ blob })));
+}
+
+/** Sequential concat of clips and silence, matching the first clip's sample rate. */
+export async function concatParts(parts: { blob?: Blob; silenceMs?: number }[]): Promise<Blob> {
+  const nonempty = parts.filter((p) => p.blob || (p.silenceMs ?? 0) > 0);
+  if (!nonempty.length) throw new Error("没有可拼接的音频");
   const ctx = new AudioContext();
   try {
-    const buffers: AudioBuffer[] = [];
-    for (const blob of blobs) {
-      const copy = await blob.arrayBuffer();
-      buffers.push(await ctx.decodeAudioData(copy.slice(0)));
+    const decoded: AudioBuffer[] = [];
+    for (const p of nonempty) {
+      if (!p.blob) continue;
+      const copy = await p.blob.arrayBuffer();
+      decoded.push(await ctx.decodeAudioData(copy.slice(0)));
     }
-    const sampleRate = buffers[0].sampleRate;
-    const channels = Math.max(...buffers.map((b) => b.numberOfChannels));
-    const length = buffers.reduce((n, b) => n + b.length, 0);
+    const sampleRate = decoded[0]?.sampleRate ?? 24000;
+    const channels = decoded.length ? Math.max(...decoded.map((b) => b.numberOfChannels)) : 1;
+    const pieces: AudioBuffer[] = [];
+    let di = 0;
+    for (const p of nonempty) {
+      if ((p.silenceMs ?? 0) > 0 && !p.blob) {
+        const n = Math.max(1, Math.round((sampleRate * (p.silenceMs ?? 0)) / 1000));
+        pieces.push(ctx.createBuffer(channels, n, sampleRate));
+        continue;
+      }
+      if (p.blob) pieces.push(decoded[di++]);
+    }
+    if (!pieces.length) throw new Error("没有可拼接的音频");
+    if (pieces.length === 1 && decoded.length === 1) {
+      const blob = nonempty.find((p) => p.blob)?.blob;
+      if (blob) return blob;
+    }
+    const length = pieces.reduce((n, b) => n + b.length, 0);
     const out = ctx.createBuffer(channels, length, sampleRate);
     let offset = 0;
-    for (const buf of buffers) {
+    for (const buf of pieces) {
       for (let c = 0; c < channels; c++) {
         const src = buf.getChannelData(Math.min(c, buf.numberOfChannels - 1));
         out.getChannelData(c).set(src, offset);
@@ -110,10 +156,56 @@ export async function concatAudioBlobs(blobs: Blob[]): Promise<Blob> {
   }
 }
 
+export function silentWav(ms: number, sampleRate = 24000, channels = 1): Blob {
+  const samples = Math.max(1, Math.round((sampleRate * Math.max(0, ms)) / 1000));
+  const chans = Array.from({ length: Math.max(1, channels) }, () => new Float32Array(samples));
+  return encodeWavFromChannels(chans, sampleRate);
+}
+
+/** Place clips at startMs on a timeline of totalMs (overlap is mixed). */
+export async function mixClips(
+  clips: { blob: Blob; startMs: number }[],
+  totalMs: number,
+): Promise<Blob> {
+  const duration = Math.max(1, totalMs);
+  if (!clips.length) return silentWav(duration);
+  const ctx = new AudioContext();
+  try {
+    const decoded: { buf: AudioBuffer; startMs: number }[] = [];
+    for (const clip of clips) {
+      const copy = await clip.blob.arrayBuffer();
+      decoded.push({ buf: await ctx.decodeAudioData(copy.slice(0)), startMs: clip.startMs });
+    }
+    const sampleRate = decoded[0].buf.sampleRate;
+    const channels = Math.max(...decoded.map((d) => d.buf.numberOfChannels));
+    const length = Math.max(1, Math.round((sampleRate * duration) / 1000));
+    const out = ctx.createBuffer(channels, length, sampleRate);
+    for (const { buf, startMs } of decoded) {
+      const offset = Math.max(0, Math.round((sampleRate * startMs) / 1000));
+      for (let c = 0; c < channels; c++) {
+        const src = buf.getChannelData(Math.min(c, buf.numberOfChannels - 1));
+        const dest = out.getChannelData(c);
+        for (let i = 0; i < src.length && offset + i < dest.length; i++) {
+          const mixed = dest[offset + i] + src[i];
+          dest[offset + i] = Math.max(-1, Math.min(1, mixed));
+        }
+      }
+    }
+    return encodeWav(out);
+  } finally {
+    await ctx.close();
+  }
+}
+
 function encodeWav(buffer: AudioBuffer): Blob {
-  const numChannels = buffer.numberOfChannels;
-  const sampleRate = buffer.sampleRate;
-  const samples = buffer.length;
+  const chans: Float32Array[] = [];
+  for (let c = 0; c < buffer.numberOfChannels; c++) chans.push(buffer.getChannelData(c));
+  return encodeWavFromChannels(chans, buffer.sampleRate);
+}
+
+function encodeWavFromChannels(channels: Float32Array[], sampleRate: number): Blob {
+  const numChannels = Math.max(1, channels.length);
+  const samples = channels[0]?.length ?? 0;
   const dataSize = samples * numChannels * 2;
   const bytes = new ArrayBuffer(44 + dataSize);
   const view = new DataView(bytes);
@@ -133,12 +225,10 @@ function encodeWav(buffer: AudioBuffer): Blob {
   view.setUint16(34, 16, true);
   writeStr(36, "data");
   view.setUint32(40, dataSize, true);
-  const channels: Float32Array[] = [];
-  for (let c = 0; c < numChannels; c++) channels.push(buffer.getChannelData(c));
   let offset = 44;
   for (let i = 0; i < samples; i++) {
     for (let c = 0; c < numChannels; c++) {
-      const s = Math.max(-1, Math.min(1, channels[c][i] ?? 0));
+      const s = Math.max(-1, Math.min(1, channels[c]?.[i] ?? 0));
       view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
       offset += 2;
     }

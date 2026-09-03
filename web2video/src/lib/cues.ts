@@ -1,22 +1,15 @@
 import type { Cue, CueBind, CueStay, Project, Scene } from "../types";
 import type { LangId } from "./langs";
-import { beatSpansForScene, speakText, SPEAK_CLOSE, SPEAK_OPEN, type BeatSpan } from "./narration";
+import { beatSpansForScene, speakText, type BeatSpan } from "./narration";
 import { sceneClock, type SceneClock } from "./timeline";
 
 export function bodyBeatSpans(scene: Scene, lang: LangId, source: LangId): BeatSpan[] {
-  return beatSpansForScene(scene, lang, source).filter((s) => s.target !== SPEAK_OPEN && s.target !== SPEAK_CLOSE);
+  return beatSpansForScene(scene, lang, source);
 }
 
 export function cueBind(cue: Cue, scene: Scene, source: LangId): CueBind {
   if (cue.bind === "speak" || cue.bind === "visual") return cue.bind;
   if (speakText(scene, cue.target, source, source).trim()) return "speak";
-  const i18n =
-    cue.target === SPEAK_OPEN
-      ? scene.narration.i18n
-      : cue.target === SPEAK_CLOSE
-        ? scene.narrationClose?.i18n
-        : scene.speak?.[cue.target]?.i18n;
-  if (Object.values(i18n ?? {}).some((v) => (v ?? "").trim())) return "speak";
   return "visual";
 }
 

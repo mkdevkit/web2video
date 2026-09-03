@@ -3,6 +3,7 @@ import { measureDuration, putAudioBlob } from "./audioStore";
 import { loadTtsSecrets } from "./ttsSecrets";
 import { findTimbreByVoice } from "./voiceLibrary";
 import { qwenSynthesize } from "./qwenTts";
+import { findSpeak } from "./speaks";
 import { qwenRoles } from "./voices";
 import type { Project, Scene, SceneAudio, TtsProvider, VoiceProfile } from "../types";
 
@@ -23,7 +24,8 @@ export function activeVoice(project: Project): VoiceProfile | undefined {
 
 export function resolveSpeakRole(project: Project, scene: Scene, lang: LangId, key: string): VoiceProfile | undefined {
   const roles = qwenRoles(project.voices);
-  return pickRole(roles, scene.speakRole?.[key]) || defaultRoleForLang(project, lang);
+  const line = findSpeak(scene, key);
+  return pickRole(roles, line?.role) || pickRole(roles, scene.speakRole?.[key]) || defaultRoleForLang(project, lang);
 }
 
 export function voiceSynthParams(role: VoiceProfile): { provider: TtsProvider; voiceId: string; targetModel?: string } {

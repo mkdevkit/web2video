@@ -14,7 +14,7 @@ import { runAgent, type ChatMessage } from "../lib/ai/agent";
 import { useEditor } from "../store/useEditor";
 
 const EXAMPLES = [
-  "把当前片子重做成三分钟科普：黑洞不是洞。分 5 场，要开场口播和结束口播。",
+  "把当前片子重做成三分钟科普：黑洞不是洞。分 5 场，每场写好口播列表。",
   "在最后追加一场总结，金句版面。",
   "把第 2 场改成要点列表，三条常见误解。",
 ];

@@ -3,33 +3,51 @@ import type { EngineId } from "../types";
 export const SPEECH_API = [
   { name: `speech.s("hook")`, meaning: "这一句配音有多长（秒）。这一段画面的总时长用它，不要写死 3。" },
   { name: `speech.ms("hook")`, meaning: "同上，毫秒。" },
-  { name: `speech.startS("hook")`, meaning: "这一句口播从哪一秒开始（不含暂停）。" },
-  { name: `speech.endS("hook")`, meaning: "这一句口播哪一秒结束（不含暂停）。" },
+  { name: `speech.startS("hook")`, meaning: "这一句口播从哪一秒开始。口播驱动＝列表时钟（含延时行）；脚本驱动＝上次 play 的位置。" },
+  { name: `speech.endS("hook")`, meaning: "这一句口播哪一秒结束。" },
+  {
+    name: `speech.play("hook")`,
+    meaning:
+      "脚本驱动：把这句排到口播轴上，返回开始秒，可当 GSAP position。可写 speech.play(\"hook\", 1.2) 指定时刻。同一 id 第一次生效。口播驱动：等于 startS，不改列表顺序。",
+  },
   {
     name: `speech.holdS("hook", 0.48)`,
     meaning:
       "这一句画面分两段：入场 0.48s（fade 等，各语言一样长）+ 停住。holdS = s(\"hook\") − 0.48。停住这段吃掉多出来的口播，两段加起来刚好说到这句结束。换语言只变停住多久，入场不要改。",
   },
-  { name: `speech.bodyS()`, meaning: "各句口播之和，不含暂停。" },
-  { name: `speech.sleepS(0.4)`, meaning: "暂停（秒）。每次调用把这段时间加进全长并返回该值，给 timeline 当 duration。可多次。不要在口播表填。" },
-  { name: `speech.totalS()`, meaning: "本脚本全长 = bodyS + 所有 sleepS。" },
+  { name: `speech.bodyS()`, meaning: "各句口播之和，不含延时行 / sleepS。" },
+  { name: `speech.sleepS(0.4)`, meaning: "暂停（秒）。口播驱动：加在列表时钟之后（片尾）。脚本驱动：推进 play 光标，插在两次 play 之间。不要用它代替口播表延时行。" },
+  { name: `speech.totalS()`, meaning: "本脚本全长。口播驱动 = 列表（含延时）+ 片尾 sleepS；脚本驱动 = play 光标。" },
   { name: `speech.text("hook")`, meaning: "当前预览语言的口播文案。" },
-  { name: `speech.ids()`, meaning: "有文案的口播 id，按播放顺序。" },
+  { name: `speech.ids()`, meaning: "有文案的口播 id（不含延时行）。" },
 ];
 
 export const CLOCK_LAYERS = [
   { layer: "语义", store: "第几句、句内 0–1、元件 id", varies: "否" },
   { layer: "口播", store: "TTS 每句真实毫秒（或按字数估算）", varies: "是" },
+  { layer: "延时", store: "口播表延时行，或脚本驱动的 speech.play / sleepS", varies: "否" },
   { layer: "演出", store: "入场 fade 等固定毫秒", varies: "否" },
 ];
+
+export const SCRIPT_DRIVE_EXAMPLE = `// 口播页切到「脚本驱动」
+const fade = 0.48;
+const t0 = speech.play("hook");
+timeline.fromTo("#title", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: fade }, t0);
+timeline.to("#title", { duration: speech.holdS("hook", fade) }, t0 + fade);
+speech.sleepS(0.4);
+const t1 = speech.play("fact");
+timeline.fromTo("#stat", { opacity: 0 }, { opacity: 1, duration: 0.42 }, t1);
+timeline.to("#stat", { duration: speech.holdS("fact", 0.42) }, t1 + 0.42);
+`;
 
 export const DONT = [
   "整条时间轴按「新时长 / 旧时长」做 timeScale",
   "CSS animation-duration: 8s 或 Remotion durationInFrames={150} 当口播时钟",
   "用英文字幕时间轴驱动中文画面（字幕可以共用时间轴，动画不行）",
-  "调用 timeline.play()（预览和 HyperFrames 都是 seek 暂停轴）",
+  "调用 timeline.play()（预览和 HyperFrames 都是 seek 暂停轴）。口播用 speech.play，不是 timeline.play",
   "把 KaTeX / Three.js 当成独立引擎；它们是 TS 工具里的库，时长仍跟 speech 走",
-  "在口播表填暂停毫秒；暂停用 speech.sleepS(0.4)，可多次，clock.sleep_ms 是合计",
+  "口播驱动下用 sleepS 做句间留白（sleepS 加在片尾）；句间静音用口播表「加延时」",
+  "脚本驱动下指望口播表顺序自动播；必须 speech.play(id)",
 ];
 
 export interface EngineGuide {
@@ -46,14 +64,14 @@ export const ENGINE_GUIDES: Record<EngineId, EngineGuide> = {
   gsap: {
     id: "gsap",
     label: "GSAP",
-    summary: "工作台默认引擎。每个脚本自己的舞台 HTML；画幅/字体/全局 CSS 在工程外观里。本脚本写 paused timeline。预览和导出走 seek，不要 play()。",
+    summary: "工作台默认引擎。每个脚本自己的舞台 HTML；画幅/字体/全局 CSS 在工程外观里。本脚本写 paused timeline。预览和导出走 seek，不要 timeline.play()。",
     duration: "speech.s(id) 是该句配音总秒数。入场写死 fade（各语言相同）；holdS(id, fade) = 该句总长 − fade，用来把画面停到这句说完。",
     rules: [
       "timeline 必须 { paused: true }（工作台已建好，直接往上 add tween）",
       "每一段的 duration 之和应对齐 speech.s(id)，不要另写 3 秒",
       "画面文案可用 speech.text(id) 写进 DOM",
       "公式用 KaTeX、三维用 Three.js（见下方附加库），不要另开一个工具",
-      "暂停用 speech.sleepS(0.4)，可多次，全长累加；不要在口播表填毫秒",
+      "暂停：口播驱动用列表延时行；脚本驱动用 speech.play + sleepS。不要 timeline.play()",
       "换预览语言只换 TTS，这段代码不用改",
     ],
     exampleTitle: "标题入场 0.48s，其余时间停住",

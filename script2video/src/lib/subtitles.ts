@@ -12,12 +12,9 @@ export function beatLine(script: SceneScript, beatId: string, lang: LangId, sour
 
 export function beatSpans(script: SceneScript, lang: LangId): { id: string; text: string; startMs: number; endMs: number }[] {
   const audio = langAudioOf(script, lang);
-  let t = 0;
-  return beatOrder(script, audio).map((b) => {
-    const span = { id: b.id, text: b.text, startMs: t, endMs: t + b.ms };
-    t += b.ms;
-    return span;
-  });
+  return beatOrder(script, audio)
+    .filter((b) => b.kind === "speech" && b.text)
+    .map((b) => ({ id: b.id, text: b.text, startMs: b.startMs, endMs: b.startMs + b.ms }));
 }
 
 export function captionLinesAt(

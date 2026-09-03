@@ -1,8 +1,9 @@
 import type { LangId } from "./langs";
-import { concatAudioBlobs, measureDuration, putAudioBlob } from "./audioStore";
+import { concatParts, measureDuration, putAudioBlob, putBeatAudio } from "./audioStore";
 import { beatsForLang, resolveBeatRole, synthesizeClip, voiceSynthParams } from "./tts";
 import { useStudio } from "../store/useStudio";
 import type { BeatDurations, ScriptAudio } from "../types";
+import { gapMsOf, isGapBeat } from "./beats";
 
 export async function synthScript(
   scriptId: string,
@@ -13,26 +14,38 @@ export async function synthScript(
   const script = project.scripts.find((s) => s.id === scriptId);
   if (!script) throw new Error("找不到脚本");
   const source = project.sourceLang;
-  const beats = beatsForLang(script, lang, source);
-  if (!beats.length) throw new Error("该语言没有口播句");
+  const spoken = beatsForLang(script, lang, source);
+  if (!spoken.length && !script.beats.some(isGapBeat)) throw new Error("该语言没有口播句");
 
-  const blobs: Blob[] = [];
+  const parts: { blob?: Blob; silenceMs?: number }[] = [];
   const beatMs: BeatDurations = {};
   let lastVoice = "";
-  for (let i = 0; i < beats.length; i++) {
-    const beat = beats[i];
+  let spokenIndex = 0;
+  for (const beat of script.beats) {
+    if (isGapBeat(beat)) {
+      const ms = gapMsOf(beat);
+      beatMs[beat.id] = ms;
+      parts.push({ silenceMs: ms });
+      continue;
+    }
+    const row = spoken.find((s) => s.id === beat.id);
+    if (!row) continue;
     const role = resolveBeatRole(project, beat, lang);
     if (!role) throw new Error("请先在配音窗口添加角色并指定音色");
     const { voiceId, targetModel } = voiceSynthParams(role);
     lastVoice = voiceId;
-    onProgress?.(`${i + 1}/${beats.length} ${role.name}：${beat.text.slice(0, 24)}`);
-    const blob = await synthesizeClip(lang, beat.text, voiceId, targetModel);
-    beatMs[beat.id] = await measureDuration(blob);
-    blobs.push(blob);
+    spokenIndex += 1;
+    onProgress?.(`${spokenIndex}/${spoken.length} ${role.name}：${row.text.slice(0, 24)}`);
+    const blob = await synthesizeClip(lang, row.text, voiceId, targetModel);
+    const ms = await measureDuration(blob);
+    beatMs[beat.id] = ms;
+    await putBeatAudio(scriptId, lang, beat.id, blob);
+    parts.push({ blob });
   }
-  const all = await concatAudioBlobs(blobs);
+  if (!parts.length) throw new Error("该语言没有口播句");
+  const all = await concatParts(parts);
   await putAudioBlob(scriptId, lang, all);
-  const durationMs = Object.values(beatMs).reduce((n, x) => n + x, 0);
+  const durationMs = await measureDuration(all);
   const audio: ScriptAudio = {
     src: `media/${lang}/${scriptId}.wav`,
     durationMs,

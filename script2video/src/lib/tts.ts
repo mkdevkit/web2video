@@ -41,6 +41,7 @@ export async function synthesizeClip(lang: LangId, text: string, voice?: string,
 
 export function beatsForLang(script: SceneScript, lang: LangId, source: LangId): { id: string; text: string; roleId?: string }[] {
   return script.beats
+    .filter((b) => b.kind !== "gap")
     .map((b) => ({
       id: b.id,
       text: (b.text[lang] ?? (lang === source ? "" : b.text[source]) ?? "").replace(/\s+/g, " ").trim(),

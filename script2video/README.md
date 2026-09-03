@@ -72,8 +72,10 @@ npm run tauri:build   # 安装包
 ```js
 speech.s("hook")           // 这一句配音有多长（秒）
 speech.holdS("hook", 0.48) // = s("hook") - 0.48：入场后还要停多久，直到这句说完
-speech.sleepS(0.4)          // 暂停（可多次，每次加进全长）
-speech.totalS()            // 全片 = bodyS + 所有 sleepS
+speech.startS("hook")      // 口播驱动：列表时钟上的起点
+speech.play("hook")        // 脚本驱动：排期并返回起点
+speech.sleepS(0.4)          // 口播驱动＝片尾；脚本驱动＝两次 play 之间
+speech.totalS()            // 全片
 ```
 
 入场用固定秒；**这一段代码的总时长 = `speech.s(id)`**。换语言只换 TTS，代码不用改。
@@ -137,7 +139,13 @@ speech.totalS()            // 全片 = bodyS + 所有 sleepS
 | --- | --- | --- |
 | 语义 | 第几句、句内 0–1、元件 id | 否 |
 | 口播 | TTS 每句真实毫秒（尚未配音时按字数估算） | 是 |
+| 延时 | 口播表延时行，或脚本驱动的 `speech.play` / `sleepS` | 否 |
 | 演出 | 入场 fade 等固定毫秒 | 否 |
+
+每个脚本在口播页可选 **口播驱动** 或 **脚本驱动**：
+
+- **口播驱动**（默认）：列表顺序即时钟。「加延时」插入只有时长的一行，合成时写入静音，后面的 `startS` 后移。
+- **脚本驱动**：列表是台词库。必须 `speech.play("hook")` 才会出声；返回开始秒，可当 GSAP position。`sleepS` 插在两次 `play` 之间。
 
 工作台注入的 `speech`（GSAP / HyperFrames）：
 
@@ -145,14 +153,15 @@ speech.totalS()            // 全片 = bodyS + 所有 sleepS
 | --- | --- |
 | `speech.s("hook")` | 这一句配音有多长（秒）。这一段画面的总时长用它 |
 | `speech.ms("hook")` | 同上，毫秒 |
-| `speech.startS("hook")` | 这一句口播从哪一秒开始（不含暂停） |
-| `speech.endS("hook")` | 这一句口播哪一秒结束（不含暂停） |
+| `speech.startS("hook")` | 这一句从哪一秒开始（口播驱动＝列表时钟；脚本驱动＝`play` 的位置） |
+| `speech.endS("hook")` | 这一句哪一秒结束 |
+| `speech.play("hook")` | 脚本驱动：排期并返回开始秒。口播驱动：等于 `startS` |
 | `speech.holdS("hook", 0.48)` | `s("hook") − 0.48`。画面分两段：入场固定 0.48s（各语言相同）+ 停住到这句配音结束。换语言只变停住多久 |
-| `speech.bodyS()` | 各句口播之和，不含暂停 |
-| `speech.sleepS(0.4)` | 暂停。每次调用把这段时间加进全长并返回该值；可多次。不要在口播表填毫秒 |
-| `speech.totalS()` | 本脚本全长 = `bodyS` + 所有 `sleepS` |
+| `speech.bodyS()` | 各句口播之和，不含延时 / sleepS |
+| `speech.sleepS(0.4)` | 暂停。口播驱动加在片尾；脚本驱动推进 `play` 光标 |
+| `speech.totalS()` | 本脚本全长 |
 | `speech.text("hook")` | 当前预览语言的口播文案 |
-| `speech.ids()` | 有文案的口播 id，按播放顺序 |
+| `speech.ids()` | 有文案的口播 id（不含延时行） |
 
 入场用固定秒（各语言一样快）；**这一段总时长 = `speech.s(id)`**。多出来的时间用 hold 停住。右侧预览表列出每个 id 的秒数。
 
@@ -160,7 +169,7 @@ Remotion / Manim 不跑 `speech` 对象：用同一套时钟（`toClockJson` / `
 
 ### GSAP
 
-工作台默认引擎。每个脚本自己的舞台 HTML；画幅 / 字体 / 全局 CSS 在顶栏「外观」。本脚本只写 paused timeline。预览和导出走 seek，不要 `play()`。
+工作台默认引擎。每个脚本自己的舞台 HTML；画幅 / 字体 / 全局 CSS 在顶栏「外观」。本脚本只写 paused timeline。预览和导出走 seek，不要 `timeline.play()`。口播用 `speech.play`。
 
 ```js
 const fade = 0.48;
@@ -245,8 +254,9 @@ self.wait(0.4)
 - 整条时间轴按「新时长 / 旧时长」做 `timeScale`
 - CSS `animation-duration: 8s` 或 Remotion `durationInFrames={150}` 当口播时钟
 - 用英文字幕时间轴驱动中文画面（字幕可以共用时间轴，**动画不行**）
-- 调用 `timeline.play()`（预览和 HyperFrames 都是 seek 暂停轴）
-- 在口播表填暂停毫秒；暂停写在脚本里：`speech.sleepS` 可多次，`clock.sleep_ms` 是合计
+- 调用 `timeline.play()`（预览和 HyperFrames 都是 seek 暂停轴）。口播用 `speech.play`
+- 口播驱动下用 `sleepS` 做句间留白（它加在片尾）；句间静音用口播表「加延时」
+- 脚本驱动下指望列表顺序自动播；必须 `speech.play(id)`
 
 ## 目录
 

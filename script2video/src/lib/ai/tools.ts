@@ -6,6 +6,7 @@ import { STAGE_FONTS, STAGE_FONT_IDS, stageThemeOf } from "../stage";
 import { emptyScript, normalizeScript } from "../../sample";
 import { useStudio } from "../../store/useStudio";
 import type { AspectId, Beat, EngineId, SceneScript, StageTheme } from "../../types";
+import { DEFAULT_GAP_MS, isGapBeat } from "../beats";
 
 export type ChatTool = {
   type: "function";
@@ -21,7 +22,9 @@ const ENGINE_ENUM = ENGINES.map((e) => e.id);
 
 const beatProperties = {
   id: { type: "string", description: "口播 id，给脚本用，如 hook / fact / close。字母开头，勿用空格。" },
-  text: { type: "string", description: "源语言口播文案。口语化，一句一事。" },
+  kind: { type: "string", enum: ["speech", "gap"], description: "speech 为台词；gap 为延时行，只有时长。" },
+  text: { type: "string", description: "源语言口播文案。口语化，一句一事。gap 行不要填。" },
+  gapMs: { type: "number", description: "延时行时长（毫秒），跨语言相同。默认 400。" },
   i18n: {
     type: "object",
     description: "可选：各语言文案。键为 zh/en/ja/fr/de/ru/es/pt/it。省略则只写源语言。",
@@ -39,7 +42,7 @@ const scriptSpecProperties = {
   },
   code: {
     type: "string",
-    description: "当前引擎源码。GSAP/HyperFrames：paused timeline，用 speech.s/holdS/startS/sleepS，不要写死秒数，不要 play()。",
+    description: "当前引擎源码。GSAP/HyperFrames：paused timeline，用 speech.s/holdS/startS。脚本驱动用 speech.play(id)。不要写死秒数，不要 timeline.play()。",
   },
   stageHtml: { type: "string", description: "本脚本舞台 DOM。画幅/字体/底色/全局 CSS 是工程级，用 set_project。" },
 };
@@ -134,6 +137,7 @@ export const AI_TOOLS: ChatTool[] = [
           scriptId: { type: "string" },
           name: { type: "string" },
           engine: { type: "string", enum: ENGINE_ENUM },
+          drive: { type: "string", enum: ["narration", "script"], description: "narration 列表时钟；script 用 speech.play 排期" },
           code: { type: "string" },
           stageHtml: { type: "string", description: "本脚本舞台 HTML" },
         },
@@ -197,8 +201,12 @@ function sanitizeBeatId(raw: string, used: Set<string>): string {
   return n;
 }
 
-function beatFromSpec(spec: { id?: unknown; text?: unknown; i18n?: unknown }, lang: LangId, used: Set<string>): Beat {
+function beatFromSpec(spec: { id?: unknown; text?: unknown; i18n?: unknown; kind?: unknown; gapMs?: unknown }, lang: LangId, used: Set<string>): Beat {
   const id = sanitizeBeatId(String(spec.id ?? "beat"), used);
+  if (spec.kind === "gap") {
+    const gapMs = typeof spec.gapMs === "number" && spec.gapMs > 0 ? Math.round(spec.gapMs) : DEFAULT_GAP_MS;
+    return { id, kind: "gap", text: {}, gapMs };
+  }
   const text: Beat["text"] = {};
   const source = typeof spec.text === "string" ? spec.text.trim() : "";
   if (source) text[lang] = source;
@@ -207,7 +215,7 @@ function beatFromSpec(spec: { id?: unknown; text?: unknown; i18n?: unknown }, la
       if (isLangId(k) && typeof v === "string" && v.trim()) text[k] = v.trim();
     }
   }
-  return { id, text };
+  return { id, kind: "speech", text };
 }
 
 function codeFromBeats(ids: string[]): string {
@@ -244,10 +252,10 @@ function scriptFromSpec(spec: Record<string, unknown>, lang: LangId, fallbackHtm
   const used = new Set<string>();
   const rawBeats = Array.isArray(spec.beats) ? spec.beats : [];
   const beats = rawBeats.map((b, i) => {
-    const row = b && typeof b === "object" ? (b as { id?: unknown; text?: unknown; i18n?: unknown }) : {};
+    const row = b && typeof b === "object" ? (b as { id?: unknown; text?: unknown; i18n?: unknown; kind?: unknown; gapMs?: unknown }) : {};
     return beatFromSpec({ ...row, id: row.id ?? `beat${i + 1}` }, lang, used);
   });
-  const ids = beats.map((b) => b.id);
+  const ids = beats.filter((b) => b.kind !== "gap").map((b) => b.id);
   const engine: EngineId = isEngineId(spec.engine) ? spec.engine : "gsap";
   const draft = emptyScript(String(spec.name ?? "未命名脚本").trim() || "未命名脚本");
   const code = typeof spec.code === "string" && spec.code.trim() ? spec.code : codeFromBeats(ids.length ? ids : ["hook"]);
@@ -277,12 +285,18 @@ function dumpScript(scriptId?: string) {
     id: script.id,
     name: script.name,
     engine: script.engine ?? "gsap",
+    drive: script.drive === "script" ? "script" : "narration",
     holdMs: script.holdMs ?? 0,
-    beats: script.beats.map((b) => ({
-      id: b.id,
-      text: b.text[lang] ?? "",
-      langs: Object.fromEntries(Object.entries(b.text).filter(([, t]) => (t ?? "").trim())),
-    })),
+    beats: script.beats.map((b) =>
+      isGapBeat(b)
+        ? { id: b.id, kind: "gap", gapMs: b.gapMs ?? DEFAULT_GAP_MS }
+        : {
+            id: b.id,
+            kind: "speech",
+            text: b.text[lang] ?? "",
+            langs: Object.fromEntries(Object.entries(b.text).filter(([, t]) => (t ?? "").trim())),
+          },
+    ),
     code: sourceOf(script),
     stageHtml: script.stageHtml ?? "",
   };
@@ -346,7 +360,8 @@ export function executeTool(name: string, rawArgs: unknown): string {
         langs: LANGS.map((l) => ({ id: l.id, label: l.label })),
         speech: {
           "speech.s(id)": "这一句配音有多长（秒）。这一段画面总时长用它。",
-          "speech.startS(id)": "这一句口播从哪一秒开始（不含 sleep）。",
+          "speech.startS(id)": "这一句从哪一秒开始。口播驱动＝列表时钟（含延时行）。",
+          "speech.play(id)": "脚本驱动：排期并返回开始秒，可当 GSAP position。口播驱动＝startS。",
           "speech.endS(id)": "这一句口播哪一秒结束。",
           "speech.holdS(id, fade)": "s(id) − fade。入场固定 fade；剩下的时间画面停住直到这句说完。",
           "speech.sleepS(n)": "暂停。每次调用把 n 秒加进全长并返回 n。可多次。totalS = bodyS + Σ sleepS。",
@@ -356,10 +371,10 @@ export function executeTool(name: string, rawArgs: unknown): string {
         },
         notes: {
           clock: "不要写死 3 秒。入场用固定秒；换语言只换 TTS。",
-          gsap: "timeline 已 paused。不要 play()。预览和导出 seek。",
+          gsap: "timeline 已 paused。不要 timeline.play()。脚本驱动用 speech.play(id)。预览和导出 seek。",
           stage: "每个脚本自己的 stageHtml。画幅/字体/底色/stageCss 是工程级。HTML 里用 #title 等选择器。",
           fonts: "舞台与字幕字体均为 SIL OFL，免费可商用。字幕条用 captionFontId。中日文不足时回落 Noto CJK。",
-          sleep: "startS/endS 不含暂停。句间留白要把后面的起点加上这段 sleep。",
+          sleep: "口播驱动：句间留白用延时行（kind=gap）。sleepS 加在片尾。脚本驱动：speech.play + sleepS。",
           tts: "密钥和配音合成不用你处理。改口播后配音会过期，用户自己点配音。",
         },
         fonts: STAGE_FONTS.map((f) => ({ id: f.id, label: f.label, langs: f.langs, hint: f.hint, detail: f.detail, license: f.license })),
@@ -415,6 +430,7 @@ export function executeTool(name: string, rawArgs: unknown): string {
       if (!script) return fail("找不到脚本");
       if (typeof args.name === "string" && args.name.trim()) store.patchScript(scriptId, { name: args.name.trim() });
       if (isEngineId(args.engine)) store.setScriptEngine(scriptId, args.engine);
+      if (args.drive === "narration" || args.drive === "script") store.patchScript(scriptId, { drive: args.drive });
       if (typeof args.code === "string") store.patchScriptSource(scriptId, args.code);
       if (typeof args.stageHtml === "string") store.patchScript(scriptId, { stageHtml: args.stageHtml });
       return ok({ ok: true, script: dumpScript(scriptId) });
@@ -462,7 +478,7 @@ export function executeTool(name: string, rawArgs: unknown): string {
         if (!list.length) return fail("beats 为空");
         const used = new Set<string>();
         const beats = list.map((b, i) => {
-          const row = b && typeof b === "object" ? (b as { id?: unknown; text?: unknown; i18n?: unknown }) : {};
+          const row = b && typeof b === "object" ? (b as { id?: unknown; text?: unknown; i18n?: unknown; kind?: unknown; gapMs?: unknown }) : {};
           return beatFromSpec({ ...row, id: row.id ?? `beat${i + 1}` }, lang, used);
         });
         const keep = new Set(beats.map((b) => b.id));
@@ -511,10 +527,11 @@ export const SYSTEM_PROMPT = `你是 Script2Video 的分镜助手。这是本地
 
 时钟：
 - speech.s("hook") 是这一句配音有多长，这一段画面总时长用它，不要写死 3。
-- speech.startS / endS 是口播轴上的起止，不含 sleep。
-- 入场用固定秒（各语言一样快）。holdS(id, fade) = s(id) − fade，画面停到这句说完。
-- sleepS(n) 是暂停，可多次，每次加进全长。totalS = bodyS + Σ sleepS。
-- 不要整条时间轴 timeScale。不要 timeline.play()。
+- 口播驱动（默认）：列表顺序即时钟。句间留白用 kind=gap 的延时行，不要用 sleepS 当句间停顿。
+- 脚本驱动：列表是台词库。必须 speech.play("hook") 才会出声；返回开始秒，可当 GSAP position。sleepS 插在两次 play 之间。
+- speech.startS / endS 是口播轴上的起止。
+- 入场用固定秒。holdS(id, fade) = s(id) − fade。
+- 不要整条时间轴 timeScale。不要 timeline.play()（那是动画播放，不是口播）。
 
 舞台与代码：
 - 每个脚本自己的舞台 HTML（DOM，不是 canvas）。GSAP 只写 paused timeline。

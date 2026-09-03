@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { useStudio } from "../store/useStudio";
 import { createSpeech } from "../lib/speech";
+import { persistSpeechRun, mixScriptSoundtrack } from "../lib/soundtrack";
+import { driveOf } from "../lib/beats";
 import { runGsapScript } from "../lib/runGsap";
 import { mountStage, stageBoxStyle } from "../lib/stage";
 import { sourceOf, usesGsapPreview } from "../lib/engines";
@@ -39,19 +41,19 @@ export function ExportStage() {
     if (!root) return;
     mountStage(root, script, project);
     const speech = createSpeech(script, lang);
-    const { timeline, revert, sleepMs } = runGsapScript(sourceOf(script), speech, root);
+    const { timeline, revert } = runGsapScript(sourceOf(script), speech, root);
     tlRef.current = timeline;
     timeline.seek(localMs / 1000, false);
-    const nextSleep = Math.round(sleepMs);
-    if (Math.round(script.holdMs ?? 0) !== nextSleep) {
-      useStudio.getState().patchScript(script.id, { holdMs: nextSleep });
+    persistSpeechRun(script, speech);
+    if (driveOf(script) === "script") {
+      void mixScriptSoundtrack(script, lang, speech);
     }
     return () => {
       revert();
       tlRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exporting, script?.id, script?.engine, script?.code, script?.sources, script?.beats, script?.audioByLang, script?.holdMs, script?.stageHtml, project.stageCss, project.stageTheme, lang]);
+  }, [exporting, script?.id, script?.engine, script?.code, script?.sources, script?.beats, script?.audioByLang, script?.holdMs, script?.stageHtml, script?.drive, project.stageCss, project.stageTheme, lang]);
 
   useEffect(() => {
     tlRef.current?.seek(localMs / 1000, false);

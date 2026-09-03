@@ -10,7 +10,7 @@ import { ExportDialog } from "./components/dialogs/ExportDialog";
 import { HelpDialog } from "./components/dialogs/HelpDialog";
 import { AiDialog } from "./components/dialogs/AiDialog";
 import { PrefsDialog } from "./components/dialogs/PrefsDialog";
-import { TextI18nDialog } from "./components/dialogs/TextI18nDialog";
+import { SpeakEditorDialog } from "./components/dialogs/SpeakEditorDialog";
 import { TtsDialog } from "./components/dialogs/TtsDialog";
 import { WelcomeDialog } from "./components/dialogs/WelcomeDialog";
 import { useKeyboard } from "./hooks/useKeyboard";
@@ -54,7 +54,7 @@ export default function App() {
       {dialog === "welcome" && <WelcomeDialog />}
       {dialog === "export" && <ExportDialog />}
       {dialog === "help" && <HelpDialog />}
-      {dialog === "texts" && <TextI18nDialog />}
+      {dialog === "speaks" && <SpeakEditorDialog />}
       {dialog === "tts" && <TtsDialog />}
       {dialog === "ai" && <AiDialog />}
       {dialog === "prefs" && <PrefsDialog />}

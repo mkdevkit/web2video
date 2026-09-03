@@ -3,8 +3,9 @@ import { defaultCues, sceneBlocks } from "../blocks";
 import { t18, guessLayout } from "../scriptSplit";
 import { asCssHex, defaultDialogueLines, emptyScene } from "../templates";
 import { itemSpeakKey } from "../narration";
+import { migrateSpeaks } from "../speaks";
 import { itemText, textOf } from "../textI18n";
-import { LAYOUTS, type DialogueLine, type DialogueSide, type LayoutId, type Scene, type SceneTransition } from "../../types";
+import { LAYOUTS, type DialogueLine, type DialogueSide, type DriveMode, type LayoutId, type Scene, type SceneTransition } from "../../types";
 import type { LangId } from "../langs";
 
 export interface StoryboardSpeak {
@@ -50,6 +51,7 @@ export interface StoryboardScene {
   bgFit?: "cover" | "contain";
   bgDim?: number;
   holdMs?: number;
+  drive?: DriveMode;
   transition?: SceneTransition;
   transitionMs?: number;
   title?: string;
@@ -61,6 +63,8 @@ export interface StoryboardScene {
   number?: string;
   items?: string[];
   dialogue?: StoryboardDialogueLine[];
+  /** Ordered speech lines for this scene. Preferred over narration/speak. */
+  speaks?: string[];
   narration?: string;
   narrationClose?: string;
   speak?: StoryboardSpeak;
@@ -69,6 +73,13 @@ export interface StoryboardScene {
 
 const SLOT_KEYS = ["title", "subtitle", "body", "caption", "quote", "author", "number"] as const;
 const ROLE_SLOT_KEYS = ["open", "close", ...SLOT_KEYS] as const;
+
+function speaksFromTexts(texts: string[], lang: LangId): Scene["speaks"] {
+  return texts
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .map((t) => ({ id: uid("sp"), kind: "speech" as const, i18n: { [lang]: t } }));
+}
 
 function asLayout(value: string | undefined, title: string, body: string, items: string[], dialogue?: StoryboardDialogueLine[]): LayoutId {
   if (value && LAYOUTS.some((l) => l.id === value)) return value as LayoutId;
@@ -153,6 +164,7 @@ function applySceneChrome(scene: Scene, spec: Partial<StoryboardScene>): Scene {
   const dim = clamp01(spec.bgDim);
   if (dim !== undefined) next = { ...next, bgDim: dim };
   if (typeof spec.holdMs === "number" && Number.isFinite(spec.holdMs)) next = { ...next, holdMs: Math.max(0, spec.holdMs) };
+  if (spec.drive === "config" || spec.drive === "narration") next = { ...next, drive: spec.drive };
   if (spec.transition === "cut" || spec.transition === "crossfade") next = { ...next, transition: spec.transition };
   if (typeof spec.transitionMs === "number" && Number.isFinite(spec.transitionMs)) {
     next = { ...next, transitionMs: Math.max(0, spec.transitionMs) };
@@ -175,8 +187,6 @@ export function sceneFromStoryboard(spec: StoryboardScene, lang: LangId): Scene 
     ...scene,
     name: (spec.name || title).slice(0, 24),
     layoutId: layout,
-    narration: t18(lang, (spec.narration ?? (layout === "dialogue" ? "" : title)).trim()),
-    narrationClose: t18(lang, (spec.narrationClose ?? "").trim()),
     slots: {
       ...scene.slots,
       title: t18(lang, title),
@@ -191,7 +201,16 @@ export function sceneFromStoryboard(spec: StoryboardScene, lang: LangId): Scene 
     },
     cues: defaultCues(layout, items, layout === "custom" ? scene.blocks : undefined, dialogue),
   };
-  return applySpeakRoles(fillSpeak(applySceneChrome(scene, spec), spec, lang), spec);
+  scene = applySpeakRoles(fillSpeak(applySceneChrome(scene, spec), spec, lang), spec);
+  if (spec.speaks?.length) {
+    return { ...scene, speaks: speaksFromTexts(spec.speaks, lang), speakTrack: undefined };
+  }
+  return migrateSpeaks({
+    ...scene,
+    speaks: undefined,
+    narration: t18(lang, (spec.narration ?? (layout === "dialogue" ? "" : title)).trim()),
+    narrationClose: t18(lang, (spec.narrationClose ?? "").trim()),
+  });
 }
 
 export function patchSceneFromStoryboard(scene: Scene, spec: Partial<StoryboardScene>, lang: LangId): Scene {
@@ -221,8 +240,20 @@ export function patchSceneFromStoryboard(scene: Scene, spec: Partial<StoryboardS
     slots,
     cues: defaultCues(layout, slots.items, layout === "custom" ? next.blocks ?? sceneBlocks(next) : undefined, slots.dialogue),
   };
-  const touchVisual = Boolean(spec.speak || itemsText || spec.dialogue || SLOT_KEYS.some((k) => spec[k] !== undefined));
-  if (touchVisual) next = fillSpeak(next, spec, lang);
+  const touchSpeak =
+    spec.speaks !== undefined ||
+    spec.narration !== undefined ||
+    spec.narrationClose !== undefined ||
+    spec.speak !== undefined ||
+    Boolean(spec.dialogue?.some((d) => d.speak || d.role));
+  if (spec.speak || itemsText || spec.dialogue || SLOT_KEYS.some((k) => spec[k] !== undefined)) {
+    next = fillSpeak(next, spec, lang);
+  }
   if (spec.speakRole || spec.dialogue?.some((d) => d.role)) next = applySpeakRoles(next, spec);
+  if (spec.speaks) {
+    next = { ...next, speaks: speaksFromTexts(spec.speaks, lang), speakTrack: undefined };
+  } else if (touchSpeak) {
+    next = migrateSpeaks({ ...next, speaks: undefined });
+  }
   return next;
 }

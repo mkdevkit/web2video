@@ -14,17 +14,15 @@ import {
 } from "lucide-react";
 import { pickGifFile, pickImageFile, pickVideoFile } from "../lib/insertImage";
 import { alignBlockBox, boxAlignActive, sceneBlocks, type BoxAlign } from "../lib/blocks";
-import { cueBind, cueKeyProgress, cueStay, resolveCueOnScene } from "../lib/cues";
 import { mergedSettings, restPose } from "../lib/interpolate";
 import { itemText, sourceLangOf, textOf, writeI18n } from "../lib/textI18n";
-import { composeNarration, itemSpeakKey, speakText, SPEAK_CLOSE, SPEAK_OPEN } from "../lib/narration";
+import { itemSpeakKey } from "../lib/speaks";
 import { asCssHex, sceneBgDim, sceneBgFit } from "../lib/templates";
 import {
-  formatMs,
   sceneAt,
+  sceneCalendar,
   sceneClosePadAfterMs,
   sceneClosePadBeforeMs,
-  sceneClock,
   sceneHoldMs,
   sceneOpenPadAfterMs,
   sceneOpenPadBeforeMs,
@@ -32,23 +30,17 @@ import {
   sceneTransitionKind,
   sceneTransitionMs,
 } from "../lib/timeline";
+import { driveOf, playTargetChoices } from "../lib/calendar";
+import { blockWindow, windowProgress } from "../lib/effects";
 import { synthScenes } from "../lib/synthProject";
-import { BLOCK_TYPES, LAYOUTS, type AnimKind, type CueBind, type DialogueSide, type Scene, type SceneTransition, type StageFontId } from "../types";
+import { BLOCK_TYPES, LAYOUTS, type DriveMode, type DialogueSide, type Scene, type SceneTransition, type StageFontId } from "../types";
 import { useEditor } from "../store/useEditor";
 import { Field } from "./ui";
 import type { LangId } from "../lib/langs";
-import type { LayoutBlock } from "../types";
+import type { LayoutBlock, TimeRef } from "../types";
 import { STAGE_FONTS, blockFontId, stageFont } from "../lib/fonts";
-import { defaultRoleForLang } from "../lib/tts";
-import { profileLabel, qwenRoles } from "../lib/voices";
-
-const ANIMS: { id: AnimKind; label: string }[] = [
-  { id: "fade", label: "淡入" },
-  { id: "slide", label: "滑入" },
-  { id: "scale", label: "缩放" },
-  { id: "kenburns", label: "Ken Burns" },
-  { id: "highlight", label: "高亮" },
-];
+import { EffectList, TimeRefFields } from "./EffectEditor";
+import { SpeakTrackEditor } from "./SpeakTrackEditor";
 
 function secInput(ms: number) {
   return Number((Math.max(0, ms) / 1000).toFixed(2));
@@ -58,16 +50,6 @@ function parseSec(raw: string, max = 30) {
   const n = Number(raw);
   if (!Number.isFinite(n)) return 0;
   return Math.round(Math.min(max, Math.max(0, n)) * 1000);
-}
-
-function parseSignedSec(raw: string, min = -5, max = 10) {
-  const n = Number(raw);
-  if (!Number.isFinite(n)) return 0;
-  return Math.round(Math.min(max, Math.max(min, n)) * 1000);
-}
-
-function secSigned(ms: number) {
-  return Number((ms / 1000).toFixed(2));
 }
 
 function isMediaType(type: string) {
@@ -97,32 +79,6 @@ function AlignBtn({
   );
 }
 
-function SpeakRoleSelect({ sceneId, speakKey }: { sceneId: string; speakKey: string }) {
-  const project = useEditor((s) => s.project);
-  const scene = project.scenes.find((s) => s.id === sceneId);
-  const roles = qwenRoles(project.voices);
-  if (!roles.length || !scene) return null;
-  const raw = scene.speakRole?.[speakKey] ?? "";
-  const value = roles.some((r) => r.id === raw) ? raw : "";
-  const fallback = defaultRoleForLang(project, project.previewLang);
-  return (
-    <Field label="配音角色">
-      <select
-        className="field"
-        value={value}
-        onChange={(e) => useEditor.getState().patchSpeakRole(sceneId, speakKey, e.target.value)}
-      >
-        <option value="">默认（{fallback ? profileLabel(fallback) : "语言默认"}）</option>
-        {roles.map((r) => (
-          <option key={r.id} value={r.id}>
-            {profileLabel(r)}
-          </option>
-        ))}
-      </select>
-    </Field>
-  );
-}
-
 function SlotField({
   scene,
   lang,
@@ -134,16 +90,11 @@ function SlotField({
   scene: Scene;
   lang: LangId;
   source: LangId;
-  field: "title" | "subtitle" | "body" | "caption" | "quote" | "author" | "number" | "narration" | "narrationClose";
+  field: "title" | "subtitle" | "body" | "caption" | "quote" | "author" | "number";
   label: string;
   rows?: number;
 }) {
-  const value =
-    field === "narration"
-      ? textOf(scene.narration, lang, source)
-      : field === "narrationClose"
-        ? textOf(scene.narrationClose, lang, source)
-        : textOf(scene.slots[field], lang, source);
+  const value = textOf(scene.slots[field], lang, source);
   return (
     <Field label={label}>
       <textarea
@@ -159,7 +110,6 @@ function SlotField({
 function SceneInspector({ scene }: { scene: Scene }) {
   const project = useEditor((s) => s.project);
   const lang = project.previewLang;
-  const source = sourceLangOf(project);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [synthLine, setSynthLine] = useState("");
@@ -182,6 +132,18 @@ function SceneInspector({ scene }: { scene: Scene }) {
                 {l.label}
               </option>
             ))}
+          </select>
+        </Field>
+      </div>
+      <div className="mt-2">
+        <Field label="时钟">
+          <select
+            className="field"
+            value={driveOf(scene)}
+            onChange={(e) => useEditor.getState().patchScene(scene.id, { drive: e.target.value as DriveMode })}
+          >
+            <option value="narration">口播驱动（列表顺序就是时钟）</option>
+            <option value="config">配置驱动（播放元件 + 动效锚点）</option>
           </select>
         </Field>
       </div>
@@ -299,6 +261,54 @@ function SceneInspector({ scene }: { scene: Scene }) {
             />
           </Field>
         </div>
+        {driveOf(scene) === "config" && (
+          <div className="grid grid-cols-2 gap-1">
+            <Field label="片级 · 开场前空白（秒）">
+              <input
+                type="number"
+                min={0}
+                max={10}
+                step={0.1}
+                className="field"
+                value={secInput(project.openPadBeforeMs)}
+                onChange={(e) => useEditor.getState().updateProject({ openPadBeforeMs: parseSec(e.target.value, 10) })}
+              />
+            </Field>
+            <Field label="开场后空白（秒）">
+              <input
+                type="number"
+                min={0}
+                max={10}
+                step={0.1}
+                className="field"
+                value={secInput(project.openPadAfterMs)}
+                onChange={(e) => useEditor.getState().updateProject({ openPadAfterMs: parseSec(e.target.value, 10) })}
+              />
+            </Field>
+            <Field label="结束前空白（秒）">
+              <input
+                type="number"
+                min={0}
+                max={10}
+                step={0.1}
+                className="field"
+                value={secInput(project.closePadBeforeMs)}
+                onChange={(e) => useEditor.getState().updateProject({ closePadBeforeMs: parseSec(e.target.value, 10) })}
+              />
+            </Field>
+            <Field label="结束后空白（秒）">
+              <input
+                type="number"
+                min={0}
+                max={10}
+                step={0.1}
+                className="field"
+                value={secInput(project.closePadAfterMs)}
+                onChange={(e) => useEditor.getState().updateProject({ closePadAfterMs: parseSec(e.target.value, 10) })}
+              />
+            </Field>
+          </div>
+        )}
         <label className="flex items-center gap-2 text-[11px] text-ink-200">
           <input
             type="checkbox"
@@ -309,10 +319,14 @@ function SceneInspector({ scene }: { scene: Scene }) {
                   holdMs: sceneHoldMs(scene, project),
                   transition: sceneTransitionKind(scene, project),
                   transitionMs: sceneTransitionMs(scene, project),
-                  openPadBeforeMs: sceneOpenPadBeforeMs(scene, project),
-                  openPadAfterMs: sceneOpenPadAfterMs(scene, project),
-                  closePadBeforeMs: sceneClosePadBeforeMs(scene, project),
-                  closePadAfterMs: sceneClosePadAfterMs(scene, project),
+                  ...(driveOf(scene) === "config"
+                    ? {
+                        openPadBeforeMs: sceneOpenPadBeforeMs(scene, project),
+                        openPadAfterMs: sceneOpenPadAfterMs(scene, project),
+                        closePadBeforeMs: sceneClosePadBeforeMs(scene, project),
+                        closePadAfterMs: sceneClosePadAfterMs(scene, project),
+                      }
+                    : {}),
                 });
               } else {
                 useEditor.getState().patchScene(scene.id, (s) => {
@@ -344,52 +358,54 @@ function SceneInspector({ scene }: { scene: Scene }) {
                 onChange={(e) => useEditor.getState().patchScene(scene.id, { holdMs: parseSec(e.target.value) })}
               />
             </Field>
-            <div className="grid grid-cols-2 gap-1">
-              <Field label="开场前空白（秒）">
-                <input
-                  type="number"
-                  min={0}
-                  max={10}
-                  step={0.1}
-                  className="field"
-                  value={secInput(sceneOpenPadBeforeMs(scene, project))}
-                  onChange={(e) => useEditor.getState().patchScene(scene.id, { openPadBeforeMs: parseSec(e.target.value, 10) })}
-                />
-              </Field>
-              <Field label="开场后空白（秒）">
-                <input
-                  type="number"
-                  min={0}
-                  max={10}
-                  step={0.1}
-                  className="field"
-                  value={secInput(sceneOpenPadAfterMs(scene, project))}
-                  onChange={(e) => useEditor.getState().patchScene(scene.id, { openPadAfterMs: parseSec(e.target.value, 10) })}
-                />
-              </Field>
-              <Field label="结束前空白（秒）">
-                <input
-                  type="number"
-                  min={0}
-                  max={10}
-                  step={0.1}
-                  className="field"
-                  value={secInput(sceneClosePadBeforeMs(scene, project))}
-                  onChange={(e) => useEditor.getState().patchScene(scene.id, { closePadBeforeMs: parseSec(e.target.value, 10) })}
-                />
-              </Field>
-              <Field label="结束后空白（秒）">
-                <input
-                  type="number"
-                  min={0}
-                  max={10}
-                  step={0.1}
-                  className="field"
-                  value={secInput(sceneClosePadAfterMs(scene, project))}
-                  onChange={(e) => useEditor.getState().patchScene(scene.id, { closePadAfterMs: parseSec(e.target.value, 10) })}
-                />
-              </Field>
-            </div>
+            {driveOf(scene) === "config" && (
+              <div className="grid grid-cols-2 gap-1">
+                <Field label="本场 · 开场前空白（秒）">
+                  <input
+                    type="number"
+                    min={0}
+                    max={10}
+                    step={0.1}
+                    className="field"
+                    value={secInput(sceneOpenPadBeforeMs(scene, project))}
+                    onChange={(e) => useEditor.getState().patchScene(scene.id, { openPadBeforeMs: parseSec(e.target.value, 10) })}
+                  />
+                </Field>
+                <Field label="开场后空白（秒）">
+                  <input
+                    type="number"
+                    min={0}
+                    max={10}
+                    step={0.1}
+                    className="field"
+                    value={secInput(sceneOpenPadAfterMs(scene, project))}
+                    onChange={(e) => useEditor.getState().patchScene(scene.id, { openPadAfterMs: parseSec(e.target.value, 10) })}
+                  />
+                </Field>
+                <Field label="结束前空白（秒）">
+                  <input
+                    type="number"
+                    min={0}
+                    max={10}
+                    step={0.1}
+                    className="field"
+                    value={secInput(sceneClosePadBeforeMs(scene, project))}
+                    onChange={(e) => useEditor.getState().patchScene(scene.id, { closePadBeforeMs: parseSec(e.target.value, 10) })}
+                  />
+                </Field>
+                <Field label="结束后空白（秒）">
+                  <input
+                    type="number"
+                    min={0}
+                    max={10}
+                    step={0.1}
+                    className="field"
+                    value={secInput(sceneClosePadAfterMs(scene, project))}
+                    onChange={(e) => useEditor.getState().patchScene(scene.id, { closePadAfterMs: parseSec(e.target.value, 10) })}
+                  />
+                </Field>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-1">
               <Field label="切场方式">
                 <select
@@ -417,7 +433,7 @@ function SceneInspector({ scene }: { scene: Scene }) {
           </>
         )}
         <p className="text-[10px] leading-relaxed text-ink-400">
-          时长 = 开场（冻第一帧）+ 空白 + 主体动画/元件口播 + 结束（冻最后一帧）+ 停留。叠化发生在本场末尾；配音不会交叉。
+          口播驱动：口播列表播完后加停留再切场。配置驱动：开场/结束空白 + 播放元件与动效全部结束后切场（可加停留）。叠化发生在本场末尾。
         </p>
         <button
           className="btn w-full"
@@ -463,62 +479,7 @@ function SceneInspector({ scene }: { scene: Scene }) {
       {err && <p className="mt-1 text-[11px] text-red-400">{err}</p>}
       <div className="mt-3 space-y-2">
         <div className="section-label">口播</div>
-        <SlotField scene={scene} lang={lang} source={source} field="narration" label="开场口播（钉在第一帧）" rows={3} />
-        <SpeakRoleSelect sceneId={scene.id} speakKey={SPEAK_OPEN} />
-        <SlotField scene={scene} lang={lang} source={source} field="narrationClose" label="结束口播（钉在最后一帧）" rows={2} />
-        <SpeakRoleSelect sceneId={scene.id} speakKey={SPEAK_CLOSE} />
-        <div className="grid grid-cols-2 gap-1">
-          <Field label="片级 · 开场前空白（秒）">
-            <input
-              type="number"
-              min={0}
-              max={10}
-              step={0.1}
-              className="field"
-              value={secInput(project.openPadBeforeMs)}
-              onChange={(e) => useEditor.getState().updateProject({ openPadBeforeMs: parseSec(e.target.value, 10) })}
-            />
-          </Field>
-          <Field label="开场后空白（秒）">
-            <input
-              type="number"
-              min={0}
-              max={10}
-              step={0.1}
-              className="field"
-              value={secInput(project.openPadAfterMs)}
-              onChange={(e) => useEditor.getState().updateProject({ openPadAfterMs: parseSec(e.target.value, 10) })}
-            />
-          </Field>
-          <Field label="结束前空白（秒）">
-            <input
-              type="number"
-              min={0}
-              max={10}
-              step={0.1}
-              className="field"
-              value={secInput(project.closePadBeforeMs)}
-              onChange={(e) => useEditor.getState().updateProject({ closePadBeforeMs: parseSec(e.target.value, 10) })}
-            />
-          </Field>
-          <Field label="结束后空白（秒）">
-            <input
-              type="number"
-              min={0}
-              max={10}
-              step={0.1}
-              className="field"
-              value={secInput(project.closePadAfterMs)}
-              onChange={(e) => useEditor.getState().updateProject({ closePadAfterMs: parseSec(e.target.value, 10) })}
-            />
-          </Field>
-        </div>
-        <p className="text-[10px] leading-relaxed text-ink-400">
-          开场口播在第一帧播完后，才开始动画和元件口播。结束口播在全部元件口播之后、钉在最后一帧。空白为静音。无开场/结束口播时不插入空白。本场覆盖请勾选上方「本场单独设置」。有口播的元件默认跟该语言的那一句入场；切预览语言后色块会跟着变长。
-        </p>
-        <Field label="将合成的全文（只读）">
-          <textarea className="field min-h-[64px] text-ink-400" rows={3} readOnly value={composeNarration(scene, lang, source)} />
-        </Field>
+        <SpeakTrackEditor scene={scene} />
       </div>
       <p className="mt-3 text-[11px] leading-relaxed text-ink-400">
         在左侧检视或舞台上点选元件，右侧会只显示该元件的属性。
@@ -534,18 +495,12 @@ function BlockInspector({ scene, block }: { scene: Scene; block: LayoutBlock }) 
   const lang = project.previewLang;
   const source = sourceLangOf(project);
   const at = sceneAt(project, lang, playheadMs);
-  const sceneProgress = at && at.scene.id === scene.id && at.animDurationMs ? at.animLocalMs / at.animDurationMs : 0;
-  const blockCueRaw = scene.cues.find((c) => c.target === block.id);
-  const blockCue = blockCueRaw ? resolveCueOnScene(blockCueRaw, scene, lang, source, project) : undefined;
-  const progress = cueKeyProgress(sceneProgress, blockCue);
+  const cal = sceneCalendar(scene, lang, project);
+  const win = blockWindow(block, scene, source, cal);
+  const sampleMs = at && at.scene.id === scene.id ? at.localMs : 0;
+  const progress = windowProgress(sampleMs, win);
   const set = mergedSettings(block);
   const typeLabel = BLOCK_TYPES.find((t) => t.type === block.type)?.label ?? block.type;
-  const cues = scene.cues.filter(
-    (c) =>
-      c.target === block.id ||
-      (block.type === "list" && (scene.slots.items ?? []).some((it) => c.target === itemSpeakKey(it.id))) ||
-      (block.type === "dialogue" && (scene.slots.dialogue ?? []).some((it) => c.target === itemSpeakKey(it.id))),
-  );
   const applyBoxAlign = (kind: BoxAlign) => {
     const store = useEditor.getState();
     store.commit();
@@ -603,53 +558,62 @@ function BlockInspector({ scene, block }: { scene: Scene; block: LayoutBlock }) 
           ))}
         </div>
       </div>
+      {block.type === "play" && (
+        <div className="mt-2 space-y-2">
+          <Field label="播放哪句口播">
+            <select
+              className="field"
+              value={block.settings?.playTarget ?? ""}
+              onChange={(e) => useEditor.getState().patchBlockSettings(scene.id, block.id, { playTarget: e.target.value })}
+            >
+              <option value="">（未指定）</option>
+              {playTargetChoices(scene, lang, source).map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <label className="flex items-center gap-2 text-[11px] text-ink-200">
+            <input
+              type="checkbox"
+              checked={!block.settings?.playFrom}
+              onChange={(e) =>
+                useEditor.getState().patchBlockSettings(
+                  scene.id,
+                  block.id,
+                  e.target.checked ? { playFrom: undefined } : { playFrom: { speakId: "body", anchor: "start", offsetMs: 0 } },
+                )
+              }
+            />
+            接在上一句播放之后
+          </label>
+          {block.settings?.playFrom && (
+            <TimeRefFields
+              label="开始于"
+              value={block.settings.playFrom}
+              scene={scene}
+              onChange={(playFrom: TimeRef) => useEditor.getState().patchBlockSettings(scene.id, block.id, { playFrom })}
+            />
+          )}
+          <p className="text-[10px] text-ink-400">舞台上不渲染此元件。本场所有播放与动效结束后切到下一场。</p>
+        </div>
+      )}
       {block.type !== "image" &&
         block.type !== "video" &&
         block.type !== "gif" &&
         block.type !== "shape" &&
         block.type !== "list" &&
-        block.type !== "dialogue" && (
+        block.type !== "dialogue" &&
+        block.type !== "play" && (
         <div className="mt-2">
           <SlotField scene={scene} lang={lang} source={source} field={block.type as "title"} label="内容" />
         </div>
       )}
-      {block.type !== "list" && block.type !== "dialogue" && (
-        <div className="mt-2">
-          <Field label="口播（空则跳过）">
-            <textarea
-              className="field min-h-[52px]"
-              rows={2}
-              value={speakText(scene, block.id, lang, source)}
-              onChange={(e) => useEditor.getState().patchSpeak(scene.id, block.id, e.target.value)}
-            />
-          </Field>
-          <SpeakRoleSelect sceneId={scene.id} speakKey={block.id} />
-          {block.type !== "image" && block.type !== "video" && block.type !== "gif" && block.type !== "shape" && (
-            <button
-              className="btn mt-1 w-full"
-              onClick={() => {
-                const copy = textOf(scene.slots[block.type as "title"], lang, source);
-                if (copy.trim()) useEditor.getState().patchSpeak(scene.id, block.id, copy);
-              }}
-            >
-              用画面文案填口播
-            </button>
-          )}
-        </div>
-      )}
       {block.type === "list" && (
         <div className="mt-2">
-          <Field label="列表导语口播（空则跳过）">
-            <textarea
-              className="field min-h-[44px]"
-              rows={2}
-              value={speakText(scene, block.id, lang, source)}
-              onChange={(e) => useEditor.getState().patchSpeak(scene.id, block.id, e.target.value)}
-            />
-          </Field>
-          <SpeakRoleSelect sceneId={scene.id} speakKey={block.id} />
           <div className="mb-1 mt-2 flex items-center justify-between">
-            <span className="text-[10px] text-ink-400">列表项（画面 + 口播）</span>
+            <span className="text-[10px] text-ink-400">列表项</span>
             <button className="btn py-0.5" onClick={() => useEditor.getState().addItem(scene.id)}>
               添加
             </button>
@@ -657,7 +621,6 @@ function BlockInspector({ scene, block }: { scene: Scene; block: LayoutBlock }) 
           {(scene.slots.items ?? []).map((it, i) => {
             const cue = scene.cues.find((c) => c.target === `item:${it.id}`);
             const active = selectedCueId === cue?.id;
-            const key = itemSpeakKey(it.id);
             return (
               <div
                 key={it.id}
@@ -675,22 +638,6 @@ function BlockInspector({ scene, block }: { scene: Scene; block: LayoutBlock }) 
                     ×
                   </button>
                 </div>
-                <textarea
-                  className="field min-h-[36px]"
-                  placeholder="口播（空则跳过）"
-                  value={speakText(scene, key, lang, source)}
-                  onChange={(e) => useEditor.getState().patchSpeak(scene.id, key, e.target.value)}
-                />
-                <SpeakRoleSelect sceneId={scene.id} speakKey={key} />
-                <button
-                  className="btn w-full py-0.5"
-                  onClick={() => {
-                    const copy = itemText(it, lang, source);
-                    if (copy.trim()) useEditor.getState().patchSpeak(scene.id, key, copy);
-                  }}
-                >
-                  用画面填口播
-                </button>
               </div>
             );
           })}
@@ -712,17 +659,8 @@ function BlockInspector({ scene, block }: { scene: Scene; block: LayoutBlock }) 
       )}
       {block.type === "dialogue" && (
         <div className="mt-2">
-          <Field label="对话导语口播（空则跳过）">
-            <textarea
-              className="field min-h-[44px]"
-              rows={2}
-              value={speakText(scene, block.id, lang, source)}
-              onChange={(e) => useEditor.getState().patchSpeak(scene.id, block.id, e.target.value)}
-            />
-          </Field>
-          <SpeakRoleSelect sceneId={scene.id} speakKey={block.id} />
           <div className="mb-1 mt-2 flex items-center justify-between">
-            <span className="text-[10px] text-ink-400">对白（左右气泡 + 口播）</span>
+            <span className="text-[10px] text-ink-400">对白</span>
             <button className="btn py-0.5" onClick={() => useEditor.getState().addDialogueLine(scene.id)}>
               添加
             </button>
@@ -730,7 +668,6 @@ function BlockInspector({ scene, block }: { scene: Scene; block: LayoutBlock }) 
           {(scene.slots.dialogue ?? []).map((it, i) => {
             const cue = scene.cues.find((c) => c.target === `item:${it.id}`);
             const active = selectedCueId === cue?.id;
-            const key = itemSpeakKey(it.id);
             return (
               <div
                 key={it.id}
@@ -764,22 +701,6 @@ function BlockInspector({ scene, block }: { scene: Scene; block: LayoutBlock }) 
                   value={itemText(it, lang, source)}
                   onChange={(e) => useEditor.getState().patchDialogueText(scene.id, it.id, e.target.value)}
                 />
-                <textarea
-                  className="field min-h-[36px]"
-                  placeholder="口播（空则跳过）"
-                  value={speakText(scene, key, lang, source)}
-                  onChange={(e) => useEditor.getState().patchSpeak(scene.id, key, e.target.value)}
-                />
-                <SpeakRoleSelect sceneId={scene.id} speakKey={key} />
-                <button
-                  className="btn w-full py-0.5"
-                  onClick={() => {
-                    const copy = itemText(it, lang, source);
-                    if (copy.trim()) useEditor.getState().patchSpeak(scene.id, key, copy);
-                  }}
-                >
-                  用画面填口播
-                </button>
               </div>
             );
           })}
@@ -954,6 +875,8 @@ function BlockInspector({ scene, block }: { scene: Scene; block: LayoutBlock }) 
       <button className="btn mt-2 w-full text-red-300" onClick={() => useEditor.getState().removeBlock(scene.id, block.id)}>
         删除此元件
       </button>
+      {block.type !== "play" && (
+      <>
       <div className="section-label mt-3">关键帧（插值）</div>
       <p className="text-[10px] text-ink-400">拖动播放头后再拖舞台，会在当前元件在场时段写入关键帧。</p>
       <button
@@ -973,11 +896,8 @@ function BlockInspector({ scene, block }: { scene: Scene; block: LayoutBlock }) 
               className="btn flex-1 py-0.5"
               onClick={() => {
                 const start = at?.startMs ?? 0;
-                const bodyStart = (at?.localMs ?? 0) - (at?.animLocalMs ?? 0);
-                const dur = at?.animDurationMs ?? 1;
-                const span = blockCue ? (blockCue.until ?? 1) - blockCue.at : 1;
-                const t = blockCue ? blockCue.at + k.t * span : k.t;
-                useEditor.getState().setPlayhead(start + bodyStart + t * dur);
+                const span = win ? win.endMs - win.startMs : 1;
+                useEditor.getState().setPlayhead(start + (win?.startMs ?? 0) + k.t * span);
               }}
             >
               t={k.t.toFixed(2)}
@@ -988,117 +908,31 @@ function BlockInspector({ scene, block }: { scene: Scene; block: LayoutBlock }) 
           </div>
         ))}
       </div>
+      </>
+      )}
+      {block.type !== "play" && (
       <div className="mt-3">
-        <div className="section-label">入场窗口</div>
-        {cues.map((cue) => {
-          const bind = cueBind(cue, scene, source);
-          const resolved = resolveCueOnScene(cue, scene, lang, source, project);
-          const bodyMs = sceneClock(scene, lang, project).bodyMs;
-          return (
-          <div
-            key={cue.id}
-            className={`mb-1 rounded border px-1.5 py-1 text-[11px] ${selectedCueId === cue.id ? "border-brass/50 bg-ink-700" : "border-ink-600"}`}
-            onClick={() => useEditor.getState().setSelectedCue(cue.id)}
-          >
-            <div className="mb-1 flex items-center gap-1">
-              <span className="w-14 truncate text-ink-400">{cue.target.replace("item:", "条:")}</span>
-              <select
-                className="field flex-1 py-0.5"
-                value={cue.anim}
-                onChange={(e) => useEditor.getState().setCueAnim(scene.id, cue.id, e.target.value as AnimKind)}
-              >
-                {ANIMS.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.label}
-                  </option>
-                ))}
-              </select>
+        <div className="section-label">动效</div>
+        <p className="text-[10px] leading-relaxed text-ink-400">
+          可配多条。用某句口播的开始/结束加偏移来定时，不再按主体 0–1 拉伸。
+        </p>
+        <EffectList scene={scene} block={block} />
+        {block.type === "list" &&
+          (scene.slots.items ?? []).map((it, i) => (
+            <div key={it.id} className="mt-2">
+              <div className="text-[10px] text-ink-400">条目 {i + 1} 动效</div>
+              <EffectList scene={scene} block={block} target={itemSpeakKey(it.id)} />
             </div>
-            <Field label="入场跟随">
-              <select
-                className="field py-0.5"
-                value={bind}
-                onChange={(e) => useEditor.getState().setCueBind(scene.id, cue.id, e.target.value as CueBind)}
-              >
-                <option value="speak">跟口播（当前语言的那一句）</option>
-                <option value="visual">跟画面（主体 0–1，各语言拉伸）</option>
-              </select>
-            </Field>
-            {bind === "speak" ? (
-              <div className="mt-1 space-y-1 text-[10px] text-ink-400">
-                <label className="flex items-center gap-1.5">
-                  <span className="w-24 shrink-0">提前出现（秒）</span>
-                  <input
-                    type="number"
-                    min={-5}
-                    max={10}
-                    step={0.1}
-                    className="field py-0.5"
-                    value={secSigned(cue.leadMs ?? 0)}
-                    onChange={(e) => useEditor.getState().patchCue(scene.id, cue.id, { leadMs: parseSignedSec(e.target.value) })}
-                  />
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={cueStay(cue) === "body"}
-                    onChange={(e) =>
-                      useEditor.getState().patchCue(scene.id, cue.id, { stay: e.target.checked ? "body" : "speech" })
-                    }
-                  />
-                  留到主体结束
-                </label>
-                {cueStay(cue) === "speech" && (
-                  <label className="flex items-center gap-1.5">
-                    <span className="w-24 shrink-0">结束后再留（秒）</span>
-                    <input
-                      type="number"
-                      min={0}
-                      max={10}
-                      step={0.1}
-                      className="field py-0.5"
-                      value={secInput(cue.trailMs ?? 0)}
-                      onChange={(e) => useEditor.getState().patchCue(scene.id, cue.id, { trailMs: parseSec(e.target.value, 10) })}
-                    />
-                  </label>
-                )}
-                <p className="text-[10px] text-ink-500">
-                  本语言：{formatMs(resolved.at * bodyMs)} – {formatMs(resolved.until * bodyMs)}
-                </p>
-              </div>
-            ) : (
-            <div className="min-w-0 space-y-1 text-[10px] text-ink-400">
-              <label className="flex min-w-0 items-center gap-1.5">
-                <span className="w-4 shrink-0">入</span>
-                <input
-                  type="range"
-                  min={0}
-                  max={98}
-                  className="min-w-0 flex-1"
-                  value={Math.round(resolved.at * 100)}
-                  onChange={(e) => useEditor.getState().setCueRange(scene.id, cue.id, Number(e.target.value) / 100, resolved.until)}
-                />
-                <span className="w-8 shrink-0 text-right font-mono">{Math.round(resolved.at * 100)}%</span>
-              </label>
-              <label className="flex min-w-0 items-center gap-1.5">
-                <span className="w-4 shrink-0">出</span>
-                <input
-                  type="range"
-                  min={2}
-                  max={100}
-                  className="min-w-0 flex-1"
-                  value={Math.round(resolved.until * 100)}
-                  onChange={(e) => useEditor.getState().setCueRange(scene.id, cue.id, resolved.at, Number(e.target.value) / 100)}
-                />
-                <span className="w-8 shrink-0 text-right font-mono">{Math.round(resolved.until * 100)}%</span>
-              </label>
+          ))}
+        {block.type === "dialogue" &&
+          (scene.slots.dialogue ?? []).map((it, i) => (
+            <div key={it.id} className="mt-2">
+              <div className="text-[10px] text-ink-400">对白 {i + 1} 动效</div>
+              <EffectList scene={scene} block={block} target={itemSpeakKey(it.id)} />
             </div>
-            )}
-          </div>
-          );
-        })}
-        {cues.length === 0 && <p className="text-[10px] text-ink-400">此元件还没有入场窗口。</p>}
+          ))}
       </div>
+      )}
     </>
   );
 }

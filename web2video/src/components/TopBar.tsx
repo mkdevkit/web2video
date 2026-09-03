@@ -3,7 +3,6 @@ import {
   FilePlus,
   FolderOpen,
   HelpCircle,
-  Languages,
   Mic,
   Pause,
   Play,
@@ -64,9 +63,6 @@ export function TopBar() {
           }}
         >
           <Sparkles className="h-3.5 w-3.5" /> AI
-        </button>
-        <button className="btn shrink-0" onClick={() => useEditor.getState().setDialog("texts")}>
-          <Languages className="h-3.5 w-3.5" /> 文本
         </button>
         <button className="btn shrink-0" onClick={() => useEditor.getState().setDialog("tts")}>
           <Mic className="h-3.5 w-3.5" /> 配音

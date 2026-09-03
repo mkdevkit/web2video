@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { StageView } from "../layouts/StageView";
-import { bodyBeatSpans, cueKeyProgress, resolveCue } from "../lib/cues";
+import { blockWindow, windowProgress } from "../lib/effects";
 import { fontStack, hexAlpha, progressStyleOf } from "../lib/fonts";
 import { sourceLangOf } from "../lib/textI18n";
-import { sceneLayersAt, sceneClock, sceneDuration, sceneStarts, totalDuration, type SceneLayer } from "../lib/timeline";
+import { sceneBlocks } from "../lib/blocks";
+import { sceneLayersAt, sceneCalendar, sceneDuration, sceneStarts, totalDuration, type SceneLayer } from "../lib/timeline";
 import { ASPECT_PX } from "../types";
 import { useEditor } from "../store/useEditor";
 import type { LangId } from "../lib/langs";
@@ -43,18 +44,17 @@ function StageLayers({
         audioMs={layer.audioMs}
         showCaptions={project.showCaptions}
         editable={canEdit}
-        selectedId={canEdit ? selectedId : null}
-        onSelect={canEdit ? (id) => useEditor.getState().setSelectedBlock(id) : undefined}
+        selectedId={selectedId ?? null}
+        onSelect={(id) => useEditor.getState().setSelectedBlock(id)}
         onTransformStart={canEdit ? () => useEditor.getState().commit() : undefined}
         onTransform={
           canEdit
             ? (id, pose) => {
-                const clock = sceneClock(layer.scene, lang, project);
-                const spans = bodyBeatSpans(layer.scene, lang, source);
-                const raw = layer.scene.cues.find((c) => c.target === id);
-                const cue = raw ? resolveCue(raw, clock, spans, layer.scene, source) : undefined;
-                const sceneP = layer.animDurationMs ? layer.animLocalMs / layer.animDurationMs : 0;
-                useEditor.getState().writeBlockTransform(layer.scene.id, id, pose, cueKeyProgress(sceneP, cue));
+                const cal = sceneCalendar(layer.scene, lang, project);
+                const block = sceneBlocks(layer.scene).find((b) => b.id === id);
+                const sampleMs = layer.localMs;
+                const win = block ? blockWindow(block, layer.scene, source, cal) : undefined;
+                useEditor.getState().writeBlockTransform(layer.scene.id, id, pose, windowProgress(sampleMs, win));
               }
             : undefined
         }
@@ -200,7 +200,15 @@ export function Stage() {
 
   return (
     <div className="relative min-h-0 flex-1">
-      <div ref={wrapRef} className="stage-checker h-full overflow-auto">
+      <div
+        ref={wrapRef}
+        className="stage-checker h-full overflow-auto"
+        onMouseDown={(e) => {
+          if (stageRef.current && !stageRef.current.contains(e.target as Node)) {
+            useEditor.getState().setSelectedBlock(null);
+          }
+        }}
+      >
         <div
           className="flex items-center justify-center"
           style={{

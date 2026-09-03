@@ -72,9 +72,13 @@ export async function recordProject(opts: {
     if (blob) {
       const buf = await audioCtx.decodeAudioData(await blob.arrayBuffer());
       const t0 = audioCtx.currentTime + offset;
-      playSlice(audioCtx, dest, buf, clock.audioOpenStartMs / 1000, clock.audioOpenEndMs / 1000, t0 + clock.openBeforeMs / 1000);
-      playSlice(audioCtx, dest, buf, clock.audioBodyStartMs / 1000, clock.audioBodyEndMs / 1000, t0 + clock.bodyStartMs / 1000);
-      playSlice(audioCtx, dest, buf, clock.audioCloseStartMs / 1000, clock.audioCloseEndMs / 1000, t0 + clock.closeSpeechStartMs / 1000);
+      if (clock.mixed) {
+        playSlice(audioCtx, dest, buf, 0, clock.audioBodyEndMs / 1000, t0);
+      } else {
+        playSlice(audioCtx, dest, buf, clock.audioOpenStartMs / 1000, clock.audioOpenEndMs / 1000, t0 + clock.openBeforeMs / 1000);
+        playSlice(audioCtx, dest, buf, clock.audioBodyStartMs / 1000, clock.audioBodyEndMs / 1000, t0 + clock.bodyStartMs / 1000);
+        playSlice(audioCtx, dest, buf, clock.audioCloseStartMs / 1000, clock.audioCloseEndMs / 1000, t0 + clock.closeSpeechStartMs / 1000);
+      }
     }
     offset += dur;
   }

@@ -50,7 +50,7 @@ export function PrefsDialog() {
               ))}
             </select>
           </Field>
-          <p className="text-xs text-ink-400">切场停留、开场/结束空白仍在右侧属性里按场景调。导出格式、分辨率和码率在「导出」窗口里配，会写入工程文件。</p>
+          <p className="text-xs text-ink-400">切场停留在右侧属性里按场景调。开场/结束空白只在配置驱动下生效。导出格式、分辨率和码率在「导出」窗口里配，会写入工程文件。</p>
         </div>
       )}
     </Modal>

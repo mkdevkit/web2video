@@ -32,7 +32,8 @@ export type BlockType =
   | "image"
   | "video"
   | "gif"
-  | "shape";
+  | "shape"
+  | "play";
 export type TtsProvider = "edge" | "azure" | "openai" | "qwen";
 export type SceneTransition = "cut" | "crossfade";
 export type StageFontId =
@@ -147,11 +148,57 @@ export interface SceneAudio {
   durationMs: number;
   voice?: string;
   words?: WordTs[];
+  /** Per-line duration after synth (target → ms). */
+  beatMs?: Record<string, number>;
   stale?: boolean;
 }
 
 export type CueBind = "speak" | "visual";
 export type CueStay = "speech" | "body";
+
+/** narration: list clock. config: play blocks + TimeRef effects. */
+export type DriveMode = "narration" | "config";
+export type SpeakAnchor = "start" | "end";
+
+/** Point on the scene clock: a beat's start/end plus offset (ms). */
+export interface TimeRef {
+  speakId: string;
+  anchor: SpeakAnchor;
+  offsetMs?: number;
+}
+
+/** One animation on a block, timed from a TimeRef. */
+export interface BlockEffect {
+  id: string;
+  anim: AnimKind;
+  from: TimeRef;
+  to?: TimeRef;
+  /** Used when `to` is omitted. */
+  durationMs?: number;
+  /** List/dialogue item key (`item:{id}`). Missing = the block itself. */
+  target?: string;
+}
+
+export interface SpeakLine {
+  id: string;
+  kind?: "speech" | "gap";
+  /** Short label in the editor. */
+  name?: string;
+  i18n?: Partial<Record<LangId, string>>;
+  /** Clock duration in ms. Missing = synth beatMs or estimate. */
+  durationMs?: number;
+  /** VoiceProfile.id override. */
+  role?: string;
+}
+
+export interface SpeakTrackItem {
+  id: string;
+  kind: "speech" | "gap";
+  /** Speech target: a SpeakLine.id (legacy: open / close / block id). */
+  target?: string;
+  /** Gap row duration (ms), same across languages. */
+  gapMs?: number;
+}
 
 export interface Cue {
   id: string;
@@ -205,6 +252,10 @@ export interface BlockSettings {
   loop?: boolean;
   listLayout?: "stack" | "row" | "grid";
   shadow?: boolean;
+  /** Play block: which narration id to play (config-driven). */
+  playTarget?: string;
+  /** Play block: when to start (default = after previous play / scene start). */
+  playFrom?: TimeRef;
 }
 
 export interface LayoutBlock {
@@ -218,6 +269,8 @@ export interface LayoutBlock {
   z?: number;
   settings?: BlockSettings;
   keys?: BlockKeyframe[];
+  /** Timed animations (config / narration). Empty = derived from cues. */
+  effects?: BlockEffect[];
 }
 
 export interface SceneSlots {
@@ -237,13 +290,19 @@ export interface Scene {
   id: string;
   name: string;
   layoutId: LayoutId;
-  /** Opening narration (scene start). */
-  narration: TextI18n;
-  /** Closing narration (scene end). */
+  /** narration = speak list is the clock. config = play blocks schedule speech. */
+  drive?: DriveMode;
+  /** Unified speech lines (own id + duration). Gaps are kind=gap. */
+  speaks?: SpeakLine[];
+  /** @deprecated Folded into `speaks`. */
+  speakTrack?: SpeakTrackItem[];
+  /** @deprecated Folded into `speaks`. */
+  narration?: TextI18n;
+  /** @deprecated Folded into `speaks`. */
   narrationClose?: TextI18n;
-  /** Per-element spoken lines. Keys are block ids or `item:{id}`. */
+  /** @deprecated Folded into `speaks`. */
   speak?: Partial<Record<string, TextI18n>>;
-  /** Per-line TTS character (VoiceProfile.id). Missing = language default. */
+  /** @deprecated Use SpeakLine.role. */
   speakRole?: Partial<Record<string, string>>;
   audioByLang?: Partial<Record<LangId, SceneAudio>>;
   slots: SceneSlots;
@@ -258,13 +317,13 @@ export interface Scene {
   bgDim?: number;
   /** Extra ms after speech before the next scene. Undefined inherits the project default. */
   holdMs?: number;
-  /** Silence before opening narration. Ignored if there is no opening line. */
+  /** Config drive: silence before scheduled plays / body. Ignored in narration drive. */
   openPadBeforeMs?: number;
-  /** Silence after opening narration, before body animation. */
+  /** Config drive: extra silence after the opening pad, before body. Ignored in narration drive. */
   openPadAfterMs?: number;
-  /** Silence after body, before closing narration. */
+  /** Config drive: silence after body, before the closing pad. Ignored in narration drive. */
   closePadBeforeMs?: number;
-  /** Silence after closing narration, before hold. */
+  /** Config drive: silence after the closing pad, before hold. Ignored in narration drive. */
   closePadAfterMs?: number;
   /** How this scene leaves. Undefined inherits the project default. */
   transition?: SceneTransition;
@@ -366,4 +425,5 @@ export const BLOCK_TYPES: { type: BlockType; label: string }[] = [
   { type: "video", label: "视频" },
   { type: "gif", label: "GIF" },
   { type: "shape", label: "色块" },
+  { type: "play", label: "播放口播" },
 ];

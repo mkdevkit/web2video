@@ -1,6 +1,6 @@
-import { SPEAK_CLOSE, SPEAK_OPEN, beatSpansForScene, bilingualCaptionLangOf, captionSecondaryText, speakText } from "./narration";
+import { bilingualCaptionLangOf, captionSecondaryText, speakText } from "./narration";
 import { sourceLangOf } from "./textI18n";
-import { sceneClock, sceneStarts } from "./timeline";
+import { sceneCalendar, sceneStarts } from "./timeline";
 import type { LangId } from "./langs";
 import type { Project } from "../types";
 
@@ -17,12 +17,6 @@ function stamp(ms: number, decimal: "," | ".") {
   const s = Math.floor((t % 60_000) / 1000);
   const frac = t % 1000;
   return `${pad(h, 2)}:${pad(m, 2)}:${pad(s, 2)}${decimal}${pad(frac, 3)}`;
-}
-
-function audioToLocal(clock: ReturnType<typeof sceneClock>, audioMs: number, target: string): number {
-  if (target === SPEAK_OPEN) return clock.openBeforeMs + (audioMs - clock.audioOpenStartMs);
-  if (target === SPEAK_CLOSE) return clock.closeSpeechStartMs + (audioMs - clock.audioCloseStartMs);
-  return clock.bodyStartMs + (audioMs - clock.audioBodyStartMs);
 }
 
 export type CollectSubtitleOpts = {
@@ -47,9 +41,10 @@ export function collectSubtitles(
   const pair = Boolean(opts?.includeClockLang) && !sameLang;
   for (let i = 0; i < project.scenes.length; i++) {
     const scene = project.scenes[i];
-    const clock = sceneClock(scene, clockLang, project);
+    const cal = sceneCalendar(scene, clockLang, project);
     const origin = starts[i];
-    for (const beat of beatSpansForScene(scene, clockLang, source)) {
+    for (const beat of cal.spans) {
+      if (beat.kind !== "speech") continue;
       const timed = beat.text.replace(/\s+/g, " ").trim();
       if (!timed) continue;
       const translated = sameLang
@@ -64,8 +59,8 @@ export function collectSubtitles(
         const secondary = other ? captionSecondaryText(scene, beat.target, other, source, translated) : "";
         text = secondary ? `${translated}\n${secondary}` : translated;
       }
-      let start = origin + audioToLocal(clock, beat.startMs, beat.target);
-      let end = origin + audioToLocal(clock, beat.endMs, beat.target);
+      let start = origin + beat.startMs;
+      let end = origin + beat.endMs;
       if (end < start) [start, end] = [end, start];
       end = Math.max(end, start + 200);
       cues.push({ startMs: Math.max(0, start), endMs: end, text });

@@ -3,6 +3,7 @@ import { durationsFromEstimate } from "./lib/clock";
 import { DEFAULT_CODE } from "./lib/defaultScript";
 import { DEFAULT_STAGE_CSS, DEFAULT_STAGE_HTML, DEFAULT_STAGE_THEME, stageThemeOf } from "./lib/stage";
 import { DEFAULT_SOURCES, isEngineId } from "./lib/engines";
+import { normalizeBeat } from "./lib/beats";
 import type { LangAudio } from "./types";
 
 export const sampleScript: SceneScript = {
@@ -79,7 +80,7 @@ export function normalizeScript(s: SceneScript): SceneScript {
   return {
     id: s.id,
     name: s.name,
-    beats: s.beats?.length ? s.beats : [{ id: "hook", text: {} }],
+    beats: (s.beats?.length ? s.beats : [{ id: "hook", text: {} }]).map(normalizeBeat),
     events: s.events ?? [],
     engine,
     sources: { ...sources, [engine]: code },
@@ -87,6 +88,9 @@ export function normalizeScript(s: SceneScript): SceneScript {
     holdMs: s.holdMs ?? 0,
     audioByLang: s.audioByLang,
     stageHtml: (s.stageHtml ?? "").trim() || DEFAULT_STAGE_HTML,
+    drive: s.drive === "script" ? "script" : "narration",
+    driveSchedule: Array.isArray(s.driveSchedule) ? s.driveSchedule : undefined,
+    driveTotalMs: Number.isFinite(s.driveTotalMs) ? s.driveTotalMs : undefined,
   };
 }
 

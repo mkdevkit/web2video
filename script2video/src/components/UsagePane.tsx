@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useStudio } from "../store/useStudio";
-import { CLOCK_LAYERS, DONT, ENGINE_GUIDES, EXTRA_GUIDES, MANIM_INSTEAD, SPEECH_API, TS_ENGINE_IDS } from "../lib/engineGuide";
+import { CLOCK_LAYERS, DONT, ENGINE_GUIDES, EXTRA_GUIDES, MANIM_INSTEAD, SCRIPT_DRIVE_EXAMPLE, SPEECH_API, TS_ENGINE_IDS } from "../lib/engineGuide";
 import { ENGINES, engineOf } from "../lib/engines";
 import type { EngineId } from "../types";
 
@@ -43,8 +43,10 @@ export function UsagePane() {
     <section className="min-h-0 flex-1 overflow-auto p-4 text-sm">
       <h2 className="mb-1 text-base font-medium">用法</h2>
       <p className="mb-4 text-xs leading-relaxed text-ink-400">
-        画面跟<strong className="font-medium text-ink-200">口播节拍</strong>走，不要写死秒数。口播页给每句一个 id（如{" "}
-        <code className="text-brass">hook</code>）；脚本页选工具。当前脚本：
+        画面跟<strong className="font-medium text-ink-200">口播节拍</strong>走，不要写死秒数。口播页可选
+        <strong className="font-medium text-ink-200"> 口播驱动</strong>（列表顺序 + 延时行）或
+        <strong className="font-medium text-ink-200"> 脚本驱动</strong>（<code className="text-brass">speech.play</code>）。
+        当前脚本：
         {script ? ` ${script.name} · ${ENGINE_GUIDES[current].label}` : " 无"}
       </p>
 
@@ -87,10 +89,18 @@ export function UsagePane() {
           </tbody>
         </table>
       </div>
-      <p className="mb-4 text-xs text-ink-400">
+      <p className="mb-2 text-xs text-ink-400">
         入场用固定秒（各语言一样快）；<strong className="font-medium text-ink-200">这一段总时长 = speech.s(id)</strong>
         。多出来的时间用 hold 停住。右侧预览表列出每个 id 的秒数。字体说明在顶栏「外观 → 字体」。
       </p>
+      <h3 className="mb-2 text-xs uppercase tracking-wider text-ink-400">脚本驱动：speech.play</h3>
+      <p className="mb-2 text-xs text-ink-400">
+        口播页切到「脚本驱动」后，列表只是台词库。必须 <code className="text-brass">speech.play("hook")</code>{" "}
+        才会出声；返回值当 GSAP position。不要调用 <code className="text-brass">timeline.play()</code>。
+      </p>
+      <div className="mb-4">
+        <CopyBlock text={SCRIPT_DRIVE_EXAMPLE} />
+      </div>
 
       <h3 className="mb-2 text-xs uppercase tracking-wider text-ink-400">各工具怎么写</h3>
       <div className="mb-3 flex flex-wrap gap-1">

@@ -3,7 +3,8 @@ import { sceneBlocks } from "../blocks";
 import { captionStyleOf, isStageFontId, progressStyleOf, STAGE_FONTS } from "../fonts";
 import { listMarkerStyleOf } from "../listMarker";
 import { exportSettingsOf } from "../exportSettings";
-import { itemSpeakKey, speakText } from "../narration";
+import { itemSpeakKey } from "../narration";
+import { isGapSpeak, lineDurationMs, speakLineText, speaksOf } from "../speaks";
 import { textOf, itemText, sourceLangOf, blockNameOf, writeI18n } from "../textI18n";
 import { useEditor } from "../../store/useEditor";
 import { patchSceneFromStoryboard, sceneFromStoryboard, type StoryboardScene } from "./storyboard";
@@ -27,6 +28,7 @@ const sceneSpecProperties = {
   bgFit: { type: "string", enum: ["cover", "contain"], description: "已有背景图时的铺满方式" },
   bgDim: { type: "number", description: "背景图遮罩 0–1，让字更清楚" },
   holdMs: { type: "number", description: "本场口播后停留毫秒，省略跟片级" },
+  drive: { type: "string", enum: ["narration", "config"], description: "narration=口播列表即时钟；config=播放元件排期 + 动效锚点" },
   transition: { type: "string", enum: ["cut", "crossfade"], description: "切到下一场，省略跟片级" },
   transitionMs: { type: "number", description: "叠化时长毫秒" },
   title: { type: "string" },
@@ -51,11 +53,16 @@ const sceneSpecProperties = {
       },
     },
   },
-  narration: { type: "string", description: "开场口播，钉在第一帧。对话场宜短或空" },
-  narrationClose: { type: "string", description: "结束口播，钉在最后一帧，可空" },
+  speaks: {
+    type: "array",
+    items: { type: "string" },
+    description: "本场口播列表，顺序即播放顺序。每条有独立 id 与时长。优先用这个，不要再拆开场/结束。",
+  },
+  narration: { type: "string", description: "兼容旧字段。无 speaks 时作为口播列表的一句" },
+  narrationClose: { type: "string", description: "兼容旧字段。无 speaks 时接到口播列表末尾" },
   speak: {
     type: "object",
-    description: "元件口播。省略则用画面文案。items / dialogue 与画面一一对应。",
+    description: "兼容旧字段：按元件拆口播。新片子请用 speaks 数组。",
     properties: {
       title: { type: "string" },
       subtitle: { type: "string" },
@@ -295,7 +302,7 @@ export const AI_TOOLS: ChatTool[] = [
     type: "function",
     function: {
       name: "set_cue",
-      description: "设置元件入场：跟口播或跟画面。target 为元件 id 或 item:{id}。",
+      description: "设置元件动效锚点。target 为元件 id 或 item:{id}。跟口播用该句开始/结束；不要再用主体 0–1 拉伸。",
       parameters: {
         type: "object",
         properties: {
@@ -322,23 +329,13 @@ function dumpScene(sceneId?: string) {
   const scene = s.project.scenes.find((x) => x.id === (sceneId || s.currentSceneId));
   if (!scene) return { error: "找不到场景" };
   const items = scene.slots.items ?? [];
-  const speak: Record<string, string> = {};
-  const open = speakText(scene, "open", lang, source);
-  const close = speakText(scene, "close", lang, source);
-  if (open) speak.open = open;
-  if (close) speak.close = close;
-  for (const b of sceneBlocks(scene)) {
-    const t = speakText(scene, b.id, lang, source);
-    if (t) speak[b.id] = t;
-  }
-  for (const it of items) {
-    const t = speakText(scene, itemSpeakKey(it.id), lang, source);
-    if (t) speak[itemSpeakKey(it.id)] = t;
-  }
-  for (const it of scene.slots.dialogue ?? []) {
-    const t = speakText(scene, itemSpeakKey(it.id), lang, source);
-    if (t) speak[itemSpeakKey(it.id)] = t;
-  }
+  const speaks = speaksOf(scene).map((line) => ({
+    id: line.id,
+    kind: line.kind ?? "speech",
+    text: isGapSpeak(line) ? "" : speakLineText(line, lang, source),
+    durationMs: lineDurationMs(scene, line, lang, source),
+    role: line.role ?? "",
+  }));
   return {
     id: scene.id,
     name: scene.name,
@@ -348,10 +345,10 @@ function dumpScene(sceneId?: string) {
     bgFit: scene.bgFit ?? "cover",
     bgDim: scene.bgDim ?? 0,
     holdMs: scene.holdMs,
+    drive: scene.drive ?? "narration",
     transition: scene.transition,
     transitionMs: scene.transitionMs,
-    narration: open,
-    narrationClose: close,
+    speaks,
     slots: {
       title: textOf(scene.slots.title, lang, source),
       subtitle: textOf(scene.slots.subtitle, lang, source),
@@ -370,8 +367,6 @@ function dumpScene(sceneId?: string) {
       })),
       hasImage: Boolean(scene.slots.image),
     },
-    speak,
-    speakRole: scene.speakRole ?? {},
     blocks: sceneBlocks(scene).map((b) => ({
       id: b.id,
       type: b.type,
@@ -442,12 +437,16 @@ export function executeTool(name: string, rawArgs: unknown): string {
         voices: p.voices.map((v) => ({ id: v.id, name: v.name, gender: v.gender })),
         voiceId: p.voiceId,
         voiceByLang: p.voiceByLang,
-        scenes: p.scenes.map((sc) => ({
-          id: sc.id,
-          name: sc.name,
-          layoutId: sc.layoutId,
-          open: speakText(sc, "open", lang, lang).slice(0, 80),
-        })),
+        scenes: p.scenes.map((sc) => {
+          const first = speaksOf(sc).find((line) => !isGapSpeak(line));
+          return {
+            id: sc.id,
+            name: sc.name,
+            layoutId: sc.layoutId,
+            speaks: speaksOf(sc).length,
+            firstSpeak: first ? speakLineText(first, lang, lang).slice(0, 80) : "",
+          };
+        }),
       });
     }
 
@@ -461,9 +460,9 @@ export function executeTool(name: string, rawArgs: unknown): string {
         blocks: BLOCK_TYPES.map((b) => ({ type: b.type, label: b.label })),
         fonts: STAGE_FONTS.map((f) => ({ id: f.id, label: f.label, langs: f.langs, hint: f.hint, detail: f.detail, license: f.license })),
         notes: {
-          open: "开场口播钉在第一帧，播完才开始动画和元件口播",
-          close: "结束口播钉在最后一帧，排在全部元件口播之后",
-          speakBind: "有口播的元件默认跟该语言的那一句入场",
+          open: "口播驱动：开场钉第一帧。配置驱动请用播放元件",
+          close: "口播驱动：结束钉最后一帧。句间留白用延时，不要 0–1 拉伸",
+          speakBind: "动效用口播 id 的 start/end + offset；play 元件只在配置驱动里播口播",
           dialogue: "dialogue 版面是左右双人对话窗。对白写在 dialogue 数组，口播键为 item:{id}，每句可配 role",
           bg: "bg 是场景底色；bgImage / 图片 / 视频 / GIF 只能用户本地选文件，不要编造 URL",
           media: "video、gif 元件用 manage_blocks 添加后，src 由用户在检视里选择，存在 settings.src",
@@ -655,17 +654,16 @@ export function executeTool(name: string, rawArgs: unknown): string {
   }
 }
 
-export const SYSTEM_PROMPT = `你是 Web2Video 的分镜助手。这是本地口播网页转视频工具：多场景、版面元件、开场/元件/结束口播、多语言。
+export const SYSTEM_PROMPT = `你是 Web2Video 的分镜助手。这是本地口播网页转视频工具：多场景、版面元件、每场独立口播列表、多语言。
 
 时间规则：
-- 开场口播钉在第一帧，播完才开始动画和元件口播。
-- 结束口播钉在最后一帧，排在全部元件口播之后，可空。
-- 有口播的元件默认跟「当前语言的那一句」入场；配图可跟画面。
-- 开场/结束可配前后静音空白，片级默认可改。
+- 每场默认口播驱动：口播列表顺序就是时钟。句间留白用延时行，不要按主体时长 0–1 拉伸。
+- 口播是场景上的独立条目，各有 id 和时长，不要再拆开场口播/结束口播。
+- 配置驱动：口播是台词库，用「播放口播」元件排期；元件动效用某句的开始/结束 + 偏移（毫秒）。本场播放与动效全部结束后切场。
 
 版面与对白：
 - 封面 cover，要点 bullets/cards，步骤 steps，金句 quote，数据 bigStat，对话 dialogue。
-- 对话场填 dialogue:[{side,name,text,role?}]，左右交替。开场口播宜短或空，对白每句单独配音。
+- 对话场填 dialogue:[{side,name,text,role?}]，左右交替。口播用 speaks 数组，对白每句可单独写成一条口播。
 - 场景底色用 bg；遮罩 bgDim 0–1。不要编造图片、视频、GIF 的 URL。视频/GIF 元件让用户在检视里选本地文件。
 
 外观：
@@ -673,11 +671,11 @@ export const SYSTEM_PROMPT = `你是 Web2Video 的分镜助手。这是本地口
 - 全片进度条：showTopProgress + progressStyle，画在画布顶/底，导出会带上。
 - 列表序号：listMarkerStyle.show / kind / 颜色 / 形状。图片只能用户在全局配置里上传，不要编造 URL。
 - 字体用 fontId / titleFontId / subtitleFontId / quoteFontId / captionFontId，取值见 list_catalog。
-- 每句口播可指定角色：dialogue[].role 或 speakRole，id 来自 get_project.voices。
+- 每句口播可指定角色，id 来自 get_project.voices。
 
 写作要求：
 - 口播口语化、适合配音，一句一事，避免书面长句。
-- 每场：开场口播 + 画面文案 + 对应元件口播；列表用 items；对话用 dialogue。
+- 每场：画面文案 + speaks 口播列表；列表用 items；对话用 dialogue。
 - 改现有工程先 get_project / get_scene，再 update_scene 或 apply_storyboard。
 - 用户要整片重做时 apply_storyboard mode=replace；要加场用 append。
 - 用户提到字幕、进度条、字体、配色时用 set_project，不要只改文案。

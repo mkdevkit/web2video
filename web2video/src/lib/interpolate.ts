@@ -1,5 +1,6 @@
-import type { BlockKeyframe, BlockSettings, Cue, EaseKind, LayoutBlock } from "../types";
-import { cueProgress, cueVisible } from "./timeline";
+import type { AnimKind, BlockKeyframe, BlockSettings, EaseKind, LayoutBlock } from "../types";
+
+export type MsWindow = { startMs: number; endMs: number; anim: AnimKind };
 
 export interface BlockPose {
   x: number;
@@ -69,18 +70,28 @@ export function restPose(block: LayoutBlock): BlockPose {
 }
 
 export type SampleOpts = {
-  /** Hold the first or last body frame at full opacity (opening / closing narration). */
+  /** Hold the first or last body frame (opening / closing narration). */
   freeze?: "start" | "end";
-  /** Smallest cue.at in this scene; used so the first frame is never empty. */
-  firstAt?: number;
+  freezeMs?: number;
 };
 
-export function sampleBlock(block: LayoutBlock, progress: number, cue?: Cue, opts?: SampleOpts): BlockPose {
+function windowVis(t: number, startMs: number, endMs: number, anim: AnimKind, keyed: boolean): number {
+  if (t < startMs - 0.5 || t > endMs + 0.5) return 0;
+  if (keyed) return 1;
+  const fade = anim === "fade" || anim === "slide" || anim === "scale" ? 90 : 40;
+  let vis = 1;
+  vis = Math.min(vis, Math.max(0, (t - startMs) / fade));
+  vis = Math.min(vis, Math.max(0, (endMs - t) / fade));
+  return vis;
+}
+
+export function sampleBlock(block: LayoutBlock, localMs: number, win?: MsWindow, opts?: SampleOpts): BlockPose {
   const rest = restPose(block);
-  const until = cue ? (cue.until ?? 1) : 1;
-  const at = cue?.at ?? 0;
-  const frame = opts?.freeze === "start" ? 0 : opts?.freeze === "end" ? 1 : progress;
-  const keyProgress = cue ? (frame - at) / Math.max(0.0001, until - at) : frame;
+  const t =
+    opts?.freeze === "start" || opts?.freeze === "end"
+      ? (opts.freezeMs ?? localMs)
+      : localMs;
+  const keyProgress = win ? (t - win.startMs) / Math.max(1, win.endMs - win.startMs) : 0;
   const keys = [...(block.keys ?? [])].sort((a, b) => a.t - b.t);
   let pose = rest;
   if (keys.length === 1) {
@@ -94,30 +105,23 @@ export function sampleBlock(block: LayoutBlock, progress: number, cue?: Cue, opt
       const a = keys[i];
       const b = keys[i + 1];
       const span = Math.max(0.0001, b.t - a.t);
-      const t = easeFn(b.ease ?? a.ease, (keyProgress - a.t) / span);
+      const u = easeFn(b.ease ?? a.ease, (keyProgress - a.t) / span);
       const pa = pick(rest, a);
       const pb = pick(rest, b);
       pose = {
-        x: lerp(pa.x, pb.x, t),
-        y: lerp(pa.y, pb.y, t),
-        w: lerp(pa.w, pb.w, t),
-        h: lerp(pa.h, pb.h, t),
-        opacity: lerp(pa.opacity, pb.opacity, t),
-        rotation: lerp(pa.rotation, pb.rotation, t),
+        x: lerp(pa.x, pb.x, u),
+        y: lerp(pa.y, pb.y, u),
+        w: lerp(pa.w, pb.w, u),
+        h: lerp(pa.h, pb.h, u),
+        opacity: lerp(pa.opacity, pb.opacity, u),
+        rotation: lerp(pa.rotation, pb.rotation, u),
       };
     }
   }
 
   let vis = 1;
-  if (cue) {
-    if (opts?.freeze === "start") {
-      const cut = (opts.firstAt ?? 0) + 0.02;
-      vis = cue.at <= cut ? 1 : 0;
-    } else if (opts?.freeze === "end") {
-      vis = cueVisible(cue, 1) ? 1 : 0;
-    } else if (!cueVisible(cue, progress)) vis = 0;
-    else vis = keys.length ? 1 : cueProgress(cue, progress);
-  }
+  if (win) vis = windowVis(t, win.startMs, win.endMs, win.anim, keys.length > 0);
+  if (win?.anim === "slide" && vis < 1 && vis > 0) pose = { ...pose, y: pose.y + (1 - vis) * 3 };
   return { ...pose, opacity: pose.opacity * vis };
 }
 

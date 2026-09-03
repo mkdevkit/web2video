@@ -16,7 +16,7 @@ npm run dev
 - 视频 / GIF 元件（跟场景时间走，导出时按当前帧画进画面）
 - 多种版面：封面、图文、要点、金句、步骤、对话窗、自定义等
 - 场景底色 / 背景图、口播字幕条（字体与样式可配，烧录到画面）、画布进度条（样式可配，画在舞台上会进导出）
-- 开场 / 元件 / 结束口播；入场可跟口播或跟画面；多角色按句合成再拼接
+- 每场独立口播列表（id + 时长）；口播驱动或配置驱动；元件可配多条动效（口播开始/结束 + 偏移）；配置驱动用播放元件排期
 - 千问 TTS：声音设计、声音复刻、角色与语言默认音色
 - 生成式 AI 分镜（DeepSeek 等 Chat Completions + 本地工具调用）
 - 一键机翻：中、英、日、法、德、俄、西班牙、葡萄牙、意大利
@@ -66,20 +66,18 @@ npm run dev
 
 `src/types.ts` 里的 `Project` 是唯一真相：画幅、字体、字幕/进度条样式、导出规格、场景列表。
 
-每场 `Scene` 含：
-
+- `drive`：`narration`（默认，列表即时钟，可加延时行）或 `config`（播放元件排期）
+- `speaks`：本场口播（id、多语言文本、时长、角色）；延时为 `kind: "gap"`
 - `slots`：画面文案（含列表、对话窗）
-- `narration` / `narrationClose` / `speak`：开场、结束、元件口播（按语言分字段）
-- `speakRole`：某句覆盖用哪个配音角色
-- `cues`：入场绑定（跟口播或跟画面 0–1）
-- `blocks`：元件几何与样式；未自定义时用版面预设
-- `audioByLang`：各语言配音元数据（时长、是否过期）
+- `cues`：旧入场绑定（无 `effects` 时仍可读）
+- `blocks`：元件几何、样式、多条 `effects`（TimeRef）；`play` 元件只排期口播
+- `audioByLang`：各语言配音元数据（时长、`beatMs`、是否过期）
 
-时间轴在 `src/lib/timeline.ts`：口播时长 + 开场/结束静音 + 停留。换语言只换音频长度，画面 cue 的 0–1 比例仍对齐。
+时间轴在 `src/lib/timeline.ts` + `calendar.ts`：口播驱动按 `speaks` 列表（含延时）+ 停留；配置驱动按播放元件与动效窗口，全部结束后切场。换语言用各句实际时长，不再把画面按 0–1 拉伸。
 
 ### 配音
 
-合成入口 `src/lib/synthProject.ts`：按口播句解析角色，相邻同角色合并成一段，多角色则分段合成再 `concatAudioBlobs`。
+合成入口 `src/lib/synthProject.ts`：按句合成后写入 `beatMs`。口播驱动按列表拼接（延时插入静音）；配置驱动按播放元件开始时刻混音。
 
 浏览器不能直连 DashScope，开发服务器插件把请求转到 `/__tts/qwen`、`/__tts/qwen-voice`。API Key 在请求头里带上，存在 `web2video.tts-secrets`。音色库在 `web2video.voice-library`，可跨工程复用。
 

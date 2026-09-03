@@ -136,10 +136,11 @@ export function makeBlock(type: BlockType): LayoutBlock {
     video: [8, 18, 84, 64],
     gif: [8, 18, 84, 64],
     shape: [8, 8, 30, 20],
+    play: [82, 2, 16, 8],
   };
   const [x, y, w, h] = defaults[type];
   return {
-    id: type === "shape" ? uid("blk") : `${type}_${Math.random().toString(36).slice(2, 6)}`,
+    id: type === "shape" || type === "play" ? uid(type === "play" ? "play" : "blk") : `${type}_${Math.random().toString(36).slice(2, 6)}`,
     type,
     x,
     y,
@@ -175,6 +176,7 @@ export function defaultCues(
     const out: Cue[] = [];
     let i = 0;
     for (const b of list) {
+      if (b.type === "play") continue;
       const bind: CueBind = b.type === "image" || b.type === "video" || b.type === "gif" || b.type === "shape" ? "visual" : "speak";
       if (b.type === "list") {
         out.push(...itemCues(items, 0.12 + i * 0.08));

@@ -6,11 +6,27 @@ export type TtsProvider = "qwen";
 
 export type TimeBind = "speech" | "fixed";
 
+/** Who owns the speech calendar. Default narration. */
+export type DriveMode = "narration" | "script";
+
+export type BeatKind = "speech" | "gap";
+
 export interface Beat {
   id: string;
+  /** Default speech. Gap = delay row, duration only. */
+  kind?: BeatKind;
   text: Partial<Record<LangId, string>>;
+  /** Gap row silence (ms). Same across languages. */
+  gapMs?: number;
   /** Override voice profile id for this beat. */
   roleId?: string;
+}
+
+/** One scheduled line after speech.play() (script-driven). */
+export interface PlayCue {
+  id: string;
+  startMs: number;
+  ms: number;
 }
 
 export interface VisualEvent {
@@ -63,6 +79,15 @@ export interface SceneScript {
   code?: string;
   /** This script's stage DOM (GSAP / HyperFrames). */
   stageHtml?: string;
+  /**
+   * narration: list order (including gap rows) is the clock.
+   * script: speech.play() schedules lines; list is a library.
+   */
+  drive?: DriveMode;
+  /** Last speech.play() schedule (GSAP / HyperFrames run). */
+  driveSchedule?: PlayCue[];
+  /** Last speech.totalMs() in script-driven mode. */
+  driveTotalMs?: number;
 }
 
 export interface VoiceProfile {

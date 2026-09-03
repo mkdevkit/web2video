@@ -7,8 +7,9 @@ import { DEFAULT_LIST_MARKER_STYLE, listMarkerStyleOf } from "./listMarker";
 import { DEFAULT_EXPORT_SETTINGS, exportSettingsOf } from "./exportSettings";
 import { DEFAULT_HOLD_MS, DEFAULT_TRANSITION, DEFAULT_TRANSITION_MS, DEFAULT_OPEN_PAD_BEFORE_MS, DEFAULT_OPEN_PAD_AFTER_MS, DEFAULT_CLOSE_PAD_BEFORE_MS, DEFAULT_CLOSE_PAD_AFTER_MS } from "./timeline";
 import { itemSpeakKey } from "./narration";
+import { persistSpeaks } from "./speaks";
 import { asNameI18n } from "./textI18n";
-import type { DialogueLine, DialogueSide, LayoutId, Project, Scene, SceneTransition } from "../types";
+import type { DialogueLine, DialogueSide, DriveMode, LayoutId, Project, Scene, SceneTransition, SpeakLine } from "../types";
 import { isLangId, type LangId } from "./langs";
 
 export const DEFAULT_PROJECT_NAME = "未命名口播";
@@ -58,7 +59,6 @@ export function emptyScene(lang: LangId = "zh", layout: LayoutId = "cover"): Sce
     id: uid("sc"),
     name: "新场景",
     layoutId: layout,
-    narration: t18(lang, "在这里写下口播稿。"),
     slots: {
       title: t18(lang, "场景标题"),
       subtitle: t18(lang, "副标题"),
@@ -72,7 +72,7 @@ export function emptyScene(lang: LangId = "zh", layout: LayoutId = "cover"): Sce
       image: PLACEHOLDER,
     },
     cues: defaultCues(layout, items, undefined, dialogue),
-    narrationClose: t18(lang, ""),
+    speaks: [{ id: uid("sp"), kind: "speech", i18n: { [lang]: "在这里写下口播稿。" } }],
     bg: DEFAULT_SCENE_BG,
   };
 }
@@ -88,17 +88,19 @@ export function sampleProject(): Project {
   ): Scene => {
     const items = slots.items;
     const dialogue = slots.dialogue;
-    const speak: Scene["speak"] = {};
+    const speaks: SpeakLine[] = [];
+    if (open.trim()) speaks.push({ id: uid("sp"), kind: "speech", i18n: { [lang]: open } });
     if (extra?.speak) {
-      for (const [k, v] of Object.entries(extra.speak)) speak[k] = t18(lang, v);
+      for (const v of Object.values(extra.speak)) {
+        if (v.trim()) speaks.push({ id: uid("sp"), kind: "speech", i18n: { [lang]: v } });
+      }
     }
+    if (extra?.close?.trim()) speaks.push({ id: uid("sp"), kind: "speech", i18n: { [lang]: extra.close } });
     return {
       id: uid("sc"),
       name,
       layoutId: layout,
-      narration: t18(lang, open),
-      narrationClose: extra?.close ? t18(lang, extra.close) : t18(lang, ""),
-      speak,
+      speaks,
       slots: { image: PLACEHOLDER, ...slots },
       cues: defaultCues(layout, items, undefined, dialogue),
       bg: DEFAULT_SCENE_BG,
@@ -331,6 +333,7 @@ export function normalizeProject(data: Project): Project {
       trailMs: finiteMs(c.trailMs),
     })),
     holdMs: finiteMs(s.holdMs),
+    drive: (s.drive === "config" ? "config" : s.drive === "narration" ? "narration" : undefined) as DriveMode | undefined,
     openPadBeforeMs: finiteMs(s.openPadBeforeMs),
     openPadAfterMs: finiteMs(s.openPadAfterMs),
     closePadBeforeMs: finiteMs(s.closePadBeforeMs),
@@ -343,8 +346,28 @@ export function normalizeProject(data: Project): Project {
     bgDim: finite01(s.bgDim),
     blocks: s.blocks?.map((b) => {
       const name = asNameI18n(b.name, data.sourceLang ?? "zh");
-      return name ? { ...b, name } : { ...b, name: undefined };
+      const effects = Array.isArray(b.effects)
+        ? b.effects.filter((fx) => fx && fx.id && fx.from?.speakId).map((fx) => ({
+            ...fx,
+            durationMs: finiteMs(fx.durationMs),
+            from: { ...fx.from, offsetMs: finiteLead(fx.from.offsetMs) },
+            to: fx.to ? { ...fx.to, offsetMs: finiteLead(fx.to.offsetMs) } : undefined,
+          }))
+        : undefined;
+      return { ...b, name: name || undefined, effects };
     }),
+    speaks: persistSpeaks({
+      ...s,
+      speakTrack: Array.isArray(s.speakTrack) ? s.speakTrack : undefined,
+    }).speaks?.map((line) => ({
+      id: String(line.id || ""),
+      kind: line.kind === "gap" ? "gap" as const : "speech" as const,
+      name: typeof line.name === "string" ? line.name : undefined,
+      i18n: line.i18n && typeof line.i18n === "object" ? line.i18n : {},
+      durationMs: finiteMs(line.durationMs),
+      role: typeof line.role === "string" && line.role.trim() ? line.role.trim() : undefined,
+    })).filter((line) => line.id),
+    speakTrack: undefined,
   }));
   return {
     ...base,

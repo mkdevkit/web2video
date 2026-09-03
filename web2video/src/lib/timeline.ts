@@ -1,6 +1,8 @@
 import type { LangId } from "./langs";
 import type { Cue, Project, Scene, SceneTransition, WordTs } from "../types";
-import { beatSpansForScene, SPEAK_CLOSE, SPEAK_OPEN } from "./narration";
+import { SPEAK_CLOSE, SPEAK_OPEN } from "./narration";
+import { audioMsAt, buildSceneCalendar, driveOf, type SceneCalendar } from "./calendar";
+import { extendCalendarForEffects } from "./effects";
 
 export const FALLBACK_DURATION_MS = 5000;
 export const DEFAULT_HOLD_MS = 0;
@@ -82,6 +84,8 @@ export function sceneClosePadAfterMs(scene: Scene, project: Project): number {
 }
 
 export type SceneClock = {
+  drive: ReturnType<typeof driveOf>;
+  mixed: boolean;
   openBeforeMs: number;
   openSpeechMs: number;
   openAfterMs: number;
@@ -103,52 +107,83 @@ export type SceneClock = {
   closeSpeechStartMs: number;
 };
 
-export function sceneClock(scene: Scene, lang: LangId, project: Project): SceneClock {
+export function sceneCalendar(scene: Scene, lang: LangId, project: Project): SceneCalendar {
   const source = project.sourceLang ?? lang;
-  const spans = beatSpansForScene(scene, lang, source);
-  const openSpans = spans.filter((s) => s.target === SPEAK_OPEN);
-  const closeSpans = spans.filter((s) => s.target === SPEAK_CLOSE);
-  const bodySpans = spans.filter((s) => s.target !== SPEAK_OPEN && s.target !== SPEAK_CLOSE);
-  const audio = scene.audioByLang?.[lang];
-  const audioLen =
-    audio?.durationMs && !audio.stale
-      ? audio.durationMs
-      : spans.length
-        ? spans[spans.length - 1].endMs
-        : 0;
+  return extendCalendarForEffects(buildSceneCalendar(scene, lang, project), scene, source);
+}
 
-  const audioOpenStartMs = openSpans[0]?.startMs ?? 0;
-  const audioOpenEndMs = openSpans.length ? openSpans[openSpans.length - 1].endMs : 0;
-  const audioCloseStartMs = closeSpans[0]?.startMs ?? audioLen;
-  const audioCloseEndMs = closeSpans.length ? closeSpans[closeSpans.length - 1].endMs : audioLen;
-  const audioBodyStartMs = bodySpans[0]?.startMs ?? audioOpenEndMs;
-  const audioBodyEndMs = bodySpans.length ? bodySpans[bodySpans.length - 1].endMs : closeSpans.length ? audioCloseStartMs : audioLen;
+function fileEnd(span: { fileStartMs: number; startMs: number; endMs: number }): number {
+  if (span.fileStartMs < 0) return 0;
+  return span.fileStartMs + (span.endMs - span.startMs);
+}
 
-  const openSpeechMs = Math.max(0, audioOpenEndMs - audioOpenStartMs);
-  const closeSpeechMs = Math.max(0, audioCloseEndMs - audioCloseStartMs);
-  const bodySpeechMs = Math.max(0, audioBodyEndMs - audioBodyStartMs);
-  const bodyMs =
-    bodySpeechMs > 0 ? bodySpeechMs : openSpeechMs || closeSpeechMs ? 2500 : FALLBACK_DURATION_MS;
+export function sceneClock(scene: Scene, lang: LangId, project: Project): SceneClock {
+  const cal = sceneCalendar(scene, lang, project);
+  const mixed = cal.drive === "config";
+  const holdMs = cal.holdMs;
+  if (mixed) {
+    const openBeforeMs = cal.openPadBeforeMs;
+    const openAfterMs = cal.openPadAfterMs;
+    const closeBeforeMs = cal.closePadBeforeMs;
+    const closeAfterMs = cal.closePadAfterMs;
+    const openHeadMs = openBeforeMs + openAfterMs;
+    return {
+      drive: "config",
+      mixed: true,
+      openBeforeMs,
+      openSpeechMs: 0,
+      openAfterMs,
+      bodyMs: Math.max(0, cal.bodyEndMs - cal.bodyStartMs),
+      closeBeforeMs,
+      closeSpeechMs: 0,
+      closeAfterMs,
+      holdMs,
+      audioOpenStartMs: 0,
+      audioOpenEndMs: 0,
+      audioBodyStartMs: cal.bodyStartMs,
+      audioBodyEndMs: cal.bodyEndMs,
+      audioCloseStartMs: 0,
+      audioCloseEndMs: 0,
+      totalMs: cal.totalMs,
+      openHeadMs,
+      bodyStartMs: cal.bodyStartMs,
+      closeHeadMs: cal.bodyEndMs,
+      closeSpeechStartMs: cal.bodyEndMs + closeBeforeMs,
+    };
+  }
 
-  const hasOpen = openSpeechMs > 0;
-  const hasClose = closeSpeechMs > 0;
-  const openBeforeMs = hasOpen ? sceneOpenPadBeforeMs(scene, project) : 0;
-  const openAfterMs = hasOpen ? sceneOpenPadAfterMs(scene, project) : 0;
-  const closeBeforeMs = hasClose ? sceneClosePadBeforeMs(scene, project) : 0;
-  const closeAfterMs = hasClose ? sceneClosePadAfterMs(scene, project) : 0;
-  const holdMs = sceneHoldMs(scene, project);
+  const openSpans = cal.spans.filter((s) => s.target === SPEAK_OPEN);
+  const closeSpans = cal.spans.filter((s) => s.target === SPEAK_CLOSE);
+  const bodySpans = cal.spans.filter((s) => s.target !== SPEAK_OPEN && s.target !== SPEAK_CLOSE);
 
+  const openSpeechMs = openSpans.length ? openSpans[openSpans.length - 1].endMs - openSpans[0].startMs : 0;
+  const closeSpeechMs = closeSpans.length ? closeSpans[closeSpans.length - 1].endMs - closeSpans[0].startMs : 0;
+  const openBeforeMs = openSpans[0]?.startMs ?? 0;
+  const openAfterMs = openSpans.length ? Math.max(0, cal.bodyStartMs - openSpans[openSpans.length - 1].endMs) : 0;
+  const closeBeforeMs = closeSpans.length ? Math.max(0, closeSpans[0].startMs - cal.bodyEndMs) : 0;
+  const closeAfterMs = closeSpans.length
+    ? Math.max(0, cal.totalMs - holdMs - closeSpans[closeSpans.length - 1].endMs)
+    : 0;
+  const bodyMs = Math.max(0, cal.bodyEndMs - cal.bodyStartMs);
   const openHeadMs = openBeforeMs + openSpeechMs + openAfterMs;
-  const bodyStartMs = openHeadMs;
-  const closeHeadMs = bodyStartMs + bodyMs;
-  const closeSpeechStartMs = closeHeadMs + closeBeforeMs;
-  const totalMs = closeSpeechStartMs + closeSpeechMs + closeAfterMs + holdMs;
+  const closeHeadMs = cal.bodyEndMs;
+  const closeSpeechStartMs = closeSpans[0]?.startMs ?? closeHeadMs;
+
+  const audioOpenStartMs = openSpans[0] && openSpans[0].fileStartMs >= 0 ? openSpans[0].fileStartMs : 0;
+  const audioOpenEndMs = openSpans.length ? fileEnd(openSpans[openSpans.length - 1]) : 0;
+  const audioCloseStartMs = closeSpans[0] && closeSpans[0].fileStartMs >= 0 ? closeSpans[0].fileStartMs : audioOpenEndMs;
+  const audioCloseEndMs = closeSpans.length ? fileEnd(closeSpans[closeSpans.length - 1]) : audioCloseStartMs;
+  const bodyFile = bodySpans.filter((s) => s.fileStartMs >= 0);
+  const audioBodyStartMs = bodyFile[0]?.fileStartMs ?? audioOpenEndMs;
+  const audioBodyEndMs = bodyFile.length ? fileEnd(bodyFile[bodyFile.length - 1]) : audioBodyStartMs;
 
   return {
+    drive: "narration",
+    mixed: false,
     openBeforeMs,
     openSpeechMs,
     openAfterMs,
-    bodyMs: Math.max(0, bodyMs),
+    bodyMs,
     closeBeforeMs,
     closeSpeechMs,
     closeAfterMs,
@@ -159,9 +194,9 @@ export function sceneClock(scene: Scene, lang: LangId, project: Project): SceneC
     audioBodyEndMs,
     audioCloseStartMs,
     audioCloseEndMs,
-    totalMs: Math.max(1, totalMs),
+    totalMs: cal.totalMs,
     openHeadMs,
-    bodyStartMs,
+    bodyStartMs: cal.bodyStartMs,
     closeHeadMs,
     closeSpeechStartMs,
   };
@@ -170,18 +205,38 @@ export function sceneClock(scene: Scene, lang: LangId, project: Project): SceneC
 export function mapSceneLocal(
   clock: SceneClock,
   localMs: number,
+  cal?: SceneCalendar,
 ): { phase: ScenePhase; animLocalMs: number; animDurationMs: number; audioMs: number | null } {
   const t = Math.max(0, localMs);
-  const animDurationMs = Math.max(1, clock.bodyMs);
+  const animDurationMs = Math.max(1, clock.totalMs);
+  if (clock.mixed) {
+    const holdStart = clock.totalMs - clock.holdMs;
+    if (clock.holdMs > 0 && t >= holdStart) {
+      return { phase: "hold", animLocalMs: t, animDurationMs, audioMs: null };
+    }
+    if (t < clock.openBeforeMs) return { phase: "openPad", animLocalMs: t, animDurationMs, audioMs: null };
+    if (t < clock.openHeadMs) return { phase: "openGap", animLocalMs: t, animDurationMs, audioMs: null };
+    if (t >= clock.closeHeadMs) {
+      if (t < clock.closeSpeechStartMs) return { phase: "closePad", animLocalMs: t, animDurationMs, audioMs: null };
+      return { phase: "closeGap", animLocalMs: t, animDurationMs, audioMs: null };
+    }
+    return {
+      phase: "body",
+      animLocalMs: t,
+      animDurationMs,
+      audioMs: cal ? audioMsAt(cal, t, true) : t < clock.bodyStartMs + clock.bodyMs ? t : null,
+    };
+  }
+
   const inOpen = (phase: ScenePhase, audioMs: number | null) => ({
     phase,
-    animLocalMs: 0,
+    animLocalMs: t,
     animDurationMs,
     audioMs,
   });
   const inClose = (phase: ScenePhase, audioMs: number | null) => ({
     phase,
-    animLocalMs: clock.bodyMs,
+    animLocalMs: t,
     animDurationMs,
     audioMs,
   });
@@ -192,16 +247,12 @@ export function mapSceneLocal(
   }
   if (t < clock.openHeadMs) return inOpen("openGap", null);
   if (t < clock.closeHeadMs) {
-    const bodyT = t - clock.bodyStartMs;
-    const audioBodyDur = Math.max(0, clock.audioBodyEndMs - clock.audioBodyStartMs);
-    const audioMs =
-      audioBodyDur > 0 ? clock.audioBodyStartMs + Math.min(audioBodyDur, bodyT) : null;
-    const endedBodyAudio = audioBodyDur > 0 && bodyT >= audioBodyDur;
+    const audioMs = cal ? audioMsAt(cal, t, false) : clock.audioBodyStartMs + Math.min(Math.max(0, clock.audioBodyEndMs - clock.audioBodyStartMs), t - clock.bodyStartMs);
     return {
       phase: "body",
-      animLocalMs: bodyT,
+      animLocalMs: t,
       animDurationMs,
-      audioMs: endedBodyAudio ? null : audioMs,
+      audioMs,
     };
   }
   if (t < clock.closeSpeechStartMs) return inClose("closePad", null);
@@ -216,9 +267,10 @@ export function mapSceneLocal(
 export function speechDuration(scene: Scene, lang: LangId, source?: LangId): number {
   const audio = scene.audioByLang?.[lang];
   if (audio?.durationMs && !audio.stale) return audio.durationMs;
-  const from = source ?? lang;
-  const spans = beatSpansForScene(scene, lang, from);
-  if (spans.length) return Math.max(1, spans[spans.length - 1].endMs);
+  const projectLike = { sourceLang: source ?? lang, holdMs: 0, openPadBeforeMs: 0, openPadAfterMs: 0, closePadBeforeMs: 0, closePadAfterMs: 0, scenes: [scene] } as Project;
+  const cal = buildSceneCalendar(scene, lang, projectLike);
+  const last = [...cal.spans.filter((s) => s.fileStartMs >= 0)].pop();
+  if (last) return Math.max(1, last.fileStartMs + (last.endMs - last.startMs));
   return FALLBACK_DURATION_MS;
 }
 
@@ -248,7 +300,8 @@ export function sceneAt(project: Project, lang: LangId, playheadMs: number): Sce
     if (playheadMs < end || i === project.scenes.length - 1) {
       const scene = project.scenes[i];
       const clock = sceneClock(scene, lang, project);
-      const mapped = mapSceneLocal(clock, Math.max(0, Math.min(durationMs, playheadMs - starts[i])));
+      const cal = sceneCalendar(scene, lang, project);
+      const mapped = mapSceneLocal(clock, Math.max(0, Math.min(durationMs, playheadMs - starts[i])), cal);
       return {
         scene,
         index: i,
@@ -295,7 +348,7 @@ export function sceneLayersAt(
       startMs: at.startMs + at.durationMs,
       durationMs: sceneDuration(next, lang, project),
       animLocalMs: 0,
-      animDurationMs: sceneClock(next, lang, project).bodyMs || 1,
+      animDurationMs: sceneClock(next, lang, project).totalMs || 1,
       audioMs: null,
       phase: "openPad",
       opacity: t,

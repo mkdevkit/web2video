@@ -1,6 +1,7 @@
 import { useStudio } from "../store/useStudio";
 import { ENGINES, engineMeta, engineOf, sourceOf, usesGsapPreview } from "../lib/engines";
 import type { EngineId } from "../types";
+import { driveOf } from "../lib/beats";
 
 export function CodeEditor() {
   const project = useStudio((s) => s.project);
@@ -45,9 +46,19 @@ export function CodeEditor() {
         {htmlEngine ? (
           <>
             动画代码用口播 id 取时长：<code className="text-brass">speech.s("hook")</code> 是这一句的总秒数，
-            <code className="text-brass">speech.holdS("hook", 0.48)</code> 是入场后还要停多久（该句总长 − 0.48），
-            <code className="text-brass">speech.sleepS(0.4)</code> 是暂停（可多次，全长累加）。全片{" "}
-            <code className="text-brass">speech.totalS()</code>。不要写死 3 秒。
+            <code className="text-brass">speech.holdS("hook", 0.48)</code> 是入场后还要停多久。
+            {driveOf(script) === "script" ? (
+              <>
+                当前是<strong>脚本驱动</strong>：用 <code className="text-brass">speech.play("hook")</code>{" "}
+                排期（返回开始秒）。不要 <code className="text-brass">timeline.play()</code>。
+              </>
+            ) : (
+              <>
+                当前是<strong>口播驱动</strong>：用 <code className="text-brass">speech.startS("hook")</code>
+                ，句间留白用口播表延时行。
+              </>
+            )}{" "}
+            全片 <code className="text-brass">speech.totalS()</code>。不要写死 3 秒。
           </>
         ) : (
           <>

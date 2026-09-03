@@ -1,15 +1,16 @@
 import { create } from "zustand";
 import { uid } from "../lib/ids";
-import { collectI18nRows, patchSceneI18n, writeI18n } from "../lib/textI18n";
+import { materializeBlockEffects, nudgeEffect } from "../lib/effects";
+import { collectI18nRows, patchSceneI18n, sourceLangOf, writeI18n, type I18nRow } from "../lib/textI18n";
 import { ensureCues, makeBlock, presetBlocks, rebuildCues, sceneBlocks } from "../lib/blocks";
 import { upsertKey, removeKeyAt } from "../lib/interpolate";
 import { defaultDialogueLines, emptyScene, nextDialogueSide, normalizeProject, sampleProject } from "../lib/templates";
 import { sceneAt, sceneStarts } from "../lib/timeline";
 import { applyResolvedCueRange, bakeCueBind } from "../lib/cues";
 import { itemSpeakKey, markAllAudioStale, markLangAudioStale, ensureCuesFromBeats, writeSpeak } from "../lib/narration";
+import { findSpeak, speaksOf } from "../lib/speaks";
 import type { BlockSettings, BlockType, Cue, CueBind, DialogueLine, DialogueSide, EditorSnapshot, LayoutBlock, LayoutId, Project, Scene, SceneAudio, TtsProvider, VoiceProfile } from "../types";
 import type { LangId } from "../lib/langs";
-import type { I18nRow } from "../lib/textI18n";
 
 const STORAGE_KEY = "web2video.autosave";
 const HISTORY_LIMIT = 60;
@@ -40,7 +41,7 @@ function persist(project: Project, currentSceneId: string) {
 
 const boot = sampleProject();
 
-export type DialogId = null | "welcome" | "export" | "texts" | "tts" | "help" | "ai" | "prefs";
+export type DialogId = null | "welcome" | "export" | "speaks" | "tts" | "help" | "ai" | "prefs";
 
 interface EditorState {
   project: Project;
@@ -93,7 +94,7 @@ interface EditorState {
   replaceScenes: (scenes: Scene[]) => void;
   patchScene: (id: string, patch: Partial<Scene> | ((s: Scene) => Scene), history?: boolean) => void;
   setLayout: (id: string, layout: LayoutId) => void;
-  patchSlotText: (sceneId: string, key: "title" | "subtitle" | "body" | "caption" | "quote" | "author" | "number" | "narration" | "narrationClose", value: string) => void;
+  patchSlotText: (sceneId: string, key: "title" | "subtitle" | "body" | "caption" | "quote" | "author" | "number", value: string) => void;
   patchItemText: (sceneId: string, itemId: string, value: string) => void;
   patchSpeak: (sceneId: string, key: string, value: string) => void;
   patchSpeakRole: (sceneId: string, key: string, roleId: string) => void;
@@ -111,6 +112,7 @@ interface EditorState {
   setCueAnim: (sceneId: string, cueId: string, anim: Cue["anim"]) => void;
   addBlock: (sceneId: string, type: BlockType) => void;
   patchBlock: (sceneId: string, blockId: string, patch: Partial<LayoutBlock>) => void;
+  nudgeBlockEffect: (sceneId: string, blockId: string, effectId: string, startDeltaMs: number, endDeltaMs: number) => void;
   removeBlock: (sceneId: string, blockId: string) => void;
   setTtsProvider: (provider: TtsProvider) => void;
   addVoice: (voice: VoiceProfile) => void;
@@ -159,7 +161,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   setSelectedBlock: (id) => {
     const scene = get().currentScene();
     const cueId = id ? scene?.cues.find((c) => c.target === id)?.id ?? null : null;
-    set({ selectedBlockId: id, selectedCueId: cueId });
+    set({ selectedBlockId: id, selectedCueId: cueId, rightTab: "inspector" });
   },
   writeBlockTransform: (sceneId, blockId, pose, progress) => {
     get().patchScene(
@@ -373,12 +375,6 @@ export const useEditor = create<EditorState>((set, get) => ({
     get().patchScene(
       sceneId,
       (s) => {
-        if (key === "narration" || key === "narrationClose") {
-          const next = writeSpeak(s, key === "narration" ? "open" : "close", {
-            i18n: writeI18n(key === "narration" ? s.narration.i18n : s.narrationClose?.i18n, lang, source, value),
-          });
-          return markLangAudioStale(next, lang);
-        }
         const slot = s.slots[key];
         return {
           ...s,
@@ -397,7 +393,7 @@ export const useEditor = create<EditorState>((set, get) => ({
     get().patchScene(
       sceneId,
       (s) => {
-        const prev = key === "open" ? s.narration : key === "close" ? s.narrationClose : s.speak?.[key];
+        const prev = findSpeak(s, key);
         const next = markLangAudioStale(writeSpeak(s, key, { i18n: writeI18n(prev?.i18n, lang, source, value) }), lang);
         return { ...next, cues: ensureCuesFromBeats(next, lang, source) };
       },
@@ -408,10 +404,12 @@ export const useEditor = create<EditorState>((set, get) => ({
     get().patchScene(
       sceneId,
       (s) => {
+        const role = roleId.trim() || undefined;
+        const speaks = speaksOf(s).map((line) => (line.id === key ? { ...line, role } : line));
         const speakRole = { ...s.speakRole };
-        if (roleId.trim()) speakRole[key] = roleId.trim();
+        if (role) speakRole[key] = role;
         else delete speakRole[key];
-        return markAllAudioStale({ ...s, speakRole });
+        return markAllAudioStale({ ...s, speaks, speakRole });
       },
       true,
     );
@@ -595,7 +593,7 @@ export const useEditor = create<EditorState>((set, get) => ({
       },
       true,
     );
-    set({ selectedBlockId: block.id });
+    set({ selectedBlockId: block.id, rightTab: "inspector" });
   },
   patchBlock: (sceneId, blockId, patch) => {
     get().patchScene(
@@ -605,6 +603,29 @@ export const useEditor = create<EditorState>((set, get) => ({
         return {
           ...s,
           blocks: blocks.map((b) => (b.id === blockId ? { ...b, ...patch } : b)),
+        };
+      },
+      false,
+    );
+  },
+  nudgeBlockEffect: (sceneId, blockId, effectId, startDeltaMs, endDeltaMs) => {
+    const source = sourceLangOf(get().project);
+    get().patchScene(
+      sceneId,
+      (s) => {
+        const blocks = s.blocks?.length ? s.blocks : presetBlocks(s.layoutId);
+        return {
+          ...s,
+          blocks: blocks.map((b) => {
+            if (b.id !== blockId) return b;
+            const material = materializeBlockEffects(b, s, source);
+            return {
+              ...material,
+              effects: (material.effects ?? []).map((fx) =>
+                fx.id === effectId ? nudgeEffect(fx, startDeltaMs, endDeltaMs) : fx,
+              ),
+            };
+          }),
         };
       },
       false,

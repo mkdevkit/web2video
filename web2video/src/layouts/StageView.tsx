@@ -1,20 +1,18 @@
 import { useRef, type CSSProperties, type MouseEvent } from "react";
 import { sceneBlocks } from "../lib/blocks";
-import { bodyBeatSpans, resolveCue } from "../lib/cues";
+import { isPlayBlock } from "../lib/calendar";
+import { blockWindow, targetWindow } from "../lib/effects";
 import { mergedSettings, sampleBlock } from "../lib/interpolate";
-import { captionBeatForTime, bilingualCaptionLangOf, captionSecondaryText } from "../lib/narration";
+import { bilingualCaptionLangOf, captionSecondaryText, itemSpeakKey } from "../lib/narration";
 import { captionStyleOf, fontStack, hexAlpha, resolveBlockFont } from "../lib/fonts";
 import { itemText, textOf } from "../lib/textI18n";
 import { type LangId } from "../lib/langs";
-import { cueVisible, sceneClock } from "../lib/timeline";
+import { sceneCalendar } from "../lib/timeline";
+import { captionSpanAt } from "../lib/calendar";
 import { MediaFrame } from "./MediaFrame";
 import { mediaSrcOf } from "../lib/insertImage";
 import { listMarkerRadius, listMarkerStyleOf } from "../lib/listMarker";
-import type { Cue, LayoutBlock, ListMarkerStyle, Project, Scene } from "../types";
-
-function cueOf(scene: Scene, target: string): Cue | undefined {
-  return scene.cues.find((c) => c.target === target);
-}
+import type { LayoutBlock, ListMarkerStyle, Project, Scene } from "../types";
 
 const HANDLES = ["nw", "n", "ne", "e", "se", "s", "sw", "w"] as const;
 type Handle = (typeof HANDLES)[number];
@@ -48,11 +46,11 @@ export function StageView({
   source,
   project,
   localMs,
-  durationMs,
-  animLocalMs,
-  animDurationMs,
+  durationMs: _durationMs,
+  animLocalMs: _animLocalMs,
+  animDurationMs: _animDurationMs,
   phase,
-  audioMs,
+  audioMs: _audioMs,
   showCaptions,
   editable = false,
   selectedId = null,
@@ -77,31 +75,13 @@ export function StageView({
   onTransformStart?: () => void;
   onTransform?: (id: string, pose: { x: number; y: number; w: number; h: number }) => void;
 }) {
-  const animDur = animDurationMs ?? durationMs;
-  const animLocal = animLocalMs ?? localMs;
-  const progress = animDur > 0 ? animLocal / animDur : 0;
-  const freeze: "start" | "end" | undefined =
-    phase === "openPad" || phase === "open" || phase === "openGap"
-      ? "start"
-      : phase === "closePad" || phase === "close" || phase === "closeGap" || phase === "hold"
-        ? "end"
-        : undefined;
-  const clock = sceneClock(scene, lang, project);
-  const spans = bodyBeatSpans(scene, lang, source);
-  const resolvedOf = (target: string) => {
-    const cue = cueOf(scene, target);
-    return cue ? resolveCue(cue, clock, spans, scene, source) : undefined;
-  };
-  const blocks = sceneBlocks(scene);
-  const firstAt = Math.min(
-    1,
-    ...[
-      ...blocks.map((b) => resolvedOf(b.id)?.at ?? 0),
-      ...(scene.slots.items ?? []).map((it) => resolvedOf(`item:${it.id}`)?.at ?? 1),
-      ...(scene.slots.dialogue ?? []).map((it) => resolvedOf(`item:${it.id}`)?.at ?? 1),
-    ],
-  );
-  const sampleOpts = { freeze, firstAt: Number.isFinite(firstAt) ? firstAt : 0 };
+  const cal = sceneCalendar(scene, lang, project);
+  const sampleOpts = { freeze: undefined as "start" | "end" | undefined, freezeMs: undefined as number | undefined };
+  const sampleT = localMs;
+  const winOf = (block: LayoutBlock, target?: string) =>
+    target && target !== block.id
+      ? targetWindow(target, scene, source, cal, block)
+      : blockWindow(block, scene, source, cal);
   const title = textOf(scene.slots.title, lang, source);
   const subtitle = textOf(scene.slots.subtitle, lang, source);
   const body = textOf(scene.slots.body, lang, source);
@@ -115,19 +95,14 @@ export function StageView({
   const captionFont = fontStack(project.captionFontId || project.fontId, lang);
   const capStyle = captionStyleOf(project.captionStyle);
   const listMark = listMarkerStyleOf(project.listMarkerStyle);
-  const capBeat = showCaptions
-    ? captionBeatForTime(scene, lang, source, localMs, durationMs, phase, audioMs, animLocal, animDur, (target) => {
-        const cue = resolvedOf(target);
-        if (!cue) return true;
-        if (freeze === "start") return cue.at <= sampleOpts.firstAt + 0.02;
-        if (freeze === "end") return cueVisible(cue, 1);
-        return cueVisible(cue, progress);
-      })
-    : null;
-  const cap = capBeat?.text ?? "";
+  const blocks = sceneBlocks(scene);
+  const skipCaptionPhase =
+    phase === "openPad" || phase === "openGap" || phase === "closePad" || phase === "closeGap" || phase === "hold";
+  const capSpan = showCaptions && !skipCaptionPhase ? captionSpanAt(cal, localMs) : undefined;
+  const cap = capSpan?.text.replace(/\s+/g, " ").trim() ?? "";
   const capOtherLang = bilingualCaptionLangOf(project, lang);
   const cap2 =
-    capBeat && capOtherLang ? captionSecondaryText(scene, capBeat.target, capOtherLang, source, cap) : "";
+    capSpan && cap && capOtherLang ? captionSecondaryText(scene, capSpan.target, capOtherLang, source, cap) : "";
   const cap2Font = capOtherLang ? fontStack(project.captionFontId || project.fontId, capOtherLang) : captionFont;
   const rootRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{
@@ -184,10 +159,10 @@ export function StageView({
   };
 
   const startDrag = (e: MouseEvent, id: string, handle: Handle | "move", pose: { x: number; y: number; w: number; h: number }) => {
-    if (!editable) return;
     e.stopPropagation();
-    e.preventDefault();
     onSelect?.(id);
+    if (!editable) return;
+    e.preventDefault();
     onTransformStart?.();
     drag.current = { id, handle, ox: e.clientX, oy: e.clientY, ...pose };
     const move = (ev: globalThis.MouseEvent) => applyDrag(ev);
@@ -205,9 +180,6 @@ export function StageView({
       ref={rootRef}
       className="relative h-full w-full overflow-hidden"
       style={{ background: scene.bg || "#141811", fontFamily: bodyFont, color: "#f3eee3", containerType: "size" }}
-      onMouseDown={() => {
-        if (editable) onSelect?.(null);
-      }}
     >
       {scene.bgImage ? (
         <img
@@ -222,9 +194,17 @@ export function StageView({
       {(scene.bgDim ?? 0) > 0 && (
         <div className="pointer-events-none absolute inset-0" style={{ background: `rgba(0,0,0,${Math.min(1, Math.max(0, scene.bgDim ?? 0))})` }} />
       )}
+      <div
+        className="absolute inset-0 z-0"
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          onSelect?.(null);
+        }}
+      />
       {blocks.map((b) => {
-        const cue = resolvedOf(b.id);
-        const pose = sampleBlock(b, progress, cue, sampleOpts);
+        if (isPlayBlock(b) && !editable) return null;
+        const cueWin = winOf(b);
+        const pose = sampleBlock(b, sampleT, isPlayBlock(b) ? { startMs: 0, endMs: cal.totalMs, anim: "fade" } : cueWin, isPlayBlock(b) ? undefined : sampleOpts);
         const set = mergedSettings(b);
         const typeFont = fontStack(resolveBlockFont(project, b), lang);
         const selected = selectedId === b.id;
@@ -234,7 +214,7 @@ export function StageView({
           top: `${pose.y}%`,
           width: `${pose.w}%`,
           height: `${pose.h}%`,
-          zIndex: b.z ?? 1,
+          zIndex: Math.max(1, b.z ?? 1),
           opacity: pose.opacity,
           transform: `rotate(${pose.rotation}deg)`,
           textAlign: set.align,
@@ -243,10 +223,19 @@ export function StageView({
           borderRadius: `${set.radius ?? 0}cqw`,
           overflow: selected && editable ? "visible" : "hidden",
           boxShadow: set.shadow ? "0 1cqw 3cqw rgba(0,0,0,.45)" : undefined,
-          cursor: editable ? "move" : undefined,
+          cursor: editable ? "move" : "pointer",
+          pointerEvents: !editable && pose.opacity < 0.04 && !selected ? "none" : undefined,
         };
 
         const inner = (() => {
+          if (b.type === "play") {
+            const tgt = (b.settings?.playTarget ?? "").trim();
+            return (
+              <div className="flex h-full w-full items-center justify-center rounded-[0.6cqw] border border-dashed border-brass/50 bg-ink-950/40 text-[1.4cqw] text-brass">
+                ▶ {tgt || "播放口播"}
+              </div>
+            );
+          }
           if (b.type === "shape") {
             return <div className="h-full w-full" style={{ background: set.fill || "#c45c26", borderRadius: `${set.radius ?? 1}cqw` }} />;
           }
@@ -268,8 +257,8 @@ export function StageView({
               <div className="flex h-full flex-col justify-end gap-[1.1cqw]">
                 {lines.map((it) => {
                   const left = it.side !== "right";
-                  const itemCue = resolvedOf(`item:${it.id}`);
-                  const ip = sampleBlock({ ...b, id: it.id, keys: undefined }, progress, itemCue, sampleOpts);
+                  const itemCue = winOf(b, itemSpeakKey(it.id));
+                  const ip = sampleBlock({ ...b, id: it.id, keys: undefined }, sampleT, itemCue, sampleOpts);
                   const name = (it.name ?? "").trim() || (left ? "左" : "右");
                   return (
                     <div
@@ -312,8 +301,8 @@ export function StageView({
             return (
               <div className={`h-full ${grid}`}>
                 {items.map((it, i) => {
-                  const itemCue = resolvedOf(`item:${it.id}`);
-                  const ip = sampleBlock({ ...b, id: it.id, keys: undefined }, progress, itemCue, sampleOpts);
+                  const itemCue = winOf(b, itemSpeakKey(it.id));
+                  const ip = sampleBlock({ ...b, id: it.id, keys: undefined }, sampleT, itemCue, sampleOpts);
                   return (
                     <div key={it.id} className={row} style={{ opacity: ip.opacity }}>
                       <ListIndexMark index={i + 1} style={listMark} />
