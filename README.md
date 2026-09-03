@@ -1,4 +1,4 @@
-# web2video
+# videocreator
 
 口播网页转视频工具集。
 
