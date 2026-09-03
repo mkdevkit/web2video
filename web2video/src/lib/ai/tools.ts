@@ -459,7 +459,7 @@ export function executeTool(name: string, rawArgs: unknown): string {
       return ok({
         layouts: LAYOUTS.map((l) => ({ id: l.id, label: l.label, desc: l.desc })),
         blocks: BLOCK_TYPES.map((b) => ({ type: b.type, label: b.label })),
-        fonts: STAGE_FONTS.map((f) => ({ id: f.id, label: f.label, langs: f.langs, hint: f.hint, license: f.license })),
+        fonts: STAGE_FONTS.map((f) => ({ id: f.id, label: f.label, langs: f.langs, hint: f.hint, detail: f.detail, license: f.license })),
         notes: {
           open: "开场口播钉在第一帧，播完才开始动画和元件口播",
           close: "结束口播钉在最后一帧，排在全部元件口播之后",

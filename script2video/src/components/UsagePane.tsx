@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useStudio } from "../store/useStudio";
 import { CLOCK_LAYERS, DONT, ENGINE_GUIDES, EXTRA_GUIDES, MANIM_INSTEAD, SPEECH_API, TS_ENGINE_IDS } from "../lib/engineGuide";
 import { ENGINES, engineOf } from "../lib/engines";
-import { FONT_USAGE, STAGE_FONTS } from "../lib/stage";
 import type { EngineId } from "../types";
 
 function CopyBlock({ text }: { text: string }) {
@@ -90,57 +89,8 @@ export function UsagePane() {
       </div>
       <p className="mb-4 text-xs text-ink-400">
         入场用固定秒（各语言一样快）；<strong className="font-medium text-ink-200">这一段总时长 = speech.s(id)</strong>
-        。多出来的时间用 hold 停住。右侧预览表列出每个 id 的秒数。
+        。多出来的时间用 hold 停住。右侧预览表列出每个 id 的秒数。字体说明在顶栏「外观 → 字体」。
       </p>
-
-      <h3 className="mb-2 text-xs uppercase tracking-wider text-ink-400">字体（均为 SIL OFL，免费可商用）</h3>
-      <p className="mb-2 text-xs leading-relaxed text-ink-400">
-        工具不捆绑任何专有字体。成片与界面用的都是 SIL Open Font License。中日文不足时回落 Noto CJK。若脚本自行引入 KaTeX 样式，其公式字体
-        KaTeX_* 同样是 SIL OFL。
-      </p>
-      <div className="mb-3 overflow-auto rounded border border-ink-700">
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="bg-ink-800 text-ink-400">
-              <th className="px-2 py-1.5 text-left font-medium">用在哪</th>
-              <th className="px-2 py-1.5 text-left font-medium">字体</th>
-              <th className="px-2 py-1.5 text-left font-medium">许可</th>
-            </tr>
-          </thead>
-          <tbody>
-            {FONT_USAGE.map((row) => (
-              <tr key={row.where} className="border-t border-ink-700">
-                <td className="px-2 py-1.5">{row.where}</td>
-                <td className="px-2 py-1.5 text-ink-300">{row.fonts}</td>
-                <td className="px-2 py-1.5">{row.license}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="mb-4 overflow-auto rounded border border-ink-700">
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="bg-ink-800 text-ink-400">
-              <th className="px-2 py-1.5 text-left font-medium">可选舞台字体</th>
-              <th className="px-2 py-1.5 text-left font-medium">语种</th>
-              <th className="px-2 py-1.5 text-left font-medium">许可</th>
-            </tr>
-          </thead>
-          <tbody>
-            {STAGE_FONTS.map((f) => (
-              <tr key={f.id} className="border-t border-ink-700">
-                <td className="px-2 py-1.5">
-                  {f.label}
-                  <span className="mt-0.5 block text-[11px] text-ink-400">{f.hint}</span>
-                </td>
-                <td className="px-2 py-1.5 text-ink-300">{f.langs}</td>
-                <td className="px-2 py-1.5">{f.license}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
 
       <h3 className="mb-2 text-xs uppercase tracking-wider text-ink-400">各工具怎么写</h3>
       <div className="mb-3 flex flex-wrap gap-1">

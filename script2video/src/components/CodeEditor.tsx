@@ -61,7 +61,7 @@ export function CodeEditor() {
           <label className="mb-1 flex items-baseline justify-between text-xs text-ink-400">
             <span>本脚本舞台 HTML（DOM，不是 canvas）</span>
             <button type="button" className="underline decoration-ink-600 hover:text-brass" onClick={() => setDialog("stage")}>
-              画幅 / 字体 / 全局 CSS
+              外观：字体 / 舞台 CSS
             </button>
           </label>
           <textarea

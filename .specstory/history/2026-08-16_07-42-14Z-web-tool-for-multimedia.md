@@ -48908,29 +48908,45 @@ _**User**_
 
 _**Agent (grok-4.6)**_
 
+<think><details><summary>Thought Process</summary>
+用户希望使用免费商用字体，并增加支持多语言的字体。
+
+正在查看现有字体配置。计划引入 Noto Sans、Source Han Sans 等 SIL OFL 免费商用字体，以覆盖中日文及多语言支持。
+
+已确定 Nunito Sans、Literata、Source Sans 3、Inter、Outfit、Manrope 等 SIL OFL 字体作为补充。将扩展 StageFontId 类型与 STAGE_FONTS 配置，为各语言添加 CJK 回退栈。
+
+决定采用动态注入 Google Fonts 的方式加载所需字体，避免一次性加载过多资源。已确认仅使用 SIL OFL、Apache 或 Ubuntu Font License 等免费商用授权字体，并会标注其许可证信息。Noto Sans 家族可同时覆盖九种目标语言的 Latin、Cyrillic 与 CJK 字符集需求。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+先看当前舞台字体怎么加载，再换成免费可商用、并补上多语言覆盖更好的字体。
+
+_**Agent (grok-4.6)**_
+
 <tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
-<summary>Tool use: **read_file_v2** • Read file: </summary>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\lib\stage.ts</summary>
 
 </details></tool-use>
 
 _**Agent (grok-4.6)**_
 
 <tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
-<summary>Tool use: **read_file_v2** • Read file: </summary>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\types.ts</summary>
 
 </details></tool-use>
 
 _**Agent (grok-4.6)**_
 
 <tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
-<summary>Tool use: **read_file_v2** • Read file: </summary>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\index.html</summary>
 
 </details></tool-use>
 
 _**Agent (grok-4.6)**_
 
 <tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
-<summary>Tool use: **read_file_v2** • Read file: </summary>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\lib\fonts.ts</summary>
 
 </details></tool-use>
 
@@ -48938,6 +48954,6155 @@ _**Agent (grok-4.6)**_
 
 <tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
 <summary>Tool use: **ripgrep_raw_search**</summary>
-Status: **loading**
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "glob": "*.{ts,tsx,html}",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video",
+  "pattern": "StageFontId|STAGE_FONTS|fontId|googleapis"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video",
+  "pattern": "StageFontId|STAGE_FONTS|fontId|googleapis",
+  "topFiles": [
+    {
+      "matchCount": 2,
+      "uri": "script2video/index.html"
+    },
+    {
+      "matchCount": 7,
+      "uri": "script2video\\src\\components\\StageDialog.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\lib\\ai\\tools.ts"
+    },
+    {
+      "matchCount": 10,
+      "uri": "script2video\\src\\lib\\stage.ts"
+    },
+    {
+      "matchCount": 3,
+      "uri": "script2video\\src\\types.ts"
+    },
+    {
+      "matchCount": 2,
+      "uri": "script2video\\index.html"
+    }
+  ],
+  "totalFiles": 6,
+  "totalMatches": 25
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在查看 web2video 的字体加载方式，以及 StageDialog 界面，准备添加字体许可证提示。
+
+计划扩展 StageFontId 以支持多语言 SIL OFL 字体。将构建包含拉丁文、西里尔文及 Noto SC/JP 的字体栈。考虑通过动态辅助函数 `ensureStageFonts()` 注入 Google Fonts 链接，避免一次性加载大文件。同时会添加 `stageFontHref()` 生成对应 CSS2 地址。
+
+已确定具体字体家族清单。优先采用 Noto Sans、Noto Serif 及其 SC/JP 版本，覆盖中、英、日、法、德、俄、西、葡、意等十余种语言。同时纳入 Source Sans 3、IBM Plex Sans、Nunito Sans、Literata 等 SIL OFL 免费商用字体。DM Sans 保留为 UI 字体，Outfit 因仅支持拉丁文被排除。
+
+Manrope 也纳入了 SIL OFL 多语言支持。已确定具体的 Google Fonts CSS2 参数格式，涵盖 Noto Sans、Noto Serif 及其 SC/JP 版本，以及 Source Sans 3 和 IBM Plex Sans 等完整字重配置。
+
+确定了核心字体常驻策略：始终加载 Noto Sans、Noto Sans SC、Noto Sans JP、Noto Serif 及其 SC/JP 版本，DM Sans 作为 UI 字体保留。额外字体仅在用户切换主题或挂载时动态注入，避免一次性加载过多文件。导出截图前也会确保当前选中的字体已就绪。
+
+决定通过单个 CSS2 URL 统一注入全部所需字体，并启用 display=swap 优化加载体验。CJK 覆盖将使用 Noto Sans SC/JP 完整字形，拉丁文部分则通过子集裁剪以减少体积。已排除 Noto Sans Mono，确认 Source Han 对应 Noto CJK，同时正在评估 Zen Kaku Gothic New、Zen Maru Gothic 和 LXGW WenKai 等额外候选。
+
+Inter 也纳入 SIL OFL 免费商用候选，因其对拉丁文、西里尔文和希腊文支持极佳，CJK 仍由 Noto 承担。ZCOOL 系列因仅覆盖中文且拉丁文有限，未列入主推。已开始按 SIL OFL 分类整理完整字体清单。
+
+已确定各字体 ID 的具体映射关系。source-sans 对应 Adobe Source Sans 3，ibm-plex 对应 IBM Plex，nunito 对应 Nunito Sans，literata 对应 Literata，inter 对应 Inter，dm-sans 保留为 DM Sans。StageDialog 将显示字体许可证与覆盖范围。新增 `isStageFontId` 检查函数，以及按 web2video 方式构建的 `fontStack` 函数，按 latin、zh、ja、generic 顺序返回字体栈。Noto Sans 的 latin 字符集已覆盖英文、法文、德文、西班牙文、葡萄牙文、意大利文和俄文。
+
+确认 Noto Sans 的 latin 字符集已覆盖俄文等西里尔文语言，无需额外子集加载。Google Fonts 的 css2 API 会自动按 unicode-range 拆分并按需下载 Cyrillic 字形，无需手动指定 subset 参数。同时会加载 Noto Sans JP 以覆盖日文。
+
+正在权衡字体加载方案。考虑在 main.tsx 或 App.tsx 挂载时动态注入 `stageFontUrl()`，或直接将所有字体写入 index.html 以简化请求。注意到 Google Fonts 的 unicode-range 拆分机制虽能按需下载，但整个界面以拉丁文与中文为主，未使用的拉丁文字体家族仍可能触发 latin 文件的下载。
+
+意识到一次性链接所有字体会导致 UI 文本的 latin 字符集被全部下载。改为仅加载选中的阶段字体及 Noto CJK 回退，DM Sans 与 Noto Sans SC 仍保留在 index.html 中。将在 stage.ts 实现 `ensureStageFonts`，并在 StageDialog 切换主题时调用。
+
+决定在 App.tsx 层通过 useEffect 监听 project.stageTheme，随主题变化动态注入阶段字体。已建立 Google Fonts URL 映射表，将各字体 ID 映射到对应的 CSS2 family 参数。
+
+已实现 `fontStack` 函数，按 latin、zh、ja 顺序提取字体名称。`ensureStageFonts` 会收集所有目标字体的 Google 名称，自动加入 Noto CJK 回退，并通过 CSS2 URL 动态注入 link 标签。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\components\StageDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\main.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\lib\\ai\\tools.ts",
+  "pattern": "fontId|noto-sans|dm-sans"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\lib\\ai\\tools.ts",
+  "pattern": "fontId|noto-sans|dm-sans",
+  "topFiles": [
+    {
+      "matchCount": 2,
+      "uri": "script2video\\src\\lib\\ai\\tools.ts"
+    }
+  ],
+  "totalFiles": 1,
+  "totalMatches": 2
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\App.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+将实现 StageFont 类型，整合 Google 字体库，标注许可证与多语言覆盖范围。
+
+补充 Noto Sans 覆盖俄语等剩余语言。确定字体栈回退顺序为 latin → cyrillic-capable → zh → ja → generic，并配置 Noto Sans、Noto Sans SC、Noto Sans JP 的级联引用。
+
+正在重新调整 Noto Sans 系列的字体栈顺序。考虑将 Noto Sans SC 放在首位，以优先保证中文显示；但需注意该变体对拉丁文和俄文的支持可能不完整，因此需要进一步权衡各语言的覆盖情况。
+
+最终确定 Noto Sans 系列的字体栈顺序为 `"Noto Sans", "Noto Sans SC", "Noto Sans JP", sans-serif`。
+
+该顺序使 Noto Sans 作为通用回退层，优先覆盖拉丁文与俄文；Noto Sans SC 接管中文显示；Noto Sans JP 负责日文假名。各语言的渲染路径均能正确命中对应变体。
+
+已确定 Noto Sans 系列的具体配置：latin 使用 Noto Sans，zh 使用 Noto Sans SC，ja 使用 Noto Sans JP，generic 回退到 sans-serif，并通过 Google Fonts API 引入对应变体的 400/500/700 字重。
+
+即使用户选择其他字体，系统也会自动保留 Noto Sans、SC、JP 作为 CJK 与西里尔文的安全兜底。同时会导出 FONT_IDS 常量供 AI 工具调用，并在 StageDialog 的下拉选择器下方展示当前选中的字体提示。
+
+将在 App.tsx 中监听 stageTheme 变化并调用 ensureStageFonts，确保主题切换时字体立即加载。ExportStage 作为挂载在 App 上的 portal，其字体加载依赖 App 组件维持，无需额外处理。
+
+同时会在应用首次渲染时补调一次 ensureStageFonts，防止未打开对话框时字体未就绪。准备更新 README 的外观章节，并在 AI 工具的 list_catalog 中列出可用字体。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+会换成全部 SIL OFL（可商用）字体，并补上中/日/俄等覆盖；按当前选中的字体按需加载，避免一次拉齐全部字重。
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\types.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\lib\stage.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\lib\stage.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在确认 stage.ts 中的 DEFAULT_STAGE_HTML 是否在替换后仍然保留。
+
+正在读取文件中 join 附近的代码。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\lib\stage.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在检查 isStageFontId 和 ensureStageFonts 是否已正确插入到 DEFAULT_STAGE_CSS 之后。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\lib\stage.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+mountStage 需要调用 ensureStageFonts，但该函数无法接收完整的主题对象。
+
+改在 App 中统一调用 ensureStageFonts。导出时暂不等待字体加载，因为用户通常已预览。接下来更新 StageDialog、App、AI 工具和 list_catalog。修复了 href 比较逻辑：link.href 是绝对 URL，而当前 href 实际为绝对地址。
+
+改用 dataset.key 存储字体键值，避免 Google Fonts 家族名中加号的 URL 编码问题。family 列表拼接作为唯一标识。同时更新 StageDialog 提示、App 的 useEffect 逻辑，并将 AI 枚举改为 STAGE_FONT_IDS，同步 list_catalog 字体配置。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\lib\stage.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\components\StageDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\components\StageDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+The model provided an ambiguous search string to replace
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+The model provided an ambiguous search string to replace
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\App.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\App.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\App.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+准备查看 StageDialog.tsx、types.ts 和 App 文件，以了解当前字体配置。
+
+还需检查 tools.ts、listcatalog、README 和 usage 页面。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\components\StageDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\types.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\App.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "glob": "*.{ts,tsx,md}",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video",
+  "pattern": "list_catalog|fontId|STAGE_FONT|noto-sans|dm-sans"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video",
+  "pattern": "list_catalog|fontId|STAGE_FONT|noto-sans|dm-sans",
+  "topFiles": [
+    {
+      "matchCount": 5,
+      "uri": "script2video\\src\\lib\\ai\\tools.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\App.tsx"
+    },
+    {
+      "matchCount": 5,
+      "uri": "script2video\\src\\components\\StageDialog.tsx"
+    },
+    {
+      "matchCount": 10,
+      "uri": "script2video\\src\\lib\\stage.ts"
+    },
+    {
+      "matchCount": 3,
+      "uri": "script2video\\src\\types.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\README.md"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\lib\\ai\\agent.ts"
+    }
+  ],
+  "totalFiles": 7,
+  "totalMatches": 26
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在为 StageDialog 的字体下拉菜单添加唯一上下文。
+
+正在核对字体目录与文档。现有字体已覆盖多语言需求，将补充更多免费商用多语言字体。
+
+Inter 与 DM Sans 已确认多语言覆盖范围。正在筛选 Source Serif 4、Lexend、Manrope 等开源字体，以完善多语言支持并保持免费商用属性。
+
+PT Sans 与 Source Serif 4 已纳入候选，前者覆盖俄语与拉丁文，后者适合标题。接下来将完整核对 STAGE_FONTS 的许可证与语言覆盖，并执行类型检查。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\lib\stage.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "glob": "**/UsagePane.tsx",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video\\src",
+  "pattern": "字体|font"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video\\src",
+  "pattern": "字体|font",
+  "topFiles": [
+    {
+      "matchCount": 13,
+      "uri": "script2video\\src\\components\\UsagePane.tsx"
+    }
+  ],
+  "totalFiles": 1,
+  "totalMatches": 13
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\README.md</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+将添加 PT Sans（俄语多语言支持）和 Source Serif 4。
+
+已确认现有 8 种字体基本满足多语言需求，不再额外添加。接下来将完成 UI 和字体目录，并等待字体文件就绪后再导出。
+
+正在检查 ExportStage 的字体加载逻辑，并准备在 UsagePane 中补充字体说明。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "glob": "*.{tsx,ts,md}",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video\\src",
+  "pattern": "舞台|外观|stageCss|字体"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video\\src",
+  "pattern": "舞台|外观|stageCss|字体",
+  "topFiles": [
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\types.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\components\\ExportDialog.tsx"
+    },
+    {
+      "matchCount": 2,
+      "uri": "script2video\\src\\sample.ts"
+    },
+    {
+      "matchCount": 2,
+      "uri": "script2video\\src\\components\\CodeEditor.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\components\\PreviewPane.tsx"
+    },
+    {
+      "matchCount": 4,
+      "uri": "script2video\\src\\lib\\stage.ts"
+    },
+    {
+      "matchCount": 13,
+      "uri": "script2video\\src\\lib\\ai\\tools.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\components\\AiChatPanel.tsx"
+    },
+    {
+      "matchCount": 5,
+      "uri": "script2video\\src\\lib\\engineGuide.ts"
+    },
+    {
+      "matchCount": 8,
+      "uri": "script2video\\src\\components\\StageDialog.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\lib\\engines.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\components\\TopBar.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\components\\ExportStage.tsx"
+    }
+  ],
+  "totalFiles": 13,
+  "totalMatches": 41
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video\\src",
+  "pattern": "toPng|html-to-image|fonts\\.ready|exportVideo"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video\\src",
+  "pattern": "toPng|html-to-image|fonts\\.ready|exportVideo",
+  "topFiles": [
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\lib\\exportVideo.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\components\\ExportDialog.tsx"
+    }
+  ],
+  "totalFiles": 2,
+  "totalMatches": 2
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\components\UsagePane.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+将添加 PT Sans 和 Source Serif 4 以增强多语言支持，尤其是俄语（PT Sans 对西里尔文有良好覆盖）。
+
+已确认 Noto 已覆盖全部语言，无需重复添加。最终选定 PT Sans 与 Source Serif 4，两者均为开源可商用字体，共 10 种字体。已确定 Google Fonts 的具体引用参数。
+
+正在查看 start.HTML 中的 UsagePane，准备添加一段关于字体使用的说明文字。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\components\UsagePane.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\lib\exportVideo.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+将添加 PT Sans 和 Source Serif 4 以增强多语言支持。
+
+考虑通过 `document.fonts.ready` 等待字体加载完成。ExportDialog 可能需要调用该等待逻辑。保持范围聚焦，继续完成 StageDialog 的多语言选项和字体目录列表。
+
+正在权衡 Nunito 与 Nunito Sans 的多语言覆盖差异。准备更新 types.ts 中的 StageFontId 类型定义。接下来将检查 ExportDialog，确定在导出流程中等待字体加载的具体位置。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\components\ExportDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "glob": "*.{ts,tsx}",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video",
+  "pattern": "STAGE_FONTS|StageFontId|dm-sans"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video",
+  "pattern": "STAGE_FONTS|StageFontId|dm-sans",
+  "topFiles": [
+    {
+      "matchCount": 12,
+      "uri": "script2video\\src\\lib\\stage.ts"
+    },
+    {
+      "matchCount": 4,
+      "uri": "script2video\\src\\types.ts"
+    },
+    {
+      "matchCount": 6,
+      "uri": "script2video\\src\\components\\StageDialog.tsx"
+    }
+  ],
+  "totalFiles": 3,
+  "totalMatches": 22
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+将再添加两种支持多语言的免费可商用字体。
+
+选定 PT Sans 与 Source Serif 4 作为新增字体。会加入 waitStageFonts 预加载逻辑，并在 SYSTEM_PROMPT 中补充 fontId 的说明。
+
+调整 StageDialog 布局以容纳提示文本。恢复 CSS 注释中的变量说明并合并为一段。在 tools.ts 中引入 STAGE_FONTS 供 list_catalog 使用。检查 apply_scripts 是否包含 stageTheme。开始编写 waitStageFonts 函数。
+
+waitStageFonts 将调用 ensureStageFonts 并通过 document.fonts.ready 等待字体加载，最多阻塞 4 秒。recordLang 会在记录语言前预加载当前主题的主字体与标题字体。
+
+确认 index.html 的 UI 字体无需改动。由于浏览器工具不可用，无法直接验证，将通过类型检查确认。STAGE_FONT_IDS 会作为字符串数组枚举用于 JSON Schema。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+补全外观下拉与目录，并加入两款多语种可商用字体（PT Sans、Source Serif 4）。
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\types.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\lib\stage.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\lib\stage.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\lib\stage.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\components\StageDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\components\StageDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在继续处理 tools.ts、ExportDialog、UsagePane、README 片段和 SYSTEM_PROMPT。
+
+还需检查 apply_scripts 中的 stageTheme 字体枚举。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\lib\\ai",
+  "pattern": "noto-sans|stageTheme|fontId"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\lib\\ai",
+  "pattern": "noto-sans|stageTheme|fontId",
+  "topFiles": [
+    {
+      "matchCount": 7,
+      "uri": "script2video\\src\\lib\\ai\\tools.ts"
+    }
+  ],
+  "totalFiles": 1,
+  "totalMatches": 7
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\components\UsagePane.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\README.md</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在并行应用剩余的编辑。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\components\UsagePane.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\README.md</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\components\ExportDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\components\ExportDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在检查 apply_scripts 是否包含 stageTheme。
+
+正在检查 index.html 和 sample.ts 的默认主题配置。准备运行 tsc 验证类型推断。确认 waitStageFonts 已正确插入 stage.ts。将排查 sample.ts 中残留的旧字体 ID。由于缺少浏览器 MCP，考虑通过 Shell 或 Node 脚本验证开发服务器状态。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\lib\stage.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "glob": "*.{ts,tsx}",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video",
+  "pattern": "dm-sans|fontId|titleFontId"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video",
+  "pattern": "dm-sans|fontId|titleFontId",
+  "topFiles": [
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\components\\ExportDialog.tsx"
+    },
+    {
+      "matchCount": 3,
+      "uri": "script2video\\src\\lib\\ai\\tools.ts"
+    },
+    {
+      "matchCount": 6,
+      "uri": "script2video\\src\\components\\StageDialog.tsx"
+    },
+    {
+      "matchCount": 8,
+      "uri": "script2video\\src\\lib\\stage.ts"
+    },
+    {
+      "matchCount": 3,
+      "uri": "script2video\\src\\types.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\App.tsx"
+    }
+  ],
+  "totalFiles": 6,
+  "totalMatches": 22
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2"><details>
+<summary>Tool use: **run_terminal_command_v2** • Run command: npx tsc --noEmit</summary>
+```bash
+npx tsc --noEmit
+```
+
+```
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+```
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+TypeScript 编译已通过。接下来需要在浏览器中验证效果。
+
+未发现可用的浏览器工具，将尝试通过终端或本地服务验证页面加载。已确认 StageDialog 中的 fontOf 仍在使用。
+
+正在处理字体加载的时序问题。当链接 href 变更后，document.fonts.ready 可能在新字体实际加载完成前就已解析。考虑添加延迟等待，或监听 link.onload 事件来确保字体真正就绪后再执行导出逻辑。
+
+放弃复杂的加载等待方案，确认 document.fonts.ready 已足够。接下来检查 GetDynamicTools 和终端 Vite 服务，同时查看编辑文件的 lint 结果。index.html 中的 DM Sans UI 字体保持不变，也可考虑为动态字体资源添加 preconnect 预连接。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="get_mcp_tools"><details>
+<summary>Tool use: **get_mcp_tools**</summary>
+
+Parameters:
+
+```json
+{
+  "pattern": "browser|mcp"
+}
+```
+Result:
+
+```json
+{
+  "content": "{\n  \"mode\": \"search\",\n  \"pattern\": \"browser|mcp\",\n  \"matches\": []\n}"
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: c:\Users\renjihe\.cursor\projects\d-WorkSpace-tools-web2video\terminals\1.txt</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="read_lints"><details>
+<summary>Tool use: **read_lints**</summary>
+
+Parameters:
+
+```json
+{
+  "paths": [
+    "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\lib\\stage.ts",
+    "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\components\\StageDialog.tsx",
+    "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\App.tsx",
+    "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\lib\\ai\\tools.ts",
+    "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\components\\ExportDialog.tsx",
+    "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\types.ts"
+  ]
+}
+```
+Result:
+
+```json
+{
+  "linterErrorsByFile": [
+    {
+      "relativeWorkspacePath": "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\lib\\stage.ts"
+    },
+    {
+      "relativeWorkspacePath": "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\components\\StageDialog.tsx"
+    },
+    {
+      "relativeWorkspacePath": "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\App.tsx"
+    },
+    {
+      "relativeWorkspacePath": "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\lib\\ai\\tools.ts"
+    },
+    {
+      "relativeWorkspacePath": "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\components\\ExportDialog.tsx"
+    },
+    {
+      "relativeWorkspacePath": "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\types.ts"
+    }
+  ]
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在验证应用编译是否正常，同时确认 StageDialog 是否已完成。
+
+已核对 Google Fonts 字体参数。Source Serif 4、PT Sans 和 Nunito Sans 的 CSS2 API 写法均正确。IBM Plex Sans JP 仅覆盖日语，与中文混用符合预期。接下来将向用户说明已完成的修改。
+
+StageDialog 已确认使用新字体。UI 层面的 DM Sans 与 Noto Sans SC 仍独立加载，不受影响。全部修改已完成。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+舞台字体已全部换成 **SIL OFL（免费可商用）**，并按九语口播补了多语种族。
+
+顶栏 **外观** 里可选正文字体 / 标题字体。西文和俄文走所选字体；中日文不够的字会回落到 Noto Sans / Serif CJK。默认是 **Noto Sans + Noto Serif**，覆盖中英日法德俄西葡意最完整。
+
+| 字体 | 语种 |
+| --- | --- |
+| Noto Sans / Noto Serif | 中英日法德俄西葡意 |
+| Source Sans 3 / Source Serif 4 | 英欧俄 + 中日回落 |
+| IBM Plex Sans | 英欧俄日 + 中文回落 |
+| PT Sans | 英欧俄（西里尔文口碑好）+ 中日回落 |
+| Nunito Sans、Inter、DM Sans、Literata | 英欧（部分含俄）+ 中日回落 |
+
+切换字体时只会加载当前两套，不会一次把全部 Google Fonts 拉下来。导出前会等字体就绪，避免截帧时还是回落字体。
+
+用法页和 AI 的 `list_catalog` 里也能看到这份字体清单。请在开发服打开外观面板试一下下拉；本机没有浏览器自动化，没法替你点一遍。
+
+---
+
+_**User**_
+
+如果烧录字幕条到画面需要可配置字幕字体，这个web2video工具也要支持。
+
+---
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+用户要求 web2video 工具支持将字幕条烧录到视频时的可配置字幕字体。
+
+正在查看 script2video 和 web2video 的代码，了解当前字幕渲染逻辑，以便为两个项目都添加可配置字幕字体的支持。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+先看两边怎么烧字幕、字体从哪来，再把字幕字体做成可配置并接到 web2video。
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "glob": "*.{ts,tsx}",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video\\src",
+  "pattern": "caption|subtitle|字幕"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video\\src",
+  "pattern": "caption|subtitle|字幕",
+  "topFiles": [
+    {
+      "matchCount": 20,
+      "uri": "script2video\\src\\components\\ExportDialog.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\lib\\exportVideo.ts"
+    },
+    {
+      "matchCount": 2,
+      "uri": "script2video\\src\\lib\\exportSettings.ts"
+    },
+    {
+      "matchCount": 2,
+      "uri": "script2video\\src\\lib\\subtitles.ts"
+    },
+    {
+      "matchCount": 2,
+      "uri": "script2video\\src\\components\\CaptionBar.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\lib\\engineGuide.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\types.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\components\\PreviewPane.tsx"
+    },
+    {
+      "matchCount": 2,
+      "uri": "script2video\\src\\components\\EngineCard.tsx"
+    }
+  ],
+  "totalFiles": 9,
+  "totalMatches": 32
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "glob": "*.{ts,tsx,js,jsx}",
+  "path": "D:\\WorkSpace\\tools\\web2video\\web2video",
+  "pattern": "caption|subtitle|字幕"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\web2video",
+  "pattern": "caption|subtitle|字幕",
+  "topFiles": [
+    {
+      "matchCount": 30,
+      "uri": "web2video/src/lib/ai/tools.ts"
+    },
+    {
+      "matchCount": 12,
+      "uri": "web2video/src/layouts/StageView.tsx"
+    },
+    {
+      "matchCount": 13,
+      "uri": "web2video/src/components/AppearancePanel.tsx"
+    },
+    {
+      "matchCount": 4,
+      "uri": "web2video/src/lib/fonts.ts"
+    },
+    {
+      "matchCount": 6,
+      "uri": "web2video/src/lib/textI18n.ts"
+    },
+    {
+      "matchCount": 9,
+      "uri": "web2video/src/lib/ai/storyboard.ts"
+    },
+    {
+      "matchCount": 4,
+      "uri": "web2video/src/components/Inspector.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "web2video/src/store/useEditor.ts"
+    },
+    {
+      "matchCount": 4,
+      "uri": "web2video/src/lib/narration.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "web2video/src/components/dialogs/HelpDialog.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "web2video/src/components/Stage.tsx"
+    },
+    {
+      "matchCount": 3,
+      "uri": "web2video/src/lib/interpolate.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "web2video/src/components/TopBar.tsx"
+    },
+    {
+      "matchCount": 12,
+      "uri": "web2video/src/lib/blocks.ts"
+    },
+    {
+      "matchCount": 2,
+      "uri": "web2video/src/lib/exportSettings.ts"
+    },
+    {
+      "matchCount": 13,
+      "uri": "web2video/src/types.ts"
+    },
+    {
+      "matchCount": 4,
+      "uri": "web2video/src/lib/subtitles.ts"
+    },
+    {
+      "matchCount": 2,
+      "uri": "web2video/src/components/AddBlockMenu.tsx"
+    },
+    {
+      "matchCount": 3,
+      "uri": "web2video/src/components/OutlinePanel.tsx"
+    },
+    {
+      "matchCount": 15,
+      "uri": "web2video/src/lib/templates.ts"
+    }
+  ],
+  "totalFiles": 22,
+  "totalMatches": 166
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="search" data-tool-name="glob_file_search"><details>
+<summary>Tool use: **glob_file_search** • Searched codebase "" • **62** results in **1** directory</summary>
+
+Directory: **`D:\WorkSpace\tools\web2video\web2video`** (62 files)
+
+| File |
+|------|
+| `../web2video/src/components/Stage.tsx` |
+| `../web2video/src/components/dialogs/HelpDialog.tsx` |
+| `../web2video/vite.config.ts` |
+| `../web2video/src/components/dialogs/WelcomeDialog.tsx` |
+| `../web2video/src/lib/voices.ts` |
+| `../web2video/src/components/AppearancePanel.tsx` |
+| `../web2video/src/components/TopBar.tsx` |
+| `../web2video/src/components/StatusBar.tsx` |
+| `../web2video/src/components/dialogs/ExportDialog.tsx` |
+| `../web2video/src/lib/ai/agent.ts` |
+| `../web2video/src/hooks/useKeyboard.ts` |
+| `../web2video/src/lib/langs.ts` |
+| `../web2video/vite-plugin-edge-tts.ts` |
+| `../web2video/src/lib/aiChat.ts` |
+| `../web2video/src/lib/interpolate.ts` |
+| `../web2video/src/lib/synthProject.ts` |
+| `../web2video/src/lib/ai/storyboard.ts` |
+| `../web2video/src/types.ts` |
+| `../web2video/src/lib/narration.ts` |
+| `../web2video/src/lib/projectFolder.ts` |
+| `../web2video/src/lib/subtitles.ts` |
+| `../web2video/src/components/dialogs/TextI18nDialog.tsx` |
+| `../web2video/src/lib/templates.ts` |
+| `../web2video/src/lib/edgeTranslate.ts` |
+| `../web2video/src/components/Playback.tsx` |
+| `../web2video/src/components/RightDock.tsx` |
+| `../web2video/src/lib/qwenTts.ts` |
+| `../web2video/src/layouts/MediaFrame.tsx` |
+| `../web2video/src/lib/blocks.ts` |
+| `../web2video/src/components/dialogs/TtsDialog.tsx` |
+| `../web2video/src/lib/insertImage.ts` |
+| `../web2video/src/components/OutlinePanel.tsx` |
+| `../web2video/src/App.tsx` |
+| `../web2video/src/components/ui.tsx` |
+| `../web2video/src/store/useEditor.ts` |
+| `../web2video/src/components/AddBlockMenu.tsx` |
+| `../web2video/vite-plugin-llm-proxy.ts` |
+| `../web2video/src/components/dialogs/AiDialog.tsx` |
+| `../web2video/src/lib/exportVideo.ts` |
+| `../web2video/src/layouts/StageView.tsx` |
+| `../web2video/src/lib/tts.ts` |
+| `../web2video/src/lib/audioStore.ts` |
+| `../web2video/src/lib/textI18n.ts` |
+| `../web2video/src/components/AiChatPanel.tsx` |
+| `../web2video/src/lib/edgeTts.ts` |
+| `../web2video/src/lib/voiceLibrary.ts` |
+| `../web2video/src/lib/aiSecrets.ts` |
+| `../web2video/src/lib/ids.ts` |
+| `../web2video/src/lib/listMarker.ts` |
+| `../web2video/src/lib/timeline.ts` |
+| `../web2video/src/main.tsx` |
+| `../web2video/src/components/SceneList.tsx` |
+| `../web2video/src/lib/cues.ts` |
+| `../web2video/src/vite-env.d.ts` |
+| `../web2video/src/components/Timeline.tsx` |
+| `../web2video/src/lib/fonts.ts` |
+| `../web2video/src/components/Inspector.tsx` |
+| `../web2video/src/lib/scriptSplit.ts` |
+| `../web2video/src/components/dialogs/PrefsDialog.tsx` |
+| `../web2video/src/lib/ttsSecrets.ts` |
+| `../web2video/src/lib/ai/tools.ts` |
+| `../web2video/src/lib/exportSettings.ts` |
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+web2video 已具备字幕字体 ID 和样式配置功能。
+
+正在对比 script2video 与 web2video 的字幕字体实现差异。需要确认 web2video 是否已适配新的多语言 OFL 字体，并排查两者在可配置字幕字体上的缺口。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\components\CaptionBar.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\lib\fonts.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\components\StageDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\types.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\components\AppearancePanel.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\types.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+用户要求字幕字体在字幕条烧录时可配置。
+
+web2video 已有 captionFontId 配置，但可能未包含新字体列表，或在导出时未实际应用。script2video 的 CaptionBar 目前使用默认 CSS 字体，尚未支持可配置字体。
+
+正在检查 script2video 的 CaptionBar 是否用于预览和导出，以及 web2video 的 StageView 如何应用 captionFontId。同时确认 StageFontId 类型和字体加载逻辑。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\types.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "path": "D:\\WorkSpace\\tools\\web2video\\web2video",
+  "pattern": "ensureStageFonts|fonts.googleapis|captionFontId"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\web2video",
+  "pattern": "ensureStageFonts|fonts.googleapis|captionFontId",
+  "topFiles": [
+    {
+      "matchCount": 2,
+      "uri": "web2video/index.html"
+    },
+    {
+      "matchCount": 1,
+      "uri": "web2video/src/components/Stage.tsx"
+    },
+    {
+      "matchCount": 3,
+      "uri": "web2video/src/lib/templates.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "web2video/src/types.ts"
+    },
+    {
+      "matchCount": 2,
+      "uri": "web2video/src/layouts/StageView.tsx"
+    },
+    {
+      "matchCount": 4,
+      "uri": "web2video/src/lib/ai/tools.ts"
+    },
+    {
+      "matchCount": 3,
+      "uri": "web2video/src/components/AppearancePanel.tsx"
+    }
+  ],
+  "totalFiles": 7,
+  "totalMatches": 16
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\components\PreviewPane.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\components\ExportStage.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\layouts\StageView.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\lib\stage.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+用户要求 script2video 支持在将字幕烧录到视频时配置字幕字体。
+
+web2video 已支持 captionFontId 配置。但其字体目录缺少 source-serif、pt-sans、inter、dm-sans 等新字体，需与 script2video 的扩展字体列表保持一致。
+
+确认用户同时需要 script2video 和 web2video 两个工具都支持字幕字体配置。EngineCard 也显示字幕，可能需要一并处理。
+
+确定在 StageTheme 上新增 captionFontId，与现有 fontId 保持一致。仅添加字体 ID，不扩展完整样式配置。
+
+CaptionBar 和 EngineCard 都会应用该配置。双语场景下需要按语言选择字体栈，但 script2video 目前的 fontStack 不支持传入语言参数，需要调整。
+
+确定 captionFontId 默认使用 noto-sans 以支持多语言字幕。将在 StageTheme 中新增该字段，并在 App.tsx、stageThemeOf、ensureStageFonts 及导出流程中统一加载。CaptionBar 与 EngineCard 将按语言参数选择字体栈。StageDialog 会增加字幕字体选择器。AI 工具需同步更新项目设置与字体目录。
+
+计划扩展 StageFontId 以匹配 script2video 的完整字体列表，包括 source-serif、pt-sans、inter、dm-sans，并为 STAGE_FONTS 新增 langs 字段。
+
+web2video 的字体目录同样需要补充这些新字体，并在 FontPick 中展示语言选项。导出时 captionFontId 已由 StageView 正确捕获，无需额外修改。
+
+index.html 中继续保留现有字体加载方式，避免页面体积进一步膨胀。
+
+将在 web2video 的 CaptionFields 中直接增加字幕字体选择器，使字幕字体配置更易发现。
+
+script2video 的 CaptionBar 将通过 CSS 变量 `--stage-caption-font` 实现字体继承，比内联样式更简洁。
+
+stageBoxStyle 将新增 `--stage-caption-font` 变量供 CaptionBar 继承。fontStack 需要支持语言参数，以匹配 web2video 按行语言区分 CJK 字体栈的逻辑。接下来会检查 EngineCard、sample.ts、App.tsx、PreviewPane 及 AI 工具中的相关调用链路。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\components\EngineCard.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video",
+  "pattern": "stageTheme|DEFAULT_STAGE_THEME|normalizeProject"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video",
+  "pattern": "stageTheme|DEFAULT_STAGE_THEME|normalizeProject",
+  "topFiles": [
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\components\\ExportStage.tsx"
+    },
+    {
+      "matchCount": 4,
+      "uri": "script2video\\src\\App.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\components\\PreviewPane.tsx"
+    },
+    {
+      "matchCount": 3,
+      "uri": "script2video\\src\\components\\StageDialog.tsx"
+    },
+    {
+      "matchCount": 4,
+      "uri": "script2video\\src\\sample.ts"
+    },
+    {
+      "matchCount": 8,
+      "uri": "script2video\\src\\lib\\stage.ts"
+    },
+    {
+      "matchCount": 2,
+      "uri": "script2video\\src\\components\\ExportDialog.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\types.ts"
+    },
+    {
+      "matchCount": 6,
+      "uri": "script2video\\src\\lib\\ai\\tools.ts"
+    },
+    {
+      "matchCount": 3,
+      "uri": "script2video\\src\\store\\useStudio.ts"
+    }
+  ],
+  "totalFiles": 10,
+  "totalMatches": 33
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\index.html</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "path": "D:\\WorkSpace\\tools\\web2video\\web2video\\src",
+  "pattern": "ensureStageFonts|fonts.googleapis|FONT_IDS"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\web2video\\src",
+  "pattern": "ensureStageFonts|fonts.googleapis|FONT_IDS",
+  "topFiles": [
+    {
+      "matchCount": 8,
+      "uri": "web2video/src/lib/ai/tools.ts"
+    }
+  ],
+  "totalFiles": 1,
+  "totalMatches": 8
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+已明确计划。接下来将检查 web2video 应用。
+
+将为 web2video 引入字体加载机制。扩展 StageFontId 与 STAGE_FONTS 以支持更多字族，并新增 ensureStageFonts 等辅助函数。App 将根据项目配置加载字体，CaptionFields 会增加字幕字体选择器，导出前等待字体就绪。AI 工具中的 FONT_IDS 也会同步更新。
+
+CaptionBar 将按语言动态应用字族：首行使用 clockLang，次行使用 secondLang。CaptionFields 会新增 StageDialog 字体选择器，确保字体加载包含 captionFontId。仅调整字体，不添加额外样式。
+
+EngineCard 在非 GSAP 导出时承载字幕内容，因此也应使用 captionFontId。CaptionBar 与 EngineCard 都会接收该参数。另一种方案是让 CaptionBar 通过 CSS 变量读取父级字体设置。
+
+单个 CSS 变量无法同时适配多语言字族栈，因此确定由 CaptionBar 直接接收 fontId 并按语言动态应用字族。接下来将查看 web2video 的 App.tsx、ExportDialog 及 transcript 以确认具体实现路径。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\App.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "path": "D:\\WorkSpace\\tools\\web2video\\web2video\\src",
+  "pattern": "waitStageFonts|ensureStageFonts|recordProject|setExport"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\web2video\\src",
+  "pattern": "waitStageFonts|ensureStageFonts|recordProject|setExport",
+  "topFiles": [
+    {
+      "matchCount": 1,
+      "uri": "web2video/src/lib/exportVideo.ts"
+    },
+    {
+      "matchCount": 4,
+      "uri": "web2video/src/store/useEditor.ts"
+    },
+    {
+      "matchCount": 12,
+      "uri": "web2video/src/components/dialogs/ExportDialog.tsx"
+    }
+  ],
+  "totalFiles": 3,
+  "totalMatches": 17
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\lib\stage.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\App.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\components\ExportDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在查看 web2video 的字体目录和 FONT_IDS 用法，以确认如何支持可配置字幕字体。
+
+计划为 web2video 的 fonts.ts 添加 Google 字体字段与语言配置。将从 script2video 复制 ensureStageFonts 和 waitStageFonts 的逻辑，并在 index.html 中保留 UI 字体加载，同时新增动态加载 stage 与字幕字体的能力。最简方案是直接扩展 index.html 中的 Google Fonts 链接来引入新字体。
+
+正在权衡两种实现路径：直接扩展 index.html 的 Google Fonts 链接来引入新字体；或采用 ensureStageFonts 动态加载，同时精简 index.html 仅保留 DM Sans 等 UI 字体。后者更干净，但会改变首帧画面的视觉表现。
+
+已确定最终方案：在 index.html 的 Google Fonts 链接中直接加入 PT Sans、Source Serif 4、Inter 等新字体，确保 JS 加载前即可渲染。同时新增字幕字体选择器，通过 ensureStageFonts 在 App 中动态加载 captionFontId 及项目所有字体，并导出等待字体就绪的机制。FONT_IDS 将从 STAGE_FONTS 派生。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "path": "D:\\WorkSpace\\tools\\web2video\\web2video\\src\\lib\\ai\\tools.ts",
+  "pattern": "fonts:|STAGE_FONTS"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\web2video\\src\\lib\\ai\\tools.ts",
+  "pattern": "fonts:|STAGE_FONTS",
+  "topFiles": [
+    {
+      "matchCount": 3,
+      "uri": "web2video\\src\\lib\\ai\\tools.ts"
+    }
+  ],
+  "totalFiles": 1,
+  "totalMatches": 3
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\components\dialogs\ExportDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\components\PreviewPane.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+需求已明确。准备实现 web2video 工具对可配置字幕字体的支持。
+
+正在修改 `fontStack` 函数以支持按语言切换字体栈，并在 `CaptionBar` 中引入相关类型和函数。
+
+CaptionBar 将按语言动态应用 fontStack 字体栈。PreviewPane、ExportStage 和 EngineCard 都会传入 fontId。StageDialog 会新增字幕字体选择器，StageTheme 也会增加 captionFontId 字段。
+
+默认字幕字体定为 noto-sans，同时扩展了 StageFontId 与 STAGE_FONTS 的语言和 Google 字体支持。App 会在加载阶段统一预加载所有主题字体（包括 captionFontId）。Export 逻辑也同步等待这些字体就绪。UsagePane 和 ExportDialog 会提示用户在外观中配置字幕字体。CaptionFields 将新增独立的字幕字体选择器。
+
+web2video 会从 STAGE_FONTS 提取 FONT_IDS 作为枚举。index.html 将保留现有字体并补充 Source Serif 4、PT Sans、Inter 等新字体，确保无需 JS 也能正常显示。ensureStageFonts 会统一加载 captionFontId、quoteFontId 及 progressStyle.fontId。FontPick 的语言选项将与 script2video 保持一致。
+
+StageDialog 会新增一个全宽的字幕字体行，包含预览文本和语言提示。ExportDialog 也会同步更新，提示字幕字体在外观/配置中设置。CaptionFields 直接复用同文件内的 FontPick 组件。预览文本将使用 project.previewLang 来渲染字体栈效果。
+
+PreviewPane 的双语字幕界面可能不需要额外的字幕字体配置。Usage pane 只需一句话更新。所有改动将批量处理。
+
+web2video 的 fonts.ts 会新增 langs 和 google 字段到 StageFont 接口。FONT_IDS 将改为 STAGE_FONTS.map(f => f.id)。index.html 会追加新字体链接，确保无需 JS 即可正常显示。
+
+ensureStageFonts 会过滤掉 undefined 的字体 ID，避免无效加载。ExportDialog 的提示文案将区分平台：web2video 显示「配置 → 字体 / 字幕」，script2video 显示「外观」。CaptionFields 会直接嵌入 FontPick 选择器。
+
+CaptionFields 的字幕字体选择器将常驻顶部，不受 showCaptions 开关影响，因为导出时会临时启用该开关。接下来将更新 script2video 的 SYSTEM_PROMPT，并检查 apply_scripts 中 stageTheme 的处理逻辑。由于涉及两个应用的多步修改，准备通过 TodoWrite 进行记录。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="todo_write"><details>
+<summary>Tool use: **todo_write**</summary>
+
+Parameters:
+
+```json
+{
+  "merge": true
+}
+```
+Result:
+
+```json
+{
+  "finalTodos": [
+    {
+      "content": "script2video: StageTheme.captionFontId + 字体栈/加载",
+      "id": "s2v-theme",
+      "status": "in_progress"
+    },
+    {
+      "content": "script2video: 外观面板 + CaptionBar/导出用字幕字体",
+      "id": "s2v-ui",
+      "status": "pending"
+    },
+    {
+      "content": "web2video: 补齐多语字体，字幕页可选字体",
+      "id": "w2v-fonts",
+      "status": "pending"
+    }
+  ],
+  "initialTodos": [
+    {
+      "content": "加 LLM 代理插件 + Vite 配置",
+      "id": "proxy",
+      "status": "completed"
+    },
+    {
+      "content": "DeepSeek 密钥与聊天存储",
+      "id": "secrets",
+      "status": "completed"
+    },
+    {
+      "content": "script2video MCP 工具 + agent",
+      "id": "tools",
+      "status": "completed"
+    },
+    {
+      "content": "AI 配置弹窗与对话页",
+      "id": "ui",
+      "status": "completed"
+    }
+  ],
+  "success": true
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\lib\langs.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+现在开始实施所有文件变更。
+
+先修改类型定义和 stage.ts，再处理 UI，最后调整 web2video。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\types.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\lib\stage.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\lib\stage.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\lib\stage.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\lib\stage.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\lib\stage.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在更新 CaptionBar、EngineCard、StageDialog、App、ExportDialog、tools、UsagePane 和 PreviewPane/ExportStage 等组件，使它们能够将 fontId 传递给 CaptionBar，从而支持自定义字幕字体。
+
+决定让 CaptionBar 通过 useStudio 直接从 store 获取 captionFontId，避免逐层传参。EngineCard 在非 GSAP 模式下也会读取该字体来显示节拍文字。接下来会更新 CaptionBar 以从 store 拉取主题。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\components\CaptionBar.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\components\EngineCard.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\components\EngineCard.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\components\StageDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+Incorrect tool arguments
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+第三个字体选择器已添加在 titleFontId 之后。
+
+字幕字体选择器将换行显示。准备为 StageDialog 添加预览行，并读取该组件的字体区域代码。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\components\StageDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+将在字体网格后添加字幕预览，使用 fontStack 实现。
+
+需要导入 fontStack。接下来将修改 App.tsx、ExportDialog、tools、UsagePane 和导出对话框的复选框文本，以支持预览和烧录字幕条。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\components\StageDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\components\StageDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\App.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\components\ExportDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\components\ExportDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\components\UsagePane.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在扩展 web2video 的 StageFontId 和 STAGE_FONTS，以支持可配置的字幕字体。
+
+正在补充 ensureStageFonts、字幕字体选择器、应用加载与导出等待等逻辑，并更新 index.html 字体家族列表和语言显示。接下来将编写与 script2video 对齐的 STAGE_FONTS 配置。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+接下来给 web2video 补同样的字幕字体选择，并同步多语种字体库。
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\src\types.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\src\lib\fonts.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\src\lib\fonts.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在确认 FONT_IDS 是否作为常量用于类型推断。
+
+STAGE_FONTS.map 返回的 string[] 可直接用于 JSON 枚举。
+
+接下来将更新 AppearancePanel 的 FontPick 选项、CaptionFields 字体选择器，以及 App.tsx 和 ExportDialog 中的字体加载与等待逻辑。同时会检查 tools 和 web2video 的系统提示中关于字幕字体的说明。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\src\components\AppearancePanel.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\src\components\AppearancePanel.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2**</summary>
+The model provided an ambiguous search string to replace
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\src\components\AppearancePanel.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\src\App.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\components\dialogs\ExportDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+CaptionFields 的 FontPick 插入因存在多个匹配项而失败。
+
+CaptionFields 的 FontPick 替换失败，但选项文本的替换已成功。接下来将修复 CaptionFields，并同步更新 ExportDialog、SYSTEM_PROMPT 和 list_catalog 的相关说明。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\components\AppearancePanel.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\components\AppearancePanel.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\App.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\components\dialogs\ExportDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+CaptionFields 需要在顶部添加 FontPick 字体选择器。
+
+Help 文本已提示可修改字幕字体，但 FontPick 尚未添加。fontStack 在 AppearancePanel 中已导入。ProgressFields 同样以 `space-y-2` 开头，导致 replace_all 失败。CaptionFields 的替换仍因重复匹配而失败。
+
+ListMarkerFields 也存在相同的开头重复问题。将使用「显示口播字幕条」等更唯一的上下文来定位目标代码。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\src\components\AppearancePanel.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\src\components\dialogs\ExportDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\src\components\dialogs\ExportDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\src\components\dialogs\ExportDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在更新 script2video 的 README，补充字幕字体的可配置说明。
+
+检查了 FONT_IDS 类型定义和 JSON 枚举格式。确认 web2video 的 fonts.ts 中没有重复的 isStageFontId 函数。准备运行两个项目的 TypeScript 编译。同时验证 EngineCard 组件替换后的完整性，并检查 captionFontId 在 set_project 中的描述更新。
+
+检查了 web2video 中 StageFontId 联合类型的引用情况。确认 PreviewPane 的 CaptionBar 已接入 store，切换字幕字体时预览会实时更新。对于旧项目缺少 captionFontId 的情况，stageThemeOf 会自动填充默认值；web2video 模板中该字段已存在默认值。接下来继续核对 fonts.ts 中 isStageFontId 的实现并完善 README。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\lib\fonts.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\components\EngineCard.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "glob": "*.{ts,tsx}",
+  "path": "D:\\WorkSpace\\tools\\web2video",
+  "pattern": "StageFontId = |FONT_IDS"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video",
+  "pattern": "StageFontId = |FONT_IDS",
+  "topFiles": [
+    {
+      "matchCount": 8,
+      "uri": ".\\web2video\\src\\lib\\ai\\tools.ts"
+    },
+    {
+      "matchCount": 6,
+      "uri": ".\\web2video\\src\\lib\\fonts.ts"
+    },
+    {
+      "matchCount": 4,
+      "uri": ".\\script2video\\src\\lib\\ai\\tools.ts"
+    },
+    {
+      "matchCount": 2,
+      "uri": ".\\script2video\\src\\lib\\stage.ts"
+    }
+  ],
+  "totalFiles": 4,
+  "totalMatches": 20
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\components\dialogs\ExportDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在确认 web2video 的 fonts.ts 中 ensureStageFonts 是否已存在。
+
+正在查看 fonts.ts 第 189 至 250 行的代码。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\lib\fonts.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\components\dialogs\ExportDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\src\components\dialogs\ExportDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\README.md</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+README 中 script2video 的替换未生效，正在定位精确行号。
+
+ExportDialog 的双语提示替换可能也未生效。将读取相关文件确认。同时准备更新 web2video 字幕字体说明，并在 README 中搜索字幕相关描述。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video\\README.md",
+  "pattern": "舞台字体均为"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video\\README.md",
+  "pattern": "舞台字体均为",
+  "topFiles": [],
+  "totalFiles": 0,
+  "totalMatches": 0
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\components\dialogs\ExportDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "glob": "*.md",
+  "path": "D:\\WorkSpace\\tools\\web2video\\web2video",
+  "pattern": "captionFont|字幕字体|SIL OFL"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\web2video",
+  "pattern": "captionFont|字幕字体|SIL OFL",
+  "topFiles": [],
+  "totalFiles": 0,
+  "totalMatches": 0
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+ExportDialog 的提示文本已更新。可能是重试时替换成功，也可能是首次替换时文本不同而成功。
+
+双语行已包含“字幕字体”说明，grep 未找到“舞台字体均为”。正在读取相关 README 章节。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video\\README.md",
+  "pattern": "外观|SIL OFL|字幕"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video\\README.md",
+  "pattern": "外观|SIL OFL|字幕",
+  "topFiles": [
+    {
+      "matchCount": 7,
+      "uri": "script2video\\README.md"
+    }
+  ],
+  "totalFiles": 1,
+  "totalMatches": 7
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="search" data-tool-name="glob_file_search"><details>
+<summary>Tool use: **glob_file_search** • Searched codebase "" • **1** result in **1** directory</summary>
+
+Directory: **`D:\WorkSpace\tools\web2video\web2video`** (1 file)
+
+| File |
+|------|
+| `../web2video/README.md` |
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\components\dialogs\HelpDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+README 中已有字幕字体的说明。此前替换操作可能已生效，只是报了错。
+
+正在更新 HelpDialog 中关于字幕字体的说明。同时检查 script2video 和 web2video 的 README 文档。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\README.md</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\README.md</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\src\components\dialogs\HelpDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "path": "D:\\WorkSpace\\tools\\web2video\\web2video\\README.md",
+  "pattern": "字幕|字体|captionFont"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\web2video\\README.md",
+  "pattern": "字幕|字体|captionFont",
+  "topFiles": [
+    {
+      "matchCount": 5,
+      "uri": "web2video\\README.md"
+    }
+  ],
+  "totalFiles": 1,
+  "totalMatches": 5
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+简要更新 web2video 的 README，说明字幕字体的可配置性。
+
+对两个项目运行 tsc，并检查字体相关引用。更新 README 第 18 行和第 75 行。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\README.md</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\README.md</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2"><details>
+<summary>Tool use: **run_terminal_command_v2** • Run command: npx tsc --noEmit</summary>
+```bash
+npx tsc --noEmit
+```
+
+```
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+```
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2"><details>
+<summary>Tool use: **run_terminal_command_v2** • Run command: npx tsc --noEmit</summary>
+```bash
+npx tsc --noEmit
+```
+
+```
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+```
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+tsc 编译已全部通过。接下来检查 lint，并确认 tools 中未使用的 StageFontId 导入是否与 const 类型定义一致。
+
+正在确认 web2video 的开发服务器是否运行，并检查浏览器端的字体页面引用。CaptionFields 的 fontStack 导入已核实。接下来查看 Inspector.tsx 中的全局配置相关代码。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="read_lints"><details>
+<summary>Tool use: **read_lints**</summary>
+
+Parameters:
+
+```json
+{
+  "paths": [
+    "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\components\\StageDialog.tsx",
+    "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\components\\CaptionBar.tsx",
+    "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\lib\\stage.ts",
+    "D:\\WorkSpace\\tools\\web2video\\web2video\\src\\App.tsx",
+    "D:\\WorkSpace\\tools\\web2video\\web2video\\src\\lib\\fonts.ts",
+    "D:\\WorkSpace\\tools\\web2video\\web2video\\src\\components\\AppearancePanel.tsx",
+    "D:\\WorkSpace\\tools\\web2video\\web2video\\src\\components\\dialogs\\ExportDialog.tsx"
+  ]
+}
+```
+Result:
+
+```json
+{
+  "linterErrorsByFile": [
+    {
+      "relativeWorkspacePath": "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\components\\StageDialog.tsx"
+    },
+    {
+      "relativeWorkspacePath": "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\components\\CaptionBar.tsx"
+    },
+    {
+      "relativeWorkspacePath": "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\lib\\stage.ts"
+    },
+    {
+      "relativeWorkspacePath": "D:\\WorkSpace\\tools\\web2video\\web2video\\src\\App.tsx"
+    },
+    {
+      "relativeWorkspacePath": "D:\\WorkSpace\\tools\\web2video\\web2video\\src\\lib\\fonts.ts"
+    },
+    {
+      "relativeWorkspacePath": "D:\\WorkSpace\\tools\\web2video\\web2video\\src\\components\\AppearancePanel.tsx"
+    },
+    {
+      "relativeWorkspacePath": "D:\\WorkSpace\\tools\\web2video\\web2video\\src\\components\\dialogs\\ExportDialog.tsx"
+    }
+  ]
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="search" data-tool-name="glob_file_search"><details>
+<summary>Tool use: **glob_file_search** • Searched codebase "" • **3** results in **1** directory</summary>
+
+Directory: **`C:\Users\renjihe\.cursor\projects\d-WorkSpace-tools-web2video\terminals`** (3 files)
+
+| File |
+|------|
+| `../C:\Users\renjihe\.cursor\projects\d-WorkSpace-tools-web2video\terminals\1.txt` |
+| `../C:\Users\renjihe\.cursor\projects\d-WorkSpace-tools-web2video\terminals\4.txt` |
+| `../C:\Users\renjihe\.cursor\projects\d-WorkSpace-tools-web2video\terminals\305805.txt` |
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="todo_write"><details>
+<summary>Tool use: **todo_write**</summary>
+
+Parameters:
+
+```json
+{
+  "merge": true
+}
+```
+Result:
+
+```json
+{
+  "finalTodos": [
+    {
+      "content": "script2video: StageTheme.captionFontId + 字体栈/加载",
+      "id": "s2v-theme",
+      "status": "completed"
+    },
+    {
+      "content": "script2video: 外观面板 + CaptionBar/导出用字幕字体",
+      "id": "s2v-ui",
+      "status": "completed"
+    },
+    {
+      "content": "web2video: 补齐多语字体，字幕页可选字体",
+      "id": "w2v-fonts",
+      "status": "completed"
+    }
+  ],
+  "initialTodos": [
+    {
+      "content": "script2video: StageTheme.captionFontId + 字体栈/加载",
+      "id": "s2v-theme",
+      "status": "in_progress"
+    },
+    {
+      "content": "script2video: 外观面板 + CaptionBar/导出用字幕字体",
+      "id": "s2v-ui",
+      "status": "pending"
+    },
+    {
+      "content": "web2video: 补齐多语字体，字幕页可选字体",
+      "id": "w2v-fonts",
+      "status": "pending"
+    }
+  ],
+  "success": true,
+  "wasMerge": true
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在检查 web2video 的 FONT_IDS 是否与 StageFontId 导入产生类型冲突。
+
+tsc 编译通过。两个工具均已完成字幕字体配置支持。预览 pane 会随字体选择实时更新。浏览器验证暂不可用。准备给出中文总结。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+烧录到画面的字幕条现在可以单独选字体，**script2video** 和 **web2video** 都接上了。
+
+**script2video**  
+顶栏 **外观** 新增「字幕字体」，和正文/标题分开。预览字幕条、导出烧录、节拍卡都走这一项。默认 Noto Sans；中日文不足会回落 Noto CJK。导出前会等这套字加载完。
+
+**web2video**  
+本来就有 `captionFontId`，这次补了两处：  
+- **配置 → 字幕** 页直接选字体，并带一行预览（不必再绕去「字体」页）  
+- 字体库和 script2video 对齐（含 Source Serif 4、PT Sans、Inter、DM Sans 等 SIL OFL 可商用字体）
+
+两边烧录时都用工程里的字幕字体，和另存的 SRT/VTT 无关。导出窗口里也写了字体从哪改。
+
+---
+
+_**User**_
+
+打开和保存要和web2video的功能一样，是以目录为单位的。
+
+---
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+脚本2视频的打开与保存功能需与网页版保持一致，均以项目文件夹为单位进行操作。
+
+正在对比两个工具当前的打开与保存逻辑。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+先对照 web2video 的目录级打开/保存，再把 script2video 改成同一套。
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "glob": "*.{ts,tsx}",
+  "path": "D:\\WorkSpace\\tools\\web2video\\web2video\\src",
+  "pattern": "save|open|projectFolder|pickDir|showOpen|showSave"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\web2video\\src",
+  "pattern": "save|open|projectFolder|pickDir|showOpen|showSave",
+  "topFiles": [
+    {
+      "matchCount": 9,
+      "uri": "web2video\\src\\lib\\ai\\tools.ts"
+    },
+    {
+      "matchCount": 6,
+      "uri": "web2video\\src\\components\\dialogs\\ExportDialog.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "web2video\\src\\App.tsx"
+    },
+    {
+      "matchCount": 7,
+      "uri": "web2video\\src\\types.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "web2video\\src\\lib\\subtitles.ts"
+    },
+    {
+      "matchCount": 3,
+      "uri": "web2video\\src\\lib\\narration.ts"
+    },
+    {
+      "matchCount": 10,
+      "uri": "web2video\\src\\lib\\templates.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "web2video\\src\\layouts\\StageView.tsx"
+    },
+    {
+      "matchCount": 5,
+      "uri": "web2video\\src\\components\\dialogs\\WelcomeDialog.tsx"
+    },
+    {
+      "matchCount": 6,
+      "uri": "web2video\\src\\store\\useEditor.ts"
+    },
+    {
+      "matchCount": 3,
+      "uri": "web2video\\src\\components\\TopBar.tsx"
+    },
+    {
+      "matchCount": 12,
+      "uri": "web2video\\src\\components\\Inspector.tsx"
+    },
+    {
+      "matchCount": 4,
+      "uri": "web2video\\src\\components\\AddBlockMenu.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "web2video\\src\\lib\\interpolate.ts"
+    },
+    {
+      "matchCount": 8,
+      "uri": "web2video\\src\\lib\\projectFolder.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "web2video\\src\\lib\\exportVideo.ts"
+    },
+    {
+      "matchCount": 2,
+      "uri": "web2video\\src\\components\\dialogs\\TtsDialog.tsx"
+    },
+    {
+      "matchCount": 2,
+      "uri": "web2video\\src\\lib\\ai\\storyboard.ts"
+    },
+    {
+      "matchCount": 11,
+      "uri": "web2video\\src\\components\\Timeline.tsx"
+    },
+    {
+      "matchCount": 5,
+      "uri": "web2video\\src\\lib\\audioStore.ts"
+    }
+  ],
+  "totalFiles": 28,
+  "totalMatches": 150
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "glob": "*.{ts,tsx}",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video\\src",
+  "pattern": "save|open|projectFolder|download|FileSaver|showOpen|showSave"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video\\src",
+  "pattern": "save|open|projectFolder|download|FileSaver|showOpen|showSave",
+  "topFiles": [
+    {
+      "matchCount": 6,
+      "uri": "script2video\\src\\components\\ExportDialog.tsx"
+    },
+    {
+      "matchCount": 3,
+      "uri": "script2video\\src\\components\\TopBar.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\store\\useStudio.ts"
+    },
+    {
+      "matchCount": 6,
+      "uri": "script2video\\src\\components\\AiChatPanel.tsx"
+    },
+    {
+      "matchCount": 2,
+      "uri": "script2video\\src\\components\\AiDialog.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\lib\\aiChat.ts"
+    },
+    {
+      "matchCount": 5,
+      "uri": "script2video\\src\\lib\\aiSecrets.ts"
+    },
+    {
+      "matchCount": 5,
+      "uri": "script2video\\src\\components\\TtsDialog.tsx"
+    },
+    {
+      "matchCount": 4,
+      "uri": "script2video\\src\\lib\\audioStore.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\lib\\ttsSecrets.ts"
+    },
+    {
+      "matchCount": 9,
+      "uri": "script2video\\src\\lib\\platform.ts"
+    }
+  ],
+  "totalFiles": 11,
+  "totalMatches": 43
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\lib\projectFolder.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+需要将 web2video 的目录级打开/保存功能移植到 script2video。
+
+正在对比 script2video 与 web2video 的目录操作逻辑。script2video 目前通过 Tauri 文件系统读写，需改为类似 web2video 的目录级访问方式：打开时选择包含 project.json 的文件夹，保存时将项目数据写入绑定目录下的对应子路径。
+
+计划将目录句柄持久化到 IndexedDB，应用启动时自动恢复绑定目录。若浏览器不支持目录选择，则回退为下载 JSON。同时添加 Ctrl+S 快捷键。针对 Tauri 环境，将使用 dialog 插件选取文件夹，并通过 fs 插件完成读写。接下来会查看 script2video 的 platform.ts、TopBar、store 及 Tauri 能力配置，以及 web2video 的 TopBar 和键盘模块代码。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\lib\platform.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\components\TopBar.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\store\useStudio.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\lib\audioStore.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\components\TopBar.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\hooks\useKeyboard.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\sample.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在检查 web2video 的 WelcomeDialog，确认新建项目时如何清空绑定目录。
+
+正在对比 web2video 与 script2video 的差异。重点查看 StatusBar 的 projectDirName、Tauri 文件系统能力（目录选择与递归读写）、音频格式（mp3 对 wav）以及 qwen TTS 输出格式。接下来将查阅 Tauri 插件配置。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\store\useEditor.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "path": "D:\\WorkSpace\\tools\\web2video",
+  "pattern": "setProjectDirName|projectDirName"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video",
+  "pattern": "setProjectDirName|projectDirName",
+  "topFiles": [
+    {
+      "matchCount": 2,
+      "uri": "web2video\\src\\lib\\projectFolder.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "web2video\\src\\components\\StatusBar.tsx"
+    },
+    {
+      "matchCount": 2,
+      "uri": "web2video/src/lib/projectFolder.ts"
+    },
+    {
+      "matchCount": 4,
+      "uri": "web2video/src/store/useEditor.ts"
+    },
+    {
+      "matchCount": 4,
+      "uri": "web2video\\src\\store\\useEditor.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "web2video/src/components/StatusBar.tsx"
+    }
+  ],
+  "totalFiles": 6,
+  "totalMatches": 14
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="search" data-tool-name="glob_file_search"><details>
+<summary>Tool use: **glob_file_search** • Searched codebase "" • **15** results in **1** directory</summary>
+
+Directory: **`D:\WorkSpace\tools\web2video\script2video`** (15 files)
+
+| File |
+|------|
+| `../script2video\src-tauri\gen\schemas\acl-manifests.json` |
+| `../script2video\src-tauri\capabilities\default.json` |
+| `../script2video\src-tauri\gen\schemas\desktop-schema.json` |
+| `../script2video\src-tauri\gen\schemas\windows-schema.json` |
+| `../script2video\tsconfig.json` |
+| `../script2video\package.json` |
+| `../script2video\src-tauri\gen\schemas\capabilities.json` |
+| `../script2video\src-tauri\Cargo.toml` |
+| `../script2video/tsconfig.node.json` |
+| `../script2video/engines/manim/clock.json` |
+| `../script2video/tsconfig.json` |
+| `../script2video\package-lock.json` |
+| `../script2video/package-lock.json` |
+| `../script2video\src-tauri\tauri.conf.json` |
+| `../script2video/package.json` |
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\lib\qwenTts.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\README.md</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\components\dialogs\WelcomeDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\App.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+README 已说明 Web 与 Tauri 的交互差异：Web 通过下载或拖入 project.json 处理，Tauri 则打开文件夹。音频存储路径为 media/{lang}/{scriptId}。
+
+计划将项目改为目录结构，参考 web2video 的实现方式。需要创建 projectFolder.ts 模块，使用 wav 文件，并在 store 中添加 projectDirName 字段。随后将 TopBar、App 恢复目录、Ctrl+S 及新建项目时清空绑定目录的逻辑接入。底部状态栏会显示当前目录名称。Tauri 端将支持选择文件夹并读写文件。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src-tauri\capabilities\default.json</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\package.json</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\components\StatusBar.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "path": "D:\\WorkSpace\\tools\\web2video\\web2video\\src\\store",
+  "pattern": "replaceProject|newProject|clearBoundDir"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\web2video\\src\\store",
+  "pattern": "replaceProject|newProject|clearBoundDir",
+  "topFiles": [
+    {
+      "matchCount": 6,
+      "uri": "web2video/src/store/useEditor.ts"
+    },
+    {
+      "matchCount": 6,
+      "uri": "web2video\\src\\store\\useEditor.ts"
+    }
+  ],
+  "totalFiles": 2,
+  "totalMatches": 12
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\lib\synthScript.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video",
+  "pattern": "showDirectoryPicker|FileSystemDirectoryHandle"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video",
+  "pattern": "showDirectoryPicker|FileSystemDirectoryHandle",
+  "topFiles": [],
+  "totalFiles": 0,
+  "totalMatches": 0
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+音频已按语言和脚本 ID 存储在 media/{lang}/{scriptId} 目录下。
+
+Tauri 的文件系统权限需要扩展。当前仅允许读写文本文件，还需添加读取、写入、创建目录及检查文件存在的二进制权限。
+
+还需补充 `fs:allow-read-dir` 和 `fs:allow-create` 权限。对话框将使用 `directory: true` 实现目录选择器。
+
+Tauri 端计划把文件夹路径存入 localStorage，而非 FileSystemDirectoryHandle。恢复时直接使用该路径，Tauri 的文件系统作用域已覆盖常用目录。
+
+若未绑定特定目录，保存时会先让用户选择文件夹，再在其下创建项目子目录。
+
+准备实现双后端方案。
+
+浏览器端沿用 File System Access API，与 web2video 保持一致。Tauri 端因不确定 WebView2 是否支持 showDirectoryPicker，仍采用基于路径的文件系统操作。两个后端将通过 projectFolder.ts 统一接口暴露给上层调用。
+
+canPickDirectory() 将统一返回浏览器端的 showDirectoryPicker 或 Tauri 端的 isTauri() 判断。
+
+Tauri 端的具体实现已明确：从 localStorage 读取 boundPath，通过 dialog.open 选择目录；读取 project.json 使用 readTextFile，列出目录使用 readDir，写入二进制文件使用 writeFile，创建 media/lang 目录使用 mkdir。
+
+已确认 Tauri v2 的 fs 插件 API 包括 open、readTextFile、writeTextFile、readFile、writeFile、mkdir、exists、readDir 及 BaseDirectory。
+
+具体权限配置已确定：新增 `fs:allow-read-file`、`fs:allow-write-file`、`fs:allow-mkdir`、`fs:allow-exists`、`fs:allow-read-dir`、`fs:allow-create`。`writeFile` 创建文件时需 `fs:allow-create`。对话框目录选择直接复用 `dialog:allow-open`。新建项目时应清空已绑定的目录路径，与 web2video 保持一致。
+
+将添加 `parseProjectFile` 函数来解析工程文件并校验脚本列表。默认工程名称设为“未命名工程”。状态管理中新增 `projectDirName` 字段用于存储绑定的目录路径。
+
+新增清空绑定目录按钮，清除后重置为空工程。键盘 Ctrl+S 将绑定保存快捷键。底部状态栏会显示当前绑定的目录名称。
+
+音频文件格式定为 wav，加载时优先尝试 wav，失败则回退到 mp3。写入时根据 blob 类型或源地址自动判断扩展名和 MIME 类型。
+
+音频始终以 .wav 格式写入，加载时若缺少 .wav 则回退到 .mp3。浏览器端保留 platform.ts 的文本读写作为 JSON 下载的后备方案。Tauri 端会先尝试使用 showDirectoryPicker，若 WebView2 不支持再回退到 Tauri 对话框。
+
+决定将双后端逻辑收拢到单一文件内，通过 `Bound` 类型区分两种绑定方式：浏览器端使用 `FileSystemDirectoryHandle` 并持久化到 IndexedDB，Tauri 端使用字符串路径并存入 localStorage。`pickDirectory()` 将按环境条件返回对应实现，避免混用造成困惑。
+
+无需 `fs:allow-rename` 权限。
+
+Windows 路径分隔符兼容性已确认，Tauri 2 均可识别。
+
+新增 `join` 辅助函数，根据目录路径自动选择反斜杠或正斜杠进行路径拼接。
+
+Tauri 2 的 `readDir` 返回包含 `name`、`isDirectory`、`isFile` 的条目数组。
+
+`exists` 由 plugin-fs 提供。
+
+Tauri 2.2 中 `fs:allow-read-file` 等权限需显式配置 `$HOME`、`$DOCUMENT`、`$DESKTOP` 等作用域路径。
+
+Tauri 2 的 `fs:scope` 是全局作用域，各命令权限均继承该范围，因此新增权限标识时无需重复路径。正在确认 `writeFile` 是否支持 `{ create: true }` 参数，以便在目标文件不存在时自动创建。
+
+确认 Tauri v2 的 `writeFile` 默认会自动创建文件，因此只需 `fs:allow-write-file` 与 `fs:allow-create` 即可。新增 `fs:allow-stat` 权限，其余文本读写权限保持不变。Tauri 端恢复绑定目录时仅将路径字符串存入状态，不预先验证文件夹是否仍然存在，留待实际保存或打开时再做检查。
+
+恢复绑定目录时仅保留路径名称，不重新请求权限，留待下次保存时再做检查。
+
+新建项目会清空已绑定的目录路径。
+
+parseProjectFile 与默认工程名称常量将放在 sample.ts 中。
+
+README 第八节会调整为与 web2video 一致的行为：用户选择父目录，程序自动在其下创建项目子目录并写入工程文件和媒体资源。
+
+保存逻辑完全对齐 web2video：若未绑定目录，则让用户选择父目录，再在其下创建 `{projectName}/project.json` 及 media 子目录。
+
+快捷键 Ctrl+S 将在 App.tsx 的 useEffect 中绑定。底部状态栏会显示当前绑定的目录名称。顶部工具栏的打开与保存按钮将分别调用 openProjectFolder 和 saveProjectFolder。
+
+JSON 回退加载时同样会清空已绑定目录。projectFolder 将直接导入 saveAs，不再依赖 platform.ts 的文本读写函数。需要为旧版 JSON 包装器增加容错解析，并确保 tsconfig 已启用 DOM 库以支持 FileSystemDirectoryHandle。接下来将实现 folderNameFromProject。
+
+保存与打开后都会调用 setStatus 向用户反馈结果，与 web2video 的静默保存形成对比。底部状态栏将同步显示当前绑定的目录名称。Tauri
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="search" data-tool-name="glob_file_search"><details>
+<summary>Tool use: **glob_file_search** • Searched codebase "" • **0** results in **1** directory</summary>
+
+Directory: **`D:\WorkSpace\tools\web2video\script2video\node_modules\@tauri-apps\plugin-fs`** (0 files)
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\store\useEditor.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\vite-env.d.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\README.md</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+将实现 projectFolder.ts，同时支持 FSA 和 Tauri 两种后端。
+
+正在更新 capabilities 并将 store、TopBar、App 及 parseProjectFile 接入新逻辑。已梳理 Tauri 文件系统权限列表，现有 fs:scope 已覆盖常见目录。注意到 Windows 用户常将项目保存在 HOME 目录之外（如 D:\WorkSpace），这需要额外处理。
+
+发现 web2video 的 showDirectoryPicker 不受路径限制，但 Tauri 的 fs:scope 仅允许 HOME、DOCUMENT、DESKTOP、DOWNLOAD 四个目录。用户若选择 D:\WorkSpace 等外部路径，Tauri 会直接拒绝。正在考虑两种方案：一是将 scope 扩大到 `**`；二是通过 dialog 获取路径后，再调用自定义 Rust 命令写入目标位置。
+
+确定采用 `$HOME/**` 与 `$DOCUMENT/**` 等宽泛路径作为 Tauri 的 fs:scope 允许范围。这样既能满足本地桌面工具对用户自选目录的需求，又可保留对话框作为安全边界。
+
+进一步分析发现，Tauri 的 `**` 根路径可能无法生效。更稳妥的做法是在用户通过对话框选择目录后，于 Rust 端动态调用 `app.fs_scope().allow_directory(&path, true)?` 将该路径加入作用域，而非依赖静态的全局 scope 配置。
+
+放弃在 JS 端动态扩展 Tauri 文件作用域的方案。改为优先使用 File System Access API（即 showDirectoryPicker），因为 WebView2 在 Windows 上已原生支持该接口，行为与浏览器一致。Linux 和 macOS 的 WebKit 可能不支持该 API，届时回退到 Tauri 对话框配合现有 fs:scope，并添加说明。
+
+已确定三段式实现策略。Windows 桌面端与 Chrome 浏览器均优先使用 showDirectoryPicker，确保与 web2video 完全一致的文件夹选择体验。若浏览器不支持目录选择且非 Tauri 环境，则回退到 JSON 下载上传。针对 Linux 与 macOS 的 Tauri 桌面端，仍保留基于路径的文件操作作为兜底方案。此外，showDirectoryPicker 在 WebView2 中运行时，IndexedDB 的句柄持久化机制也能正常工作。
+
+FSA 路径将完全复刻 web2video 的实现方式。Tauri 后端的目录持久化改用 localStorage 存储，键名为 `script2video.project-dir`。`parseProjectFile` 会放在 `sample.ts` 中，与 `templates.parseProjectFile` 保持一致。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "contextAfter": 25,
+  "path": "D:\\WorkSpace\\tools\\web2video\\web2video\\src\\lib\\templates.ts",
+  "pattern": "export function parseProjectFile"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\web2video\\src\\lib\\templates.ts",
+  "pattern": "export function parseProjectFile",
+  "topFiles": [
+    {
+      "matchCount": 5,
+      "uri": "web2video\\src\\lib\\templates.ts"
+    }
+  ],
+  "totalFiles": 1,
+  "totalMatches": 1
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\lib\langs.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+langs.ts 已导出 LANG_IDS。
+
+正在实现文件操作。新建项目时会清空绑定目录并设置项目目录名。IDB 音频清理策略与 web2video 保持一致，允许旧片段残留。底部状态栏将同时显示项目路径和当前状态。
+
+App 中将添加 Ctrl+S 快捷键。Tauri 的二进制文件系统能力需要更新。README 第八节会调整为与 web2video 一致的表述。platform.ts 保留现有函数，不再删除；saveAs 和文件输入逻辑将直接用于项目 JSON 的保存与加载。
+
+projectFolder 是长代码移植，需适配 Tauri 环境。Tauri 的 writeFile 接收 Uint8Array。新增了跨平台路径拼接函数。Tauri 的 exists 和 readDir API 也已确定。
+
+将使用 Bound 抽象统一处理两种绑定方式：FSA 目录句柄存入 IndexedDB，路径字符串存入 localStorage。恢复绑定目录时优先尝试 FSA 句柄，否则回退到路径字符串。若采用 FSA 方式，仅在保存前设置名称而不申请权限；路径恢复则从最后一段提取名称。打开项目文件夹时，若支持 pickDirectory 则走 FSA 流程。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+按 web2video 的方式改：工程以文件夹为单位（`project.json` + `media/`），打开/保存都走目录。
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\lib\langs.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video",
+  "pattern": "openTextFile|saveTextFile|isTauri"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video",
+  "pattern": "openTextFile|saveTextFile|isTauri",
+  "topFiles": [
+    {
+      "matchCount": 4,
+      "uri": "script2video\\src\\components\\TopBar.tsx"
+    },
+    {
+      "matchCount": 2,
+      "uri": "script2video\\src\\lib\\edgeTranslate.ts"
+    },
+    {
+      "matchCount": 2,
+      "uri": "script2video/src/lib/edgeTranslate.ts"
+    },
+    {
+      "matchCount": 2,
+      "uri": "script2video/src/lib/qwenTts.ts"
+    },
+    {
+      "matchCount": 4,
+      "uri": "script2video/src/components/TopBar.tsx"
+    },
+    {
+      "matchCount": 5,
+      "uri": "script2video/src/lib/platform.ts"
+    },
+    {
+      "matchCount": 2,
+      "uri": "script2video\\src\\lib\\qwenTts.ts"
+    },
+    {
+      "matchCount": 5,
+      "uri": "script2video\\src\\lib\\platform.ts"
+    }
+  ],
+  "totalFiles": 8,
+  "totalMatches": 26
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+将新建 projectFolder.ts，更新 store、TopBar、App 等组件，并简化 platform.ts 以保留 isTauri 判断。同时会同步更新 sample、capabilities 和 README。
+
+决定从 platform.ts 中移除未使用的文件辅助函数，仅保留 isTauri，避免残留死代码。现在开始编写所有文件。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\sample.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\sample.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+意识到可能误改了 `emptyScript`，将其替换成了 `DEFAULT_PROJECT_NAME`。
+
+需要查看 sample.ts 中的相关代码。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\sample.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+修复了 emptyScript 函数头。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\sample.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\sample.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+sample.ts 已确认无误。接下来将编写主文件 projectFolder.ts。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\lib\projectFolder.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\store\useStudio.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\store\useStudio.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\components\TopBar.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\components\TopBar.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\App.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\App.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\App.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+存在循环依赖风险。
+
+检查了项目文件夹模块与 store、sample 之间的依赖关系。确认不存在循环依赖：projectFolder 导入 useStudio 时 store 已存在，restoreBoundDir 在 App.tsx 的 useEffect 中执行，此时 store 也已就绪。依赖链路安全。
+
+修复了 TopBar 中未使用的 setProject 引用。更新了 Tauri 功能配置和 README。保留了 platform.ts 中未使用的 saveTextFile/openTextFile 函数。确认 App.tsx 的 setTab 仍在使用。sample.ts 被 store 和 projectFolder 同时导入，无循环依赖。showDirectoryPicker 需要 DOM 类型库支持。
+
+检查了 tsconfig 配置。确认 Uint8Array 可直接用于 Blob 构造函数，无需额外转换。准备运行 tsc 编译验证。发现潜在类型兼容性问题：某些 TypeScript 版本可能不将 Tauri 返回的 Uint8Array 视为 BlobPart。
+
+若 tsc 报错，可将 Uint8Array 包装为 `bytes.buffer` 以解决类型兼容性问题。FileSystemDirectoryHandle.values() 是异步迭代器，需确认 tsconfig 目标版本支持。web2video 使用相同模式，因此该实现没有问题。store 在模块加载时即通过 create() 创建，restoreBoundDir 执行时 store 已就绪，不存在初始化顺序风险。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src-tauri\capabilities\default.json</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\README.md</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\tsconfig.json</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\components\TopBar.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\App.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+发现 platform.ts 中的 saveTextFile 和 openTextFile 被标记为未使用。这属于未使用的导出，TypeScript 通常只检查未使用局部变量。
+
+已确认 TopBar 的所有引用均被使用。正在排查 Blob 构造函数在严格模式下是否因 Uint8Array 不符合 BlobPart 类型而失败，并准备运行 tsc 检查类型兼容性。同时注意到 projectFolder、store/useStudio 和 sample 之间的循环导入关系需要修正。
+
+已确认 File System Access API 的 showDirectoryPicker 支持 id 参数来记住上次访问的目录。未使用函数是导出项，不会触发 noUnusedLocals 报错。README 已足够，无需再添加 Usage 面板说明。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2"><details>
+<summary>Tool use: **run_terminal_command_v2** • Run command: npx tsc --noEmit</summary>
+```bash
+npx tsc --noEmit
+```
+
+```
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+src/lib/projectFolder.ts(103,21): error TS2339: Property 'queryPermission' does not exist on type 'FileSystemDirectoryHandle'.
+src/lib/projectFolder.ts(104,24): error TS2339: Property 'requestPermission' does not exist on type 'FileSystemDirectoryHandle'.
+src/lib/projectFolder.ts(110,25): error TS2339: Property 'showDirectoryPicker' does not exist on type 'Window & typeof globalThis'.
+src/lib/projectFolder.ts(146,34): error TS2339: Property 'values' does not exist on type 'FileSystemDirectoryHandle'.
+src/lib/projectFolder.ts(287,51): error TS2322: Type 'Uint8Array<ArrayBufferLike>' is not assignable to type 'BlobPart'.
+  Type 'Uint8Array<ArrayBufferLike>' is not assignable to type 'ArrayBufferView<ArrayBuffer>'.
+    Types of property 'buffer' are incompatible.
+      Type 'ArrayBufferLike' is not assignable to type 'ArrayBuffer'.
+        Type 'SharedArrayBuffer' is not assignable to type 'ArrayBuffer'.
+          Types of property '[Symbol.toStringTag]' are incompatible.
+            Type '"SharedArrayBuffer"' is not assignable to type '"ArrayBuffer"'.
+
+```
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\sample.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+需要确认 web2video 如何使用 File System Access API。
+
+web2video 可能包含额外类型。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="search" data-tool-name="glob_file_search"><details>
+<summary>Tool use: **glob_file_search** • Searched codebase "" • **2** results in **1** directory</summary>
+
+Directory: **`D:\WorkSpace\tools\web2video\web2video\src`** (2 files)
+
+| File |
+|------|
+| `../web2video\src\vite-env.d.ts` |
+| `../web2video/src/vite-env.d.ts` |
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\vite-env.d.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\tsconfig.json</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+准备将 vite-env.d.ts 中的 FSA 类型复制到 script2video，并修复 Blob 构造函数以正确拷贝缓冲区。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\vite-env.d.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在补充 FSA 类型，并修复 Blob 相关问题。
+
+正在解决 Uint8Array 与 ArrayBuffer 的类型兼容性问题，准备通过复制数组来构造 Blob。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\vite-env.d.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\lib\projectFolder.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在检查 `FileSystemDirectoryHandle` 上是否支持 `getFileHandle` 方法。
+
+确认 `FileSystemDirectoryHandle` 支持 `getFileHandle` 与 `getDirectoryHandle`。Vite 环境类型定义可能与 `lib.dom` 合并，保留 `getFileHandle` 并新增 `queryPermission`。准备重新运行 TypeScript 编译。`platform.ts` 中未使用的导出函数因被引用而保留。`TopBar` 中仍在使用 `isTauri`。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2"><details>
+<summary>Tool use: **run_terminal_command_v2** • Run command: npx tsc --noEmit</summary>
+```bash
+npx tsc --noEmit
+```
+
+```
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+```
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+TypeScript 编译通过。正在检查 UsagePane 中的旧保存文案。
+
+检查 lint 和 HMR 行为。projectFolder 是新增逻辑。platform.ts 中未使用的文件函数可保留。浏览器验证需用户自行测试。首次保存将按 web2video 方式选择父目录并创建子文件夹。sample.ts 的 emptyScript 经确认有效。
+
+打开时支持选择项目文件夹或包含项目的父目录。底部状态栏绑定目录路径。Ctrl+S 保存，新建项目会清空绑定。整体逻辑已确认无误。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="read_lints"><details>
+<summary>Tool use: **read_lints**</summary>
+
+Parameters:
+
+```json
+{
+  "paths": [
+    "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\lib\\projectFolder.ts",
+    "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\App.tsx",
+    "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\components\\TopBar.tsx",
+    "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\sample.ts",
+    "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\store\\useStudio.ts"
+  ]
+}
+```
+Result:
+
+```json
+{
+  "linterErrorsByFile": [
+    {
+      "relativeWorkspacePath": "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\lib\\projectFolder.ts"
+    },
+    {
+      "relativeWorkspacePath": "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\App.tsx"
+    },
+    {
+      "relativeWorkspacePath": "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\components\\TopBar.tsx"
+    },
+    {
+      "relativeWorkspacePath": "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\sample.ts"
+    },
+    {
+      "relativeWorkspacePath": "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\store\\useStudio.ts"
+    }
+  ]
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+已完成。打开和保存功能将改为以目录为单位，与 web2video 保持一致。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+script2video 的打开/保存已经改成和 web2video 一样，**以工程目录为单位**。
+
+**保存**  
+选一个上级目录，会在里面建「项目名」文件夹，写入：
+
+- `project.json`：口播、脚本、外观
+- `media/{语言}/{脚本id}.wav`：配音
+
+已经绑过目录后，再点保存或 **Ctrl+S** 就写回同一处。
+
+**打开**  
+可以直接打开那个项目文件夹，也可以选包含它的上级目录。配音会一并读回来。
+
+底栏会显示当前绑定的路径（例如 `黑洞不是洞/project.json`）。新建工程会解开绑定，下次保存再选目录。
+
+请用 Chrome / Edge 试一次「保存 → 关掉再打开」。没有目录选择器的浏览器仍会退回下载 JSON（不含音频）。
+
+---
+
+_**User**_
+
+检查 两个工具各处使用的字体是否是免费可商用的，并在各自和用法而对每一处的字体进行声明。以及README.md
+
+---
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在逐一检查 web2video 和 script2video 中所有字体的商用授权情况。需要为每处字体使用位置提供免费商用声明，并同步更新 README.md。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+先把两个工具里实际用到的字体和引用位置都找出来，再核对许可并写进用法页和 README。
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "glob": "*.{html,css,ts,tsx,md}",
+  "path": "D:\\WorkSpace\\tools\\web2video\\web2video",
+  "pattern": "font-family|fonts.googleapis|Font|STAGE_FONTS|Fraunces|DM Sans|Noto|Inter|Literata|Plex|Nunito|Source"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\web2video",
+  "pattern": "font-family|fonts.googleapis|Font|STAGE_FONTS|Fraunces|DM Sans|Noto|Inter|Literata|Plex|Nunito|Source",
+  "topFiles": [
+    {
+      "matchCount": 1,
+      "uri": "web2video\\README.md"
+    },
+    {
+      "matchCount": 18,
+      "uri": "web2video\\src\\lib\\ai\\tools.ts"
+    },
+    {
+      "matchCount": 6,
+      "uri": "web2video\\src\\components\\dialogs\\ExportDialog.tsx"
+    },
+    {
+      "matchCount": 24,
+      "uri": "web2video\\src\\components\\AppearancePanel.tsx"
+    },
+    {
+      "matchCount": 8,
+      "uri": "web2video\\src\\App.tsx"
+    },
+    {
+      "matchCount": 92,
+      "uri": "web2video\\src\\lib\\fonts.ts"
+    },
+    {
+      "matchCount": 8,
+      "uri": "web2video\\src\\types.ts"
+    },
+    {
+      "matchCount": 14,
+      "uri": "web2video\\src\\lib\\templates.ts"
+    },
+    {
+      "matchCount": 12,
+      "uri": "web2video\\src\\layouts\\StageView.tsx"
+    },
+    {
+      "matchCount": 2,
+      "uri": "web2video\\src\\store\\useEditor.ts"
+    },
+    {
+      "matchCount": 5,
+      "uri": "web2video\\src\\components\\Inspector.tsx"
+    },
+    {
+      "matchCount": 2,
+      "uri": "web2video\\src\\components\\dialogs\\PrefsDialog.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "web2video\\src\\layouts\\MediaFrame.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "web2video\\src\\lib\\exportVideo.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "web2video\\src\\components\\Stage.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "web2video\\src\\components\\dialogs\\TextI18nDialog.tsx"
+    },
+    {
+      "matchCount": 2,
+      "uri": "web2video\\index.html"
+    },
+    {
+      "matchCount": 2,
+      "uri": "web2video\\src\\index.css"
+    },
+    {
+      "matchCount": 9,
+      "uri": "web2video\\src\\lib\\langs.ts"
+    }
+  ],
+  "totalFiles": 19,
+  "totalMatches": 209
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "glob": "*.{html,css,ts,tsx,md}",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video",
+  "pattern": "font-family|fonts.googleapis|Font|STAGE_FONTS|Fraunces|DM Sans|Noto|Inter|Literata|Plex|Nunito|Source"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video",
+  "pattern": "font-family|fonts.googleapis|Font|STAGE_FONTS|Fraunces|DM Sans|Noto|Inter|Literata|Plex|Nunito|Source",
+  "topFiles": [
+    {
+      "matchCount": 1,
+      "uri": "script2video/engines/hyperframes/index.html"
+    },
+    {
+      "matchCount": 6,
+      "uri": "script2video/src/store/useStudio.ts"
+    },
+    {
+      "matchCount": 3,
+      "uri": "script2video\\src\\components\\CodeEditor.tsx"
+    },
+    {
+      "matchCount": 7,
+      "uri": "script2video\\src\\lib\\ai\\tools.ts"
+    },
+    {
+      "matchCount": 6,
+      "uri": "script2video\\src\\store\\useStudio.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\lib\\exportVideo.ts"
+    },
+    {
+      "matchCount": 2,
+      "uri": "script2video\\src\\App.tsx"
+    },
+    {
+      "matchCount": 2,
+      "uri": "script2video/src/index.css"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\lib\\engines.ts"
+    },
+    {
+      "matchCount": 14,
+      "uri": "script2video\\src\\components\\StageDialog.tsx"
+    },
+    {
+      "matchCount": 3,
+      "uri": "script2video\\src\\components\\EngineCard.tsx"
+    },
+    {
+      "matchCount": 2,
+      "uri": "script2video\\src\\components\\ExportDialog.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\README.md"
+    },
+    {
+      "matchCount": 2,
+      "uri": "script2video/index.html"
+    },
+    {
+      "matchCount": 2,
+      "uri": "script2video\\index.html"
+    },
+    {
+      "matchCount": 2,
+      "uri": "script2video\\src\\index.css"
+    },
+    {
+      "matchCount": 83,
+      "uri": "script2video\\src\\lib\\stage.ts"
+    },
+    {
+      "matchCount": 3,
+      "uri": "script2video\\src\\components\\CaptionBar.tsx"
+    },
+    {
+      "matchCount": 5,
+      "uri": "script2video\\src\\types.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\components\\UsagePane.tsx"
+    }
+  ],
+  "totalFiles": 20,
+  "totalMatches": 147
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="search" data-tool-name="glob_file_search"><details>
+<summary>Tool use: **glob_file_search** • Searched codebase "" • **16** results in **1** directory</summary>
+
+Directory: **`D:\WorkSpace\tools\web2video`** (16 files)
+
+| File |
+|------|
+| `../web2video\README.md` |
+| `../script2video\README.md` |
+| `../web2video/index.html` |
+| `../script2video\src\lib\engineGuide.ts` |
+| `../script2video/index.html` |
+| `../web2video\src\components\dialogs\HelpDialog.tsx` |
+| `../web2video/README.md` |
+| `../script2video/src/index.css` |
+| `../script2video\index.html` |
+| `../script2video\src\components\UsagePane.tsx` |
+| `../web2video/src/components/dialogs/HelpDialog.tsx` |
+| `../script2video\src\index.css` |
+| `../web2video/src/index.css` |
+| `../README.md` |
+| `../script2video/README.md` |
+| `../script2video/engines/hyperframes/index.html` |
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+发现 web2video 的 index.html 中加载了 Fraunces 字体，需确认其是否为免费可商用字体。
+
+Microsoft YaHei 是系统回退字体，不可商用，将替换为 Noto 等免费字体。准备查看 web2video 的 index.css 以确认 Fraunces 的实际使用情况。
+
+已核对全部 9 种字体的许可证：Noto、Source、IBM Plex、PT Sans、Nunito、Inter、Literata、DM Sans 均为 SIL OFL，Fraunces 同样适用。接下来将检查 web2video langs.ts、script2video index.css、PrefsDialog、HelpDialog、UsagePane 及 engineGuide 中的字体引用。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\index.css</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\index.css</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\lib\langs.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\components\dialogs\PrefsDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\README.md</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\components\UsagePane.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "glob": "*.{css,ts,tsx,html}",
+  "path": "D:\\WorkSpace\\tools\\web2video",
+  "pattern": "Fraunces|font-display|Microsoft YaHei|YaHei|system-ui|fontFamily"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video",
+  "pattern": "Fraunces|font-display|Microsoft YaHei|YaHei|system-ui|fontFamily",
+  "topFiles": [
+    {
+      "matchCount": 7,
+      "uri": "web2video\\src\\layouts\\StageView.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "web2video/src/components/TopBar.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video/src/index.css"
+    },
+    {
+      "matchCount": 7,
+      "uri": "web2video/src/layouts/StageView.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\components\\StageDialog.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "web2video\\src\\components\\TopBar.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "web2video/src/components/ui.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "web2video\\src\\lib\\langs.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\index.css"
+    },
+    {
+      "matchCount": 1,
+      "uri": "web2video\\src\\components\\ui.tsx"
+    },
+    {
+      "matchCount": 2,
+      "uri": "script2video\\src\\components\\CaptionBar.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "web2video/src/lib/langs.ts"
+    },
+    {
+      "matchCount": 4,
+      "uri": "web2video\\src\\components\\AppearancePanel.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "web2video/src/index.css"
+    },
+    {
+      "matchCount": 1,
+      "uri": "web2video/index.html"
+    },
+    {
+      "matchCount": 2,
+      "uri": "script2video\\src\\components\\EngineCard.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "web2video\\src\\components\\Stage.tsx"
+    },
+    {
+      "matchCount": 4,
+      "uri": "web2video/src/components/AppearancePanel.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\lib\\stage.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "web2video/src/components/Stage.tsx"
+    }
+  ],
+  "totalFiles": 20,
+  "totalMatches": 40
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在检查 Tailwind 配置中的 font-display 设置，发现 Fraunces 被用作该类。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "glob": "*.{js,ts,cjs}",
+  "path": "D:\\WorkSpace\\tools\\web2video",
+  "pattern": "font-display|Fraunces|fontFamily"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video",
+  "pattern": "font-display|Fraunces|fontFamily",
+  "topFiles": [
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\lib\\stage.ts"
+    },
+    {
+      "matchCount": 2,
+      "uri": "web2video/tailwind.config.js"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video/tailwind.config.js"
+    }
+  ],
+  "totalFiles": 3,
+  "totalMatches": 4
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\tailwind.config.js</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\tailwind.config.js</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "path": "D:\\WorkSpace\\tools\\web2video\\web2video",
+  "pattern": "\\.sans|langMeta\\(.*\\)\\.sans"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\web2video",
+  "pattern": "\\.sans|langMeta\\(.*\\)\\.sans",
+  "topFiles": [],
+  "totalFiles": 0,
+  "totalMatches": 0
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\README.md</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\README.md</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\components\dialogs\HelpDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+已确认所有字体均为 SIL OFL 许可，包括 Fraunces。
+
+发现 langs.ts 中的 Microsoft YaHei 属于专有字体，计划将其移除。LANGS.sans 目前未被使用，但会一并清理。
+
+web2video 的 index.html 预加载了全部阶段字体及 Fraunces，将精简该文件，并在 HelpDialog 中补充字体声明。
+
+script2video 的 UsagePane 将扩展为按位置列出各字体使用处及许可证列表，README 也会新增字体章节。
+
+将在代码中建立规范的 FONT_LICENSE 表格，供界面渲染与文档引用。
+
+web2video 的字体归属声明将覆盖 FontFields、HelpDialog 及 README；script2video 则在 UsagePane 与 README 中补充。
+
+已细化 script2video 的 UsagePane 表格结构：按工作台 UI、舞台正文、标题、字幕条、中日文回落及可选舞台字体六类列出对应字体与 SIL OFL 许可。
+
+hyperframes/index.html 中的 Noto Sans SC 作为示例引擎 HTML 使用，同样属于 SIL OFL，需在文档中注明。
+
+tailwind 的 system-ui 仅为系统 CSS 回退，不涉及字体文件捆绑。
+
+已细化 web2video 各位置的字体归属：工作台 UI 使用 DM Sans 与 Noto Sans SC，Fraunces 用于顶栏与对话框标题，正文、标题、副标题、金句、口播字幕、进度条场次名及元件覆盖分别对应配置项中的对应字体，均属 SIL OFL。Microsoft YaHei 将从 langs.ts 中移除。
+
+决定在 fonts.ts 与 stage.ts 中分别导出 `FONT_USAGE` 数组，统一驱动 AppearancePanel 与 UsagePane 的字体归属表格。STAGE_FONTS 仍保留为可选列表。README 与用法页将直接引用这些数组，避免重复维护。
+
+将为每种字体添加来源与设计师注释，以满足用户要求的声明需求。确认 Fraunces 属于 SIL OFL 1.1，Undercase Type / Google Fonts，可免费商用。web2video 的 index.html 仍会保留 Fraunces 的预加载，因为该字体确实在界面中使用。IBM Plex、Literata 等字体虽被预加载，但许可证均为 OFL，无需改动。Microsoft YaHei 即使未被调用，也会从 langs.ts 中移除。接下来将检查 langs.sans 是否存在其他使用模式。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "path": "D:\\WorkSpace\\tools\\web2video\\web2video",
+  "pattern": "\\.sans\\b|cjk:"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\web2video",
+  "pattern": "\\.sans\\b|cjk:",
+  "topFiles": [
+    {
+      "matchCount": 10,
+      "uri": "web2video/src/lib/langs.ts"
+    },
+    {
+      "matchCount": 10,
+      "uri": "web2video\\src\\lib\\langs.ts"
+    }
+  ],
+  "totalFiles": 2,
+  "totalMatches": 20
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\engines\hyperframes\index.html</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\README.md</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\lib\\engineGuide.ts",
+  "pattern": "字体|font"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\lib\\engineGuide.ts",
+  "pattern": "字体|font",
+  "topFiles": [
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\lib\\engineGuide.ts"
+    }
+  ],
+  "totalFiles": 1,
+  "totalMatches": 1
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+将添加字体使用常量，并编写辅助函数列出各工具字体及其许可证信息。
+
+移除 Microsoft YaHei。为各工具字体统一标注 SIL OFL 1.1 许可证。README 将列出 Noto、Source、IBM Plex、PT Sans、Nunito Sans 等字体的出处与许可证信息。
+
+Inter、Literata、DM Sans、Fraunces 也确认为 SIL OFL。system-ui 不属于实际 shipped 字体。
+
+将在 web2video 和 script2video 的 fonts.ts 中新增 FONT_USAGE 常量。UsagePane、AppearancePanel、HelpDialog 及根目录 README 都会补充字体声明表格。
+
+考虑在各应用内直接嵌入字体许可证表格，避免额外组件文件。web2video 的 HelpDialog 将添加简短字体表；script2video 的 README 会在“怎么跑”之后或末尾补充字体章节。hyperframes 示例文档将注明其使用 Noto 字体。Inspector 的每块字体覆盖说明也会同步记录。STAGE_FONTS 暂不新增 foundry 字段，现有注释已足够。
+
+决定不为字体对象新增 foundry 字段，避免扩大范围。FONT_USAGE 将按“位置、字体、许可证”三列组织，例如工作台界面使用 DM Sans 与 Noto Sans SC，script2video 不涉及 Fraunces。同时会在 index.css 中添加字体声明注释。
+
+KaTeX 内置字体同样采用 SIL OFL 许可证，需确认其 CSS 是否被实际加载。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "glob": "*.{ts,tsx,css,html,js}",
+  "path": "D:\\WorkSpace\\tools\\web2video",
+  "pattern": "katex|KaTeX|three\\.js|font-face"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video",
+  "pattern": "katex|KaTeX|three\\.js|font-face",
+  "topFiles": [
+    {
+      "matchCount": 2,
+      "uri": "script2video\\src\\components\\UsagePane.tsx"
+    },
+    {
+      "matchCount": 17,
+      "uri": "script2video\\src\\lib\\engineGuide.ts"
+    }
+  ],
+  "totalFiles": 2,
+  "totalMatches": 19
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\lib\engineGuide.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+KaTeX 字体采用 SIL OFL 许可证。若用户导入了 katex CSS，应在 script2video 的用法说明中补充该字体声明。
+
+将为两个工具分别添加 FONT_USAGE 声明表，汇总各处字体及其 SIL OFL 许可证信息。script2video 的 UsagePane 将引用 STAGE_FONTS 和 FONT_USAGE；web2video 的 AppearancePanel 与 HelpDialog 将引用 FONT_USAGE。正在编写 web2video 的具体数组内容。
+
+已补全 web2video 的 FONT_USAGE 数组，涵盖工作台标题、画面正文与列表、画面标题与数字、副标题与署名、金句、口播字幕条及画布进度条场次名等场景。所有涉及的字体均声明为 SIL OFL 许可证。
+
+web2video 的 FONT_USAGE 数组已补全剩余两项：单个元件覆盖与中日文缺字回落。script2video 的 FONT_USAGE 数组已开始编写，涵盖工作台界面、舞台正文、舞台标题及字幕条等场景。
+
+script2video 的 FONT_USAGE 数组已补全中日文缺字回落与 HyperFrames 示例页两项声明。将从 STAGE_FONTS 提取 FONT_FAMILIES 表作为字族目录。通用 CSS 中的 sans-serif 与 system-ui 不随工具分发。YaHei 字体将被修正。会在各文件中添加 CSS 注释。HelpDialog 将直接引用 FONT_USAGE 与 STAGE_FONTS。README 中的表格会改为中文。engineGuide 里的 KaTeX OFL 说明也会同步更新。
+
+根目录 README 将统一声明两个工具的界面与成片均为 SIL OFL（免费可商用），并指引用户前往各自 README 的「字体」节查看明细。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+已核对：成片与界面字体都是 SIL OFL；工作台里的微软雅黑回落会去掉。接着在用法页和 README 里按使用位置写明声明。
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\src\lib\langs.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\src\lib\fonts.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\lib\stage.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\src\index.css</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\index.css</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\tailwind.config.js</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\tailwind.config.js</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+将遵循简洁原则，避免冗长注释。
+
+CSS 注释已足够声明字体许可。接下来将为 UsagePane、AppearancePanel、HelpDialog 和 README 添加字体声明。同时会在 hyperframes 的 index.html 中补充 OFL 字体注释。继续更新 UI。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\components\UsagePane.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\components\UsagePane.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在正确导入 STAGE_FONTS 和 FONT_USAGE 到 UsagePane。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\components\UsagePane.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\components\UsagePane.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\src\components\AppearancePanel.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\src\components\AppearancePanel.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\src\components\dialogs\HelpDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\src\components\dialogs\HelpDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在检查 README 文件。同时核对 index.html 注释、hyperframes 注释、engineGuide 中 KaTeX 的 OFL 声明，以及 StageDialog 已有的 OFL 声明。
+
+将为 script2video、web2video 和根目录的 README 添加字体声明章节。同时会在 index.html 和 hyperframes 中补充注释，并在 engineGuide 的 KaTeX 规则中加入相关说明。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\index.html</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\index.html</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\README.md</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+将在两个工具的 README 及根目录 README 中添加字体声明章节。
+
+将为 web2video、script2video 和 hyperframes 的 HTML 文件及 engineGuide 添加字体注释。script2video 的字体声明将插入在密钥段落之后，web2video 在功能列表之后，根目录在表格之后。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\index.html</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\index.html</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\engines\hyperframes\index.html</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\lib\engineGuide.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\README.md</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\README.md</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\README.md</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+根目录 README 的替换操作可能重复了 chrome 行。
+
+正在核对 UsagePane 和 AppearancePanel 中的字体引用声明。准备对两个工具运行 TypeScript 编译检查。根目录 README 替换时需保留原有的 Chrome 行。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\README.md</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\components\UsagePane.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\components\AppearancePanel.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+UsagePane 的首个导入语句已损坏。误将 useStudio 导入替换为 stage 导入，又额外添加了 FONT_USAGE 导入。
+
+正在修复 UsagePane 的导入语句，恢复根目录 README 中的 Chrome 行。接下来会检查 langs.sans 是否未被使用，并运行 tsc。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\components\UsagePane.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\README.md</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2"><details>
+<summary>Tool use: **run_terminal_command_v2** • Run command: npx tsc --noEmit</summary>
+```bash
+npx tsc --noEmit
+```
+
+```
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+```
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2"><details>
+<summary>Tool use: **run_terminal_command_v2** • Run command: npx tsc --noEmit</summary>
+```bash
+npx tsc --noEmit
+```
+
+```
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+```
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在确认 langs.sans 是否未被使用。web2video 的 TypeScript 编译通过了 noUnusedLocals 检查，但对象上的 sans 字段作为数据被使用，即使从未被读取。
+
+已核对 fonts.ts 中 FONT_USAGE 的插入位置，确认未破坏 DEFAULT_FONT_ID。HelpDialog 的 FONT_USAGE 声明也已检查。script2video 的 StageDialog 仍保留 SIL OFL 声明。langs.sans 未被使用是既有情况。全部检查完成。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\lib\fonts.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="read_lints"><details>
+<summary>Tool use: **read_lints**</summary>
+
+Parameters:
+
+```json
+{
+  "paths": [
+    "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\components\\UsagePane.tsx",
+    "D:\\WorkSpace\\tools\\web2video\\web2video\\src\\components\\dialogs\\HelpDialog.tsx",
+    "D:\\WorkSpace\\tools\\web2video\\web2video\\src\\lib\\fonts.ts"
+  ]
+}
+```
+Result:
+
+```json
+{
+  "linterErrorsByFile": [
+    {
+      "relativeWorkspacePath": "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\components\\UsagePane.tsx"
+    },
+    {
+      "relativeWorkspacePath": "D:\\WorkSpace\\tools\\web2video\\web2video\\src\\components\\dialogs\\HelpDialog.tsx"
+    },
+    {
+      "relativeWorkspacePath": "D:\\WorkSpace\\tools\\web2video\\web2video\\src\\lib\\fonts.ts"
+    }
+  ]
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+审计已完成。我将提供清晰的中文总结，说明各工具字体的商用许可情况及声明位置。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+查过两边实际用到的字体：**都能免费商用**，许可都是 **SIL OFL**。唯一不合适的是 web2video 语言表里曾经把 **微软雅黑** 当中文回落（系统字体，不能当捆绑商用字体声明），已经删掉，只留 Noto Sans SC。
+
+声明已经写进各自用法页和 README，按「用在哪」列出。
+
+**web2video**  
+- 工作台：`DM Sans`、`Noto Sans SC`；顶栏/对话框标题：`Fraunces`、`Noto Serif SC`  
+- 成片：配置里的正文/标题/副标题/金句/字幕/进度条，以及检视里的元件覆盖  
+- 看：配置 → 字体、帮助（`?`）、[`web2video/README.md`](web2video/README.md#字体)
+
+**script2video**  
+- 工作台：`DM Sans`、`Noto Sans SC`  
+- 成片：外观里的正文/标题/字幕（含烧录和节拍卡）；HyperFrames 示例页用 Noto Sans SC  
+- 看：用法页、[`script2video/README.md`](script2video/README.md#字体)
+
+仓库根 README 也指到这两节。可选成片字体（Noto、Source、IBM Plex、PT Sans、Nunito Sans、Inter、Literata、DM Sans）全部是 SIL OFL；脚本若引入 KaTeX，公式字体同样是 SIL OFL。
+
+---
+
+_**User**_
+
+界面中及titile中的script2video首字母大写，另增加favicon
+
+---
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在确认将界面和标题中的 script2video 首字母大写，以匹配 Web2Video 的品牌风格。
+
+同时需要添加 favicon。已定位到 index.html 中的标题为 "script2video — 脚本与口播"，计划将其改为 Script2Video 以与 Web2Video 品牌风格保持一致。
+
+重新考虑用户要求：「首字母大写」可能仅指首字母大写，即 Script2video，而非 Script2Video。接下来将检查现有用法，并参考 web2video 的 favicon 实现方式。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+先对照 web2video 的品牌写法与 favicon，再改 script2video 的界面、标题并补上图标。
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "glob": "*.{html,tsx,ts,json,md,svg}",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video",
+  "pattern": "script2video"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video",
+  "pattern": "script2video",
+  "topFiles": [
+    {
+      "matchCount": 4,
+      "uri": "script2video\\README.md"
+    },
+    {
+      "matchCount": 3,
+      "uri": "script2video\\engines\\hyperframes\\index.html"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\index.html"
+    },
+    {
+      "matchCount": 3,
+      "uri": "script2video\\src\\lib\\projectFolder.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\components\\TopBar.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\store\\useStudio.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\sample.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\lib\\ai\\tools.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\components\\PreviewPane.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\lib\\aiChat.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\lib\\aiSecrets.ts"
+    },
+    {
+      "matchCount": 2,
+      "uri": "script2video\\package-lock.json"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\package.json"
+    },
+    {
+      "matchCount": 3,
+      "uri": "script2video\\src-tauri\\tauri.conf.json"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\lib\\voiceLibrary.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\lib\\audioStore.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\lib\\ttsSecrets.ts"
+    }
+  ],
+  "totalFiles": 17,
+  "totalMatches": 27
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="search" data-tool-name="glob_file_search"><details>
+<summary>Tool use: **glob_file_search** • Searched codebase "" • **1** result in **1** directory</summary>
+
+Directory: **`D:\WorkSpace\tools\web2video`** (1 file)
+
+| File |
+|------|
+| `../.\web2video\public\favicon.svg` |
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\index.html</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\index.html</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src-tauri\tauri.conf.json</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在查看 web2video 的 favicon.svg 和 TopBar 品牌标识。
+
+已确定将 "script2video" 统一改为 Script2Video 以匹配 Web2Video 品牌。需要修改的用户可见位置包括：index.html 标题、TopBar h1 以及 tauri.conf.json 中的产品名称和窗口标题。
+
+发现 parseProjectFile 错误提示、SYSTEM_PROMPT 和 hyperframes 标题中也存在 script2video 字样，需同步改为 Script2Video。package.json 名称、localStorage 键名、数据库名称、文件夹路径等内部标识保持不变。favicon 将参考 web2video 的图标进行适配。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\public\favicon.svg</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "glob": "*.{tsx,html}",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video",
+  "pattern": "script2video|Web2Video"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video",
+  "pattern": "script2video|Web2Video",
+  "topFiles": [
+    {
+      "matchCount": 3,
+      "uri": "script2video\\engines\\hyperframes\\index.html"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\components\\PreviewPane.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video/src/components/TopBar.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\index.html"
+    },
+    {
+      "matchCount": 3,
+      "uri": "script2video/engines/hyperframes/index.html"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\components\\TopBar.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video/index.html"
+    }
+  ],
+  "totalFiles": 7,
+  "totalMatches": 11
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\components\TopBar.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="search" data-tool-name="glob_file_search"><details>
+<summary>Tool use: **glob_file_search** • Searched codebase "" • **0** results in **1** directory</summary>
+
+Directory: **`D:\WorkSpace\tools\web2video\script2video\public`** (0 files)
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "glob": "*.tsx",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video\\src",
+  "pattern": "script2video"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video\\src",
+  "pattern": "script2video",
+  "topFiles": [
+    {
+      "matchCount": 1,
+      "uri": "script2video/src/components/TopBar.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\components\\PreviewPane.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\components\\TopBar.tsx"
+    }
+  ],
+  "totalFiles": 3,
+  "totalMatches": 3
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+Vite 从 script2video/public 目录提供静态资源。
+
+正在设计 Script2Video 的 favicon。采用与 Web2Video 相同的 32×32 铜色圆角风格，但使用脚本线条加播放三角形的图标来区分两者。
+
+确定将产品名称统一为 Script2Video（首字母大写），并同步更新顶部栏标题、页面标题、窗口标题、安装程序名称及错误提示文案。保留 com.web2video.script2video 包标识符不变。
+
+还需检查 Hyperframes 场景标题、AiChatPanel、UsagePane 及 Welcome 等模块中的品牌显示。
+
+计划将 favicon.svg 放入 script2video/public 目录，并在 index.html 中完成链接配置。
+
+考虑在 TopBar 增加一个紧凑的品牌图标块，类似 Web2Video 的顶部样式。
+
+同时会检查 vite-plugin 或引擎配置中的标题设置。
+
+已草拟 favicon SVG：32×32 铜色圆角矩形，内含三条脚本线与一个播放三角形。也在考虑改用视频帧内嵌脚本线的方案。
+
+确认仅需在 index.html 中添加 SVG favicon 即可满足浏览器标签页需求。Tauri 窗口标题的修改才是核心 UI 要求。暂不生成 PNG 图标，优先保证网页端体验。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+界面与标题改为 **Script2Video**（与 Web2Video 一致），并加上与工作台同风格的 favicon。
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\components\TopBar.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\vite.config.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "glob": "*.{tsx,html}",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video\\src",
+  "pattern": "script2video|脚本与口播"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video\\src",
+  "pattern": "script2video|脚本与口播",
+  "topFiles": [
+    {
+      "matchCount": 1,
+      "uri": "script2video/src/components/TopBar.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\components\\PreviewPane.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\components\\TopBar.tsx"
+    }
+  ],
+  "totalFiles": 3,
+  "totalMatches": 3
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+用户要求将界面和标题中的 "Script2video" 首字母大写。
+
+计划修改 TopBar、index.html 标题、favicon.svg、tauri 窗口标题、hyperframes 标题及 AiChatPanel 等多处。favicon 将采用 script 主题以区别于 Web2Video 的播放图标。
+
+TopBar 将添加 favicon.svg 图标并保留 Web/Tauri 徽章。Vite 默认 public 目录用于存放 favicon 文件。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\public\favicon.svg</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\index.html</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\components\TopBar.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src-tauri\tauri.conf.json</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src-tauri\tauri.conf.json</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\engines\hyperframes\index.html</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\sample.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在检查 AiChatPanel、UsagePane、SYSTEM_PROMPT 及 README 标题中的用户可见字符串。
+
+已定位到需要大写的用户可见文本：README 标题与 SYSTEM_PROMPT 中的 "script2video"。接下来将搜索并修正所有剩余的小写显示。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "glob": "*.{tsx,html,ts,md}",
+  "path": "D:\\WorkSpace\\tools\\web2video",
+  "pattern": "script2video"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video",
+  "pattern": "script2video",
+  "topFiles": [
+    {
+      "matchCount": 2,
+      "uri": ".\\script2video\\engines\\hyperframes\\index.html"
+    },
+    {
+      "matchCount": 3,
+      "uri": ".\\README.md"
+    },
+    {
+      "matchCount": 4,
+      "uri": ".\\script2video\\README.md"
+    },
+    {
+      "matchCount": 3,
+      "uri": ".\\script2video\\src\\lib\\projectFolder.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": ".\\script2video\\src\\store\\useStudio.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": ".\\script2video\\src\\lib\\ai\\tools.ts"
+    },
+    {
+      "matchCount": 1488,
+      "uri": ".\\.specstory\\history\\2026-08-16_07-42-14Z-web-tool-for-multimedia.md"
+    },
+    {
+      "matchCount": 1,
+      "uri": ".\\script2video\\src\\components\\PreviewPane.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": ".\\script2video\\src\\lib\\aiChat.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": ".\\script2video\\src\\lib\\aiSecrets.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": ".\\script2video\\src\\lib\\voiceLibrary.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": ".\\script2video\\src\\lib\\audioStore.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": ".\\script2video\\src\\lib\\ttsSecrets.ts"
+    }
+  ],
+  "totalFiles": 13,
+  "totalMatches": 1508
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "glob": "*.tsx",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video\\src",
+  "pattern": "script2video|分镜助手"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video\\src",
+  "pattern": "script2video|分镜助手",
+  "topFiles": [
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\components\\PreviewPane.tsx"
+    }
+  ],
+  "totalFiles": 1,
+  "totalMatches": 1
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在更新面向用户的系统提示词。
+
+正在调整 README 标题与介绍文案。根目录表格将显示 Script2Video，同时保留文件夹链接。AiChatPanel 介绍部分也会同步检查。localStorage 键名保持不变。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "glob": "*.tsx",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\components",
+  "pattern": "script2video|口播脚本"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\script2video\\src\\components",
+  "pattern": "script2video|口播脚本",
+  "topFiles": [
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\components\\AiChatPanel.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "script2video\\src\\components\\PreviewPane.tsx"
+    }
+  ],
+  "totalFiles": 2,
+  "totalMatches": 2
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\lib\ai\tools.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\README.md</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\README.md</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\components\AiChatPanel.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\index.html</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\script2video\src\components\TopBar.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+检查 AiDialog 标题。AiChatPanel 中的 web2video 保持产品名称 Web2Video。
+
+script2video 首字母大写已完成。已确认 index.html 中 favicon 位于 charset 之后。HMR 可能无法自动加载 favicon，需用户手动刷新。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\script2video\src\components\AiChatPanel.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+已确认用户要求：将界面和标题中的 script2video 首字母大写，并新增 favicon。
+
+已完成修改。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+界面和标题已改成 **Script2Video**（和 Web2Video 同一套写法），并加上了 favicon。
+
+- 顶栏名称旁有铜色图标（文稿线条 + 播放键）
+- 浏览器标签：**Script2Video — 脚本与口播**，图标在 `public/favicon.svg`
+- 桌面窗口标题同样是 Script2Video
+
+刷新一下页面就能看到标签图标。目录名、存储键仍是小写 `script2video`，不用改。
+
+---
+
+_**User**_
+
+web2video，全局配置里的字幕页的口播字幕和口播字幕字体页是不是重了？
+
+---
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+用户在询问 web2video 全局设置中“字幕”页的口播字幕字体选择器，是否与“口播字幕”字体页的功能重复。
+
+正在查看 AppearancePanel.tsx 以确认两处字体选择器的具体实现差异。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\components\AppearancePanel.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\components\dialogs\PrefsDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+确认这两个配置项存在冗余。它们都绑定到 project。
+
+准备移除字幕页重复的字体选择器与预览，由字体页统一管理。同时更新帮助文本、FONT_USAGE 和 README 中的路径说明。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\components\AppearancePanel.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "path": "D:\\WorkSpace\\tools\\web2video",
+  "pattern": "字体 / 字幕|字幕页|可在上方"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video",
+  "pattern": "字体 / 字幕|字幕页|可在上方",
+  "topFiles": [
+    {
+      "matchCount": 1,
+      "uri": ".\\web2video\\README.md"
+    },
+    {
+      "matchCount": 1,
+      "uri": ".\\web2video\\src\\components\\AppearancePanel.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": ".\\web2video\\src\\lib\\fonts.ts"
+    },
+    {
+      "matchCount": 1,
+      "uri": ".\\.specstory\\history\\2026-08-16_07-42-14Z-web-tool-for-multimedia.md"
+    },
+    {
+      "matchCount": 1,
+      "uri": ".\\web2video\\src\\components\\Inspector.tsx"
+    }
+  ],
+  "totalFiles": 5,
+  "totalMatches": 5
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在检查导出对话框中关于“配置→字幕/字体”的文本。
+
+计划从字幕页移除重复的字体选择器与预览，恢复原始字段结构，并将字体设置指向独立的字体页面。字幕样式（颜色、边框等）仍保留在字幕标签页，避免重复。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+是重复的：两边都改同一个 `captionFontId`。字幕页只留开关和样式，字号/字体统一放在「字体」页。
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\src\components\AppearancePanel.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\src\components\AppearancePanel.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\src\lib\fonts.ts</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\README.md</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "path": "D:\\WorkSpace\\tools\\web2video\\web2video",
+  "pattern": "字幕 / 字体|字体 / 字幕"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\web2video",
+  "pattern": "字幕 / 字体|字体 / 字幕",
+  "topFiles": [
+    {
+      "matchCount": 1,
+      "uri": "web2video\\README.md"
+    },
+    {
+      "matchCount": 1,
+      "uri": "web2video\\src\\components\\dialogs\\ExportDialog.tsx"
+    },
+    {
+      "matchCount": 1,
+      "uri": "web2video\\src\\components\\Inspector.tsx"
+    }
+  ],
+  "totalFiles": 3,
+  "totalMatches": 3
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+README 的替换可能因空格而失败。
+
+正在查看 ExportDialog 和 HelpDialog 中的字幕/字体相关文本。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\README.md</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\src\components\dialogs\ExportDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search"><details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+Parameters:
+
+```json
+{
+  "caseInsensitive": false,
+  "path": "D:\\WorkSpace\\tools\\web2video\\web2video",
+  "pattern": "配置 → 字幕"
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "outputMode": "content",
+  "path": "D:\\WorkSpace\\tools\\web2video\\web2video",
+  "pattern": "配置 → 字幕",
+  "topFiles": [
+    {
+      "matchCount": 2,
+      "uri": "web2video\\src\\components\\dialogs\\ExportDialog.tsx"
+    }
+  ],
+  "totalFiles": 1,
+  "totalMatches": 2
+}
+```
+Status: **completed**
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+ExportDialog 的首次替换可能已失败。
+
+grep 仍显示旧字符串。准备读取文件 285–320 行。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\components\dialogs\ExportDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+第316行也需要修复。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\src\components\dialogs\ExportDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\components\AppearancePanel.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: D:\WorkSpace\tools\web2video\web2video\src\components\dialogs\HelpDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+正在更新帮助文档中的说明：将「字幕样式（含烧录字幕字体）」简化为「字幕样式」，并注明烧录字幕字体实际位于「字体」页。
+
+确认 CaptionFields 已移除 fontStack，AppearancePanel 仍保留 checkStack。fontStack 在 FontFields 中继续使用，导入与引用均正常。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2"><details>
+<summary>Tool use: **edit_file_v2** • Edit file: D:\WorkSpace\tools\web2video\web2video\src\components\dialogs\HelpDialog.tsx</summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<think><details><summary>Thought Process</summary>
+确认重复。已从字幕页中移除。
+</details></think>
+
+_**Agent (grok-4.6)**_
+
+是重复的，两边改的是同一个 `captionFontId`。
+
+已经从「字幕」页拿掉字体下拉和预览。现在分工是：
+
+- **字体**：选口播字幕用哪套字  
+- **字幕**：开关、双语、底色、位置、字号等样式
+
+字体只在「配置 → 字体」里改一处。
+
+---
+
+_**User**_
+
+web2video 各处用字处增加标签页，像script2video那样说明每种字体。
+
+---
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: </summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: </summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: </summary>
+
+</details></tool-use>
+
+_**Agent (grok-4.6)**_
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2"><details>
+<summary>Tool use: **read_file_v2** • Read file: </summary>
 
 </details></tool-use>

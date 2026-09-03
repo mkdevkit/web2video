@@ -854,11 +854,14 @@ function BlockInspector({ scene, block }: { scene: Scene; block: LayoutBlock }) 
             >
               <option value="">默认（{stageFont(blockFontId(project, block.type)).label}）</option>
               {STAGE_FONTS.map((f) => (
-                <option key={f.id} value={f.id}>
+                <option key={f.id} value={f.id} title={f.detail}>
                   {f.label}
                 </option>
               ))}
             </select>
+            <p className="mt-1 text-[10px] leading-relaxed text-ink-500">
+              {stageFont(block.settings?.fontId || blockFontId(project, block.type)).detail}
+            </p>
           </Field>
           <Field label={`字号 ${set.fontSize}`}>
             <input

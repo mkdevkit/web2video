@@ -1,9 +1,10 @@
-import { STAGE_FONTS, FONT_USAGE, captionStyleOf, fontStack, progressStyleOf, stageFont } from "../lib/fonts";
+import { STAGE_FONTS, captionStyleOf, fontStack, progressStyleOf } from "../lib/fonts";
 import { listMarkerRadius, listMarkerStyleOf } from "../lib/listMarker";
 import { pickImageFile } from "../lib/insertImage";
 import { useEditor } from "../store/useEditor";
 import type { CaptionBox, ListMarkerKind, ListMarkerShape, StageFontId } from "../types";
 import { Field } from "./ui";
+import { FontUsageGuide } from "./FontUsageGuide";
 import { LANGS, langZhName, type LangId } from "../lib/langs";
 
 function FontPick({
@@ -26,7 +27,7 @@ function FontPick({
         onChange={(e) => onChange(e.target.value as StageFontId)}
       >
         {STAGE_FONTS.map((f) => (
-          <option key={f.id} value={f.id} style={{ fontFamily: fontStack(f.id, lang) }}>
+          <option key={f.id} value={f.id} title={f.detail} style={{ fontFamily: fontStack(f.id, lang) }}>
             {f.label} · {f.langs}
           </option>
         ))}
@@ -65,37 +66,13 @@ export function FontFields() {
           }
         />
       </div>
-      <p className="text-[10px] leading-relaxed text-ink-500">{stageFont(project.fontId).hint}</p>
       <p
         className="rounded-md border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-paper"
         style={{ fontFamily: fontStack(project.captionFontId, lang) }}
       >
         字幕预览：黑洞并不是宇宙里的一个洞。
       </p>
-      <p className="pt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-400">各处用字</p>
-      <div className="overflow-auto rounded border border-ink-700">
-        <table className="w-full text-[11px]">
-          <thead>
-            <tr className="bg-ink-800 text-ink-400">
-              <th className="px-2 py-1 text-left font-medium">用在哪</th>
-              <th className="px-2 py-1 text-left font-medium">字体</th>
-              <th className="px-2 py-1 text-left font-medium">许可</th>
-            </tr>
-          </thead>
-          <tbody>
-            {FONT_USAGE.map((row) => (
-              <tr key={row.where} className="border-t border-ink-700">
-                <td className="px-2 py-1">{row.where}</td>
-                <td className="px-2 py-1 text-ink-300">{row.fonts}</td>
-                <td className="px-2 py-1">{row.license}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p className="text-[10px] leading-relaxed text-ink-500">
-        上表可选字体均为 SIL OFL，免费可商用。不随工具分发任何专有字体。system-ui 只是系统回落，不是捆绑字体。
-      </p>
+      <FontUsageGuide />
     </div>
   );
 }

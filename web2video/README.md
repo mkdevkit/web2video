@@ -41,7 +41,7 @@ npm run dev
 | 单个元件覆盖 | 检视里可选；缺省跟该类型全局字体 | SIL OFL |
 | 中日文缺字回落 | Noto Sans/Serif SC、JP；IBM Plex 日文走 IBM Plex Sans JP | SIL OFL |
 
-成片可选字体（配置里下拉，均为 SIL OFL）：Noto Sans / Noto Serif、Source Sans 3 / Source Serif 4、IBM Plex Sans、PT Sans、Nunito Sans、Inter、Literata、DM Sans。工作台「配置 → 字体」与「?」帮助里有同一张表。
+成片可选字体（配置里下拉，均为 SIL OFL）：Noto Sans / Noto Serif、Source Sans 3 / Source Serif 4、IBM Plex Sans、PT Sans、Nunito Sans、Inter、Literata、DM Sans。工作台「配置 → 字体」与「?」帮助里分「用在哪」「每种字体」两页表。
 
 ## 技术方案
 

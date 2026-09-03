@@ -240,7 +240,7 @@ export function ExportDialog() {
 
         <label className="mb-2 flex items-center gap-2 text-sm">
           <input type="checkbox" checked={captions} onChange={(e) => setCaptions(e.target.checked)} />
-          烧录字幕条到画面（字体在「外观」里选；跟当前口播句对齐；双语见下方）
+          烧录字幕条到画面（字体在「外观 → 字体」；跟当前口播句对齐；双语见下方）
         </label>
         <label className="mb-2 flex items-center gap-2 text-sm">
           <input

@@ -362,7 +362,7 @@ export function executeTool(name: string, rawArgs: unknown): string {
           sleep: "startS/endS 不含暂停。句间留白要把后面的起点加上这段 sleep。",
           tts: "密钥和配音合成不用你处理。改口播后配音会过期，用户自己点配音。",
         },
-        fonts: STAGE_FONTS.map((f) => ({ id: f.id, label: f.label, langs: f.langs, hint: f.hint, license: f.license })),
+        fonts: STAGE_FONTS.map((f) => ({ id: f.id, label: f.label, langs: f.langs, hint: f.hint, detail: f.detail, license: f.license })),
       });
     }
 

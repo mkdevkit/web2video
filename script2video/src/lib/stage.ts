@@ -7,6 +7,7 @@ export interface StageFont {
   label: string;
   license: "SIL OFL";
   hint: string;
+  detail: string;
   langs: string;
   latin: string;
   zh: string;
@@ -22,6 +23,7 @@ export const STAGE_FONTS: StageFont[] = [
     label: "Noto Sans",
     license: "SIL OFL",
     hint: "谷歌多语种无衬线",
+    detail: "默认正文、字幕。九语都自带字形，知识讲解片首选，不靠中日文回落。",
     langs: "中英日法德俄西葡意",
     latin: '"Noto Sans"',
     zh: '"Noto Sans SC"',
@@ -34,6 +36,7 @@ export const STAGE_FONTS: StageFont[] = [
     label: "Noto Serif",
     license: "SIL OFL",
     hint: "谷歌多语种衬线，适合标题",
+    detail: "默认标题。多语衬线，正式，适合大字和引用。",
     langs: "中英日法德俄西葡意",
     latin: '"Noto Serif"',
     zh: '"Noto Serif SC"',
@@ -46,6 +49,7 @@ export const STAGE_FONTS: StageFont[] = [
     label: "Source Sans 3",
     license: "SIL OFL",
     hint: "Adobe 开源西文，中日文回落 Noto",
+    detail: "Adobe 无衬线。西文/俄文走 Source Sans 3，中日文回落 Noto Sans。",
     langs: "英欧俄 + 中日",
     latin: '"Source Sans 3"',
     zh: '"Noto Sans SC"',
@@ -58,6 +62,7 @@ export const STAGE_FONTS: StageFont[] = [
     label: "Source Serif 4",
     license: "SIL OFL",
     hint: "Adobe 开源衬线，西文/俄文，中日文回落 Noto Serif",
+    detail: "Adobe 衬线。标题想更「出版」时可换这套；中日文回落 Noto Serif。",
     langs: "英欧俄 + 中日",
     latin: '"Source Serif 4"',
     zh: '"Noto Serif SC"',
@@ -70,6 +75,7 @@ export const STAGE_FONTS: StageFont[] = [
     label: "IBM Plex Sans",
     license: "SIL OFL",
     hint: "IBM 开源，西文/俄文/日文，中文走 Noto",
+    detail: "科技感无衬线。日文走 IBM Plex Sans JP，中文仍回落 Noto Sans SC。",
     langs: "英欧俄日 + 中",
     latin: '"IBM Plex Sans"',
     zh: '"Noto Sans SC"',
@@ -86,6 +92,7 @@ export const STAGE_FONTS: StageFont[] = [
     label: "PT Sans",
     license: "SIL OFL",
     hint: "ParaType 开源，西里尔文口碑好，中日文回落 Noto",
+    detail: "俄文口碑好。西里尔文片可优先考虑；中日文回落 Noto Sans。",
     langs: "英欧俄 + 中日",
     latin: '"PT Sans"',
     zh: '"Noto Sans SC"',
@@ -98,6 +105,7 @@ export const STAGE_FONTS: StageFont[] = [
     label: "Nunito Sans",
     license: "SIL OFL",
     hint: "圆润无衬线，中日文回落 Noto",
+    detail: "圆角无衬线，偏轻松。少儿向、轻松讲解可用；中日文回落 Noto。",
     langs: "英欧俄 + 中日",
     latin: '"Nunito Sans"',
     zh: '"Noto Sans SC"',
@@ -110,6 +118,7 @@ export const STAGE_FONTS: StageFont[] = [
     label: "Inter",
     license: "SIL OFL",
     hint: "界面向无衬线，西文/俄文清晰，中日文回落 Noto",
+    detail: "界面级西文，小字也清晰。适合字幕条、节拍卡这类小字。",
     langs: "英欧俄 + 中日",
     latin: '"Inter"',
     zh: '"Noto Sans SC"',
@@ -122,6 +131,7 @@ export const STAGE_FONTS: StageFont[] = [
     label: "Literata",
     license: "SIL OFL",
     hint: "阅读向衬线，中日文回落 Noto Serif",
+    detail: "阅读向衬线。长段落比 Noto Serif 更「书」；中日文回落 Noto Serif。",
     langs: "英欧俄 + 中日",
     latin: '"Literata"',
     zh: '"Noto Serif SC"',
@@ -134,6 +144,7 @@ export const STAGE_FONTS: StageFont[] = [
     label: "DM Sans",
     license: "SIL OFL",
     hint: "和工作台 UI 同一套西文，中日文回落 Noto",
+    detail: "工作台界面同一套西文。成片想跟界面气质一致时用；中日文回落 Noto。",
     langs: "英欧 + 中日",
     latin: '"DM Sans"',
     zh: '"Noto Sans SC"',
@@ -146,13 +157,49 @@ export const STAGE_FONTS: StageFont[] = [
 export const STAGE_FONT_IDS = STAGE_FONTS.map((f) => f.id);
 
 /** Where each font is used. All SIL OFL — free for commercial use. */
-export const FONT_USAGE: { where: string; fonts: string; license: "SIL OFL" }[] = [
-  { where: "工作台界面", fonts: "DM Sans、Noto Sans SC", license: "SIL OFL" },
-  { where: "舞台正文", fonts: "外观 → 正文字体（默认 Noto Sans）", license: "SIL OFL" },
-  { where: "舞台标题", fonts: "外观 → 标题字体（默认 Noto Serif）", license: "SIL OFL" },
-  { where: "字幕条（预览与烧录）、节拍卡", fonts: "外观 → 字幕字体（默认 Noto Sans）", license: "SIL OFL" },
-  { where: "中日文缺字回落", fonts: "Noto Sans/Serif SC、JP；IBM Plex 日文走 IBM Plex Sans JP", license: "SIL OFL" },
-  { where: "HyperFrames 示例页", fonts: "Noto Sans SC", license: "SIL OFL" },
+export const FONT_USAGE: { where: string; fonts: string; license: "SIL OFL"; detail: string }[] = [
+  {
+    where: "工作台界面",
+    fonts: "DM Sans、Noto Sans SC",
+    license: "SIL OFL",
+    detail: "按钮、表单、用法页、时间轴。固定用这两套，不随工程改。中文走 Noto Sans SC。",
+  },
+  {
+    where: "舞台正文",
+    fonts: "外观 → 字体 → 正文字体（默认 Noto Sans）",
+    license: "SIL OFL",
+    detail: "舞台 DOM 正文。上面下拉改 fontId，CSS 里用 var(--stage-font)。中日文不足回落 Noto Sans CJK。",
+  },
+  {
+    where: "舞台标题",
+    fonts: "外观 → 字体 → 标题字体（默认 Noto Serif）",
+    license: "SIL OFL",
+    detail: "舞台标题。上面下拉改 titleFontId，CSS 里用 var(--stage-title-font)。",
+  },
+  {
+    where: "字幕条、节拍卡",
+    fonts: "外观 → 字体 → 字幕字体（默认 Noto Sans）",
+    license: "SIL OFL",
+    detail: "预览和烧录到画面的口播字幕，以及节拍卡上的字。上面下拉改 captionFontId。",
+  },
+  {
+    where: "中日文缺字回落",
+    fonts: "Noto Sans/Serif SC、JP；IBM Plex 日文走 IBM Plex Sans JP",
+    license: "SIL OFL",
+    detail: "西文/俄文字体没有中日文时自动回落。九语口播用 Noto 覆盖最完整。",
+  },
+  {
+    where: "HyperFrames 示例页",
+    fonts: "Noto Sans SC",
+    license: "SIL OFL",
+    detail: "HyperFrames 内置示例页用 Noto Sans SC，不随工程字体改。",
+  },
+  {
+    where: "KaTeX 公式",
+    fonts: "KaTeX_*（脚本引入 KaTeX 样式时）",
+    license: "SIL OFL",
+    detail: "工具不捆绑 KaTeX。若脚本自行引入其样式，公式字体 KaTeX_* 同样是 SIL OFL。",
+  },
 ];
 
 const FONT_ID_SET = new Set<string>(STAGE_FONT_IDS);
