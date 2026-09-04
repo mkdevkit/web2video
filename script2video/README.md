@@ -59,7 +59,7 @@ npm run tauri:build   # 安装包
 
 **默认舞台字体**打在舞台根节点上（`font-family` + `--stage-base-font`）。HTML/CSS 没写 `font-family` 的节点会整台继承它。某个节点写了自己的 `font-family`，或用了 `var(--stage-title-font)` / `var(--stage-font)`，就不再用默认这套。默认 CSS 里 `.title` 走标题字体、`.stat` 走正文字体，不走默认舞台字体。旧工程没有 `baseFontId` 时跟正文字体。
 
-实现：`src/lib/stage.ts` 的 `mountStage` / `stageBoxStyle`（预览 `PreviewPane`、导出 `ExportStage` 会调）。下拉在顶栏「外观 → 字体」。
+实现：`src/lib/stage.ts` 的 `mountStage` / `stageBoxStyle`（预览 `PreviewPane`、导出 `ExportStage` 会调）。下拉在顶栏「外观 → 字体」。预览和导出是同一条画面路径，和 Web2Video 的对照见仓库根 [README · 预览和导出](../README.md#预览和导出)。
 
 ## 用例
 

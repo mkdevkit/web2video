@@ -20,6 +20,23 @@ npm run tauri:dev  # 桌面（需 Rust）
 
 两个工具的界面与成片字体均为 **SIL OFL（免费可商用）**，字文件随工具打包，默认与回落都是 Noto 等开源字体，不走系统字体、也不依赖 Google Fonts。明细见 [`web2video/README.md`](./web2video/README.md#字体) 与 [`script2video/README.md`](./script2video/README.md#字体)。
 
+## 预览和导出
+
+**每个工具内部：所见即所导。** 预览和导出走同一条画面路径，字体不会预览一套、导出另一套。导出前都会等打包字体就绪再录。
+
+差别主要是壳：预览会缩放、可点选；导出用成片分辨率、不可编辑。烧录字幕两边都默认关，只在导出窗勾了才画进成片（预览条可以单独开）。
+
+**两个工具之间：** 字体政策对齐（SIL OFL、随工具打包、栈末回落 Noto、不走系统字体）。`fontStack` / `waitStageFonts` 是同一套思路，各写各的。画面不是共用一套渲染。
+
+| | Web2Video | Script2Video |
+| --- | --- | --- |
+| 画什么 | 版面元件 | 舞台 HTML + GSAP |
+| 默认字 | 片级「元件默认」+ 字幕 | 工程 `stageTheme`（根继承 / 正文 / 标题 / 字幕） |
+| 覆盖 | 检视里改该元件 | HTML/CSS 或 `var(--stage-*)` |
+| 预览 = 导出 | `StageLayers` → `StageView` | `mountStage` + `stageTexts` + GSAP |
+
+Script2Video 引擎不是 GSAP（Remotion / Manim）时，工作台预览/导出可能只是节拍卡，完整画面要到该引擎里渲。
+
 ## MCP
 
 两边的「工具」都是 `src/lib/ai/tools.ts`：`AI_TOOLS` 是 JSON Schema，`executeTool` 改当前打开的工程（Zustand），`SYSTEM_PROMPT` 是约定。应用内 AI（DeepSeek 等）走 `agent.ts` 的 function calling。密钥、翻译、配音合成不要让模型代劳。
