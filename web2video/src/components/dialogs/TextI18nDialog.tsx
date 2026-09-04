@@ -15,7 +15,7 @@ export function TextI18nDialog() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState("");
-  const [alsoTts, setAlsoTts] = useState(true);
+  const [alsoTts, setAlsoTts] = useState(false);
 
   const shown = rows.filter((r) => {
     const q = filter.trim().toLowerCase();

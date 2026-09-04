@@ -1,4 +1,4 @@
-import type { DriveMode, LayoutBlock, Project, Scene, SpeakLine, TimeRef } from "../types";
+import type { DriveMode, LayoutBlock, Project, Scene, SpeakLine, TimeRef, TimeRefKind } from "../types";
 import { sceneBlocks } from "./blocks";
 import type { LangId } from "./langs";
 import { isGapSpeak, lineDurationMs, speakLabel, speakLineText, speaksOf } from "./speaks";
@@ -82,8 +82,17 @@ function withSceneBody(cal: SceneCalendar): SceneCalendar {
   return cal;
 }
 
+export function timeRefKind(ref: TimeRef | undefined): TimeRefKind {
+  if (!ref) return "speak";
+  if (ref.kind === "fixed" || ref.kind === "scene" || ref.kind === "speak") return ref.kind;
+  if (ref.atMs != null) return "fixed";
+  if (ref.speakId === SPEAK_SCENE || ref.speakId === SPEAK_BODY) return "scene";
+  return "speak";
+}
+
 export function resolveTimeRef(ref: TimeRef | undefined, cal: SceneCalendar, fallback = 0): number {
   if (!ref) return fallback;
+  if (timeRefKind(ref) === "fixed") return Math.max(0, ref.atMs ?? ref.offsetMs ?? 0);
   const span = cal.byTarget[ref.speakId];
   const base = span ? (ref.anchor === "end" ? span.endMs : span.startMs) : fallback;
   return Math.max(0, base + (ref.offsetMs ?? 0));

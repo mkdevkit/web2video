@@ -1,30 +1,21 @@
-import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
-import { getAudio } from "../lib/audioStore";
+import { useEffect, useRef } from "react";
 import { formatMs, sceneAt, sceneClock, sceneDuration, sceneHoldMs, sceneStarts, totalDuration, type ScenePhase } from "../lib/timeline";
 import { useEditor } from "../store/useEditor";
-
-async function peaksOf(blob: Blob, n: number): Promise<number[]> {
-  const ctx = new AudioContext();
-  try {
-    const buf = await ctx.decodeAudioData(await blob.arrayBuffer());
-    const data = buf.getChannelData(0);
-    const size = Math.max(1, Math.floor(data.length / n));
-    const peaks: number[] = [];
-    for (let i = 0; i < n; i++) {
-      let m = 0;
-      const start = i * size;
-      for (let j = 0; j < size; j++) m = Math.max(m, Math.abs(data[start + j] ?? 0));
-      peaks.push(m);
-    }
-    return peaks;
-  } finally {
-    await ctx.close();
-  }
-}
 
 function ratioFromX(clientX: number, el: HTMLElement) {
   const r = el.getBoundingClientRect();
   return Math.min(1, Math.max(0, (clientX - r.left) / Math.max(1, r.width)));
+}
+
+function phaseLabel(phase: ScenePhase): string {
+  if (phase === "openPad") return "开场前空白";
+  if (phase === "open") return "开场口播";
+  if (phase === "openGap") return "开场后空白";
+  if (phase === "body") return "主体";
+  if (phase === "closePad") return "结束前空白";
+  if (phase === "close") return "结束口播";
+  if (phase === "closeGap") return "结束后空白";
+  return "停留";
 }
 
 export function GlobalProgressBar() {
@@ -96,30 +87,6 @@ export function GlobalProgressBar() {
   );
 }
 
-function pct(ms: number, total: number) {
-  return (ms / Math.max(1, total)) * 100;
-}
-
-function slicePeaks(peaks: number[], startMs: number, endMs: number, audioMs: number): number[] {
-  if (!peaks.length || audioMs <= 0 || endMs <= startMs) return [];
-  const a = Math.max(0, Math.floor((startMs / audioMs) * peaks.length));
-  const b = Math.min(peaks.length, Math.max(a + 1, Math.ceil((endMs / audioMs) * peaks.length)));
-  return peaks.slice(a, b);
-}
-
-function phaseLabel(phase: ScenePhase): string {
-  if (phase === "openPad") return "开场前空白";
-  if (phase === "open") return "开场口播";
-  if (phase === "openGap") return "开场后空白";
-  if (phase === "body") return "主体";
-  if (phase === "closePad") return "结束前空白";
-  if (phase === "close") return "结束口播";
-  if (phase === "closeGap") return "结束后空白";
-  return "停留";
-}
-
-type ScrubKind = "global" | "local";
-
 export function Timeline() {
   const project = useEditor((s) => s.project);
   const playheadMs = useEditor((s) => s.playheadMs);
@@ -130,166 +97,14 @@ export function Timeline() {
   const sceneDur = scene ? sceneDuration(scene, lang, project) : 1;
   const clock = scene ? sceneClock(scene, lang, project) : null;
   const holdMs = clock?.holdMs ?? 0;
-  const [peaks, setPeaks] = useState<number[]>([]);
-  const scrub = useRef<{ kind: ScrubKind; el: HTMLElement } | null>(null);
-
-  useEffect(() => {
-    let dead = false;
-    if (!scene) {
-      setPeaks([]);
-      return;
-    }
-    void getAudio(scene.id, lang).then(async (blob) => {
-      if (!blob || dead) return setPeaks([]);
-      const p = await peaksOf(blob, 120);
-      if (!dead) setPeaks(p);
-    });
-    return () => {
-      dead = true;
-    };
-  }, [scene?.id, lang, scene?.audioByLang?.[lang]?.src]);
-
-  const seekScrub = (kind: ScrubKind, el: HTMLElement, clientX: number) => {
-    const ratio = ratioFromX(clientX, el);
-    const s = useEditor.getState();
-    const p = s.project;
-    const l = p.previewLang;
-    if (kind === "global") {
-      s.setPlayhead(ratio * Math.max(1, totalDuration(p, l)));
-    } else {
-      const sc = p.scenes.find((x) => x.id === s.currentSceneId) ?? sceneAt(p, l, s.playheadMs)?.scene;
-      if (!sc) return;
-      const idx = p.scenes.findIndex((x) => x.id === sc.id);
-      const start = sceneStarts(p, l)[idx] ?? 0;
-      s.setPlayhead(start + ratio * sceneDuration(sc, l, p));
-    }
-    s.setPlaying(false);
-  };
-
-  const beginScrub = (e: ReactMouseEvent, kind: ScrubKind, el: HTMLElement) => {
-    if (e.button !== 0) return;
-    e.preventDefault();
-    scrub.current = { kind, el };
-    seekScrub(kind, el, e.clientX);
-  };
-
-  useEffect(() => {
-    const move = (e: MouseEvent) => {
-      const sc = scrub.current;
-      if (sc) seekScrub(sc.kind, sc.el, e.clientX);
-    };
-    const up = () => {
-      scrub.current = null;
-    };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", up);
-    return () => {
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", up);
-    };
-  }, []);
-
-  const localRatio = sceneDur > 0 && at && scene && at.scene.id === scene.id ? at.localMs / sceneDur : 0;
-  const bodyLeft = clock ? pct(clock.bodyStartMs, clock.totalMs) : 0;
-  const bodyWidth = clock ? pct(clock.bodyMs, clock.totalMs) : 100;
-  const audioMs = clock ? Math.max(1, clock.audioCloseEndMs, clock.audioBodyEndMs, clock.audioOpenEndMs) : 1;
-  const openPeaks = clock ? slicePeaks(peaks, clock.audioOpenStartMs, clock.audioOpenEndMs, audioMs) : [];
-  const bodyPeaks = clock ? slicePeaks(peaks, clock.audioBodyStartMs, clock.audioBodyEndMs, audioMs) : [];
-  const closePeaks = clock ? slicePeaks(peaks, clock.audioCloseStartMs, clock.audioCloseEndMs, audioMs) : [];
 
   return (
-    <div className="flex h-[4.75rem] shrink-0 flex-col border-t border-ink-600 bg-ink-900 select-none">
+    <div className="flex h-14 shrink-0 flex-col border-t border-ink-600 bg-ink-900 select-none">
       <GlobalProgressBar />
-      <div className="mx-2 mb-1 mt-1">
-        <div
-          className="relative h-7 cursor-ew-resize overflow-hidden rounded border border-ink-700 bg-ink-950"
-          onMouseDown={(e) => beginScrub(e, "local", e.currentTarget)}
-        >
-          {clock && clock.openBeforeMs > 0 && (
-            <div
-              className="pointer-events-none absolute inset-y-0 bg-ink-800/90"
-              style={{ left: 0, width: `${pct(clock.openBeforeMs, clock.totalMs)}%` }}
-              title="开场前空白"
-            />
-          )}
-          {clock && clock.openSpeechMs > 0 && (
-            <div
-              className="pointer-events-none absolute inset-y-0 flex items-end gap-px bg-copper/20 px-px"
-              style={{ left: `${pct(clock.openBeforeMs, clock.totalMs)}%`, width: `${pct(clock.openSpeechMs, clock.totalMs)}%` }}
-              title="开场口播"
-            >
-              {openPeaks.map((p, i) => (
-                <div key={i} className="flex-1 bg-brass/70" style={{ height: `${Math.max(6, p * 100)}%` }} />
-              ))}
-            </div>
-          )}
-          {clock && clock.openAfterMs > 0 && (
-            <div
-              className="pointer-events-none absolute inset-y-0 bg-ink-800/70"
-              style={{ left: `${pct(clock.openBeforeMs + clock.openSpeechMs, clock.totalMs)}%`, width: `${pct(clock.openAfterMs, clock.totalMs)}%` }}
-              title="开场后空白"
-            />
-          )}
-          {clock && clock.bodyMs > 0 && (
-            <div
-              className="pointer-events-none absolute inset-y-0 flex items-end gap-px px-px"
-              style={{ left: `${bodyLeft}%`, width: `${bodyWidth}%` }}
-              title="主体"
-            >
-              {bodyPeaks.map((p, i) => (
-                <div key={i} className="flex-1 bg-brass/70" style={{ height: `${Math.max(6, p * 100)}%` }} />
-              ))}
-            </div>
-          )}
-          {clock && clock.closeBeforeMs > 0 && (
-            <div
-              className="pointer-events-none absolute inset-y-0 bg-ink-800/70"
-              style={{ left: `${pct(clock.closeHeadMs, clock.totalMs)}%`, width: `${pct(clock.closeBeforeMs, clock.totalMs)}%` }}
-              title="结束前空白"
-            />
-          )}
-          {clock && clock.closeSpeechMs > 0 && (
-            <div
-              className="pointer-events-none absolute inset-y-0 flex items-end gap-px bg-copper/20 px-px"
-              style={{
-                left: `${pct(clock.closeSpeechStartMs, clock.totalMs)}%`,
-                width: `${pct(clock.closeSpeechMs, clock.totalMs)}%`,
-              }}
-              title="结束口播"
-            >
-              {closePeaks.map((p, i) => (
-                <div key={i} className="flex-1 bg-brass/70" style={{ height: `${Math.max(6, p * 100)}%` }} />
-              ))}
-            </div>
-          )}
-          {clock && clock.closeAfterMs > 0 && (
-            <div
-              className="pointer-events-none absolute inset-y-0 bg-ink-800/80"
-              style={{
-                left: `${pct(clock.closeSpeechStartMs + clock.closeSpeechMs, clock.totalMs)}%`,
-                width: `${pct(clock.closeAfterMs, clock.totalMs)}%`,
-              }}
-              title="结束后空白"
-            />
-          )}
-          {holdMs > 0 && sceneDur > 0 && (
-            <div
-              className="pointer-events-none absolute inset-y-0 right-0 border-l border-ink-600 bg-ink-800/80"
-              style={{ width: `${(holdMs / sceneDur) * 100}%` }}
-              title="口播后停留"
-            />
-          )}
-          {at && scene && (
-            <div className="pointer-events-none absolute top-0 z-10 h-full w-0.5 bg-paper" style={{ left: `${localRatio * 100}%` }} />
-          )}
-        </div>
-        <div className="flex justify-between py-0.5 font-mono text-[10px] text-ink-400">
-          <span>
-            {scene
-              ? `当前场景 ${formatMs(at?.localMs ?? 0)} / ${formatMs(sceneDur)}${at?.phase ? ` · ${phaseLabel(at.phase)}` : ""}${holdMs ? `（含停留 ${formatMs(holdMs)}）` : ""}`
-              : ""}
-          </span>
-        </div>
+      <div className="mx-2 py-0.5 font-mono text-[10px] text-ink-400">
+        {scene
+          ? `${formatMs(playheadMs)} / ${formatMs(totalDuration(project, lang))} · ${scene.name} ${formatMs(at?.localMs ?? 0)} / ${formatMs(sceneDur)}${at?.phase ? ` · ${phaseLabel(at.phase)}` : ""}${holdMs ? `（含停留 ${formatMs(holdMs)}）` : ""}`
+          : ""}
       </div>
     </div>
   );

@@ -914,7 +914,7 @@ function BlockInspector({ scene, block }: { scene: Scene; block: LayoutBlock }) 
       <div className="mt-3">
         <div className="section-label">动效</div>
         <p className="text-[10px] leading-relaxed text-ink-400">
-          可配多条。用某句口播的开始/结束加偏移来定时，不再按主体 0–1 拉伸。
+          可配多条。起点和终点可选用口播、场景锚点、固定时间；终点也可设为时长。
         </p>
         <EffectList scene={scene} block={block} />
         {block.type === "list" &&

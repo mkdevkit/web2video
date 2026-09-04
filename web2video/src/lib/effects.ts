@@ -1,7 +1,7 @@
 import type { MsWindow } from "./interpolate";
 import { uid } from "./ids";
 import type { AnimKind, BlockEffect, Cue, CueBind, LayoutBlock, Scene, TimeRef } from "../types";
-import { SPEAK_BODY, calendarTailMs, type SceneCalendar, effectEndMs, isPlayBlock, resolveTimeRef } from "./calendar";
+import { SPEAK_BODY, SPEAK_SCENE, calendarTailMs, type SceneCalendar, effectEndMs, isPlayBlock, resolveTimeRef } from "./calendar";
 import { findSpeak, isGapSpeak, itemSpeakKey, speakLineText, speaksOf } from "./speaks";
 import { speakText } from "./narration";
 import { sceneBlocks } from "./blocks";
@@ -14,7 +14,8 @@ function cueBindOf(cue: Cue, scene: Scene, source: LangId): CueBind {
 }
 
 export function defaultTimeRef(speakId: string, anchor: TimeRef["anchor"] = "start", offsetMs = 0): TimeRef {
-  return { speakId, anchor, offsetMs };
+  const scene = speakId === SPEAK_SCENE || speakId === SPEAK_BODY;
+  return { kind: scene ? "scene" : "speak", speakId, anchor, offsetMs };
 }
 
 function isOwnEffect(fx: BlockEffect, blockId: string) {
@@ -41,18 +42,18 @@ export function effectFromCue(cue: Cue, scene: Scene, source: LangId): BlockEffe
   const bind = cueBindOf(cue, scene, source);
   const target = cue.target.startsWith("item:") ? cue.target : undefined;
   if (bind === "speak") {
-    const from: TimeRef = { speakId: cue.target, anchor: "start", offsetMs: -(cue.leadMs ?? 0) };
+    const from: TimeRef = { kind: "speak", speakId: cue.target, anchor: "start", offsetMs: -(cue.leadMs ?? 0) };
     const to: TimeRef =
       cue.stay === "speech"
-        ? { speakId: cue.target, anchor: "end", offsetMs: cue.trailMs ?? 0 }
-        : { speakId: SPEAK_BODY, anchor: "end", offsetMs: 0 };
+        ? { kind: "speak", speakId: cue.target, anchor: "end", offsetMs: cue.trailMs ?? 0 }
+        : { kind: "scene", speakId: SPEAK_BODY, anchor: "end", offsetMs: 0 };
     return { id: cue.id, anim: cue.anim, from, to, target };
   }
   return {
     id: cue.id,
     anim: cue.anim,
-    from: { speakId: SPEAK_BODY, anchor: "start", offsetMs: 0 },
-    to: { speakId: SPEAK_BODY, anchor: "end", offsetMs: 0 },
+    from: { kind: "scene", speakId: SPEAK_BODY, anchor: "start", offsetMs: 0 },
+    to: { kind: "scene", speakId: SPEAK_BODY, anchor: "end", offsetMs: 0 },
     target,
   };
 }
@@ -119,6 +120,9 @@ export function newEffect(speakId: string, anim: AnimKind = "fade", target?: str
 
 export function nudgeTimeRef(ref: TimeRef | undefined, deltaMs: number): TimeRef | undefined {
   if (!ref) return ref;
+  if (ref.kind === "fixed" || (ref.atMs != null && ref.kind !== "speak" && ref.kind !== "scene")) {
+    return { ...ref, kind: "fixed", atMs: Math.max(0, (ref.atMs ?? 0) + deltaMs) };
+  }
   return { ...ref, offsetMs: (ref.offsetMs ?? 0) + deltaMs };
 }
 

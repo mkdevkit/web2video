@@ -22,7 +22,7 @@ export function SpeakTrackEditor({ scene }: { scene: Scene }) {
       </button>
       <p className="text-[10px] leading-relaxed text-ink-400">
         {driveOf(scene) === "config"
-          ? "配置驱动：口播是台词库。用「播放口播」元件排期；动效用某句的开始/结束 + 偏移。全部结束后切场。"
+          ? "配置驱动：口播是台词库。用「播放口播」元件排期；动效用口播 / 场景 / 固定时间定位。全部结束后切场。"
           : "口播驱动按列表顺序走时钟。句间留白在编辑页加延时。"}
       </p>
     </div>

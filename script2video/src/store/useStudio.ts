@@ -63,6 +63,7 @@ interface Studio {
   removeEvent: (scriptId: string, eventId: string) => void;
   upsertVoice: (voice: VoiceProfile) => void;
   removeVoice: (id: string) => void;
+  setLangVoice: (lang: LangId, roleId: string) => void;
   exporting: boolean;
   exportScriptId: string;
   exportLang: LangId;
@@ -227,14 +228,25 @@ export const useStudio = create<Studio>((set, get) => {
       get().patchScript(scriptId, { events: script.events.filter((e) => e.id !== eventId) });
     },
     upsertVoice: (voice) => {
-      const list = get().project.voices.filter((v) => v.id !== voice.id);
-      const voices = [...list, voice];
+      const list = get().project.voices;
+      const i = list.findIndex((v) => v.id === voice.id);
+      const voices = i >= 0 ? list.map((v) => (v.id === voice.id ? { ...v, ...voice } : v)) : [...list, voice];
       get().patchProject({ voices, voiceId: get().project.voiceId || voice.id });
     },
     removeVoice: (id) => {
       const voices = get().project.voices.filter((v) => v.id !== id);
       const voiceId = get().project.voiceId === id ? voices[0]?.id : get().project.voiceId;
-      get().patchProject({ voices, voiceId });
+      const voiceByLang = { ...get().project.voiceByLang };
+      for (const k of Object.keys(voiceByLang) as LangId[]) {
+        if (voiceByLang[k] === id) delete voiceByLang[k];
+      }
+      get().patchProject({ voices, voiceId, voiceByLang });
+    },
+    setLangVoice: (lang, roleId) => {
+      const voiceByLang = { ...get().project.voiceByLang };
+      if (roleId) voiceByLang[lang] = roleId;
+      else delete voiceByLang[lang];
+      get().patchProject({ voiceByLang });
     },
     exporting: false,
     exportScriptId: currentId(initial),

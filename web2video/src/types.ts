@@ -159,12 +159,16 @@ export type CueStay = "speech" | "body";
 /** narration: list clock. config: play blocks + TimeRef effects. */
 export type DriveMode = "narration" | "config";
 export type SpeakAnchor = "start" | "end";
+export type TimeRefKind = "speak" | "scene" | "fixed";
 
-/** Point on the scene clock: a beat's start/end plus offset (ms). */
+/** Point on the scene clock. `kind` picks 口播 / 场景 / 固定时间. */
 export interface TimeRef {
+  kind?: TimeRefKind;
   speakId: string;
   anchor: SpeakAnchor;
   offsetMs?: number;
+  /** Absolute ms from scene start when `kind` is `fixed`. */
+  atMs?: number;
 }
 
 /** One animation on a block, timed from a TimeRef. */

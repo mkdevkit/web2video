@@ -16,7 +16,6 @@ export function BeatEditor() {
   const patchBeat = useStudio((s) => s.patchBeat);
   const renameBeat = useStudio((s) => s.renameBeat);
   const patchScript = useStudio((s) => s.patchScript);
-  const setDialog = useStudio((s) => s.setDialog);
   const setStatus = useStudio((s) => s.setStatus);
   const [alsoTts, setAlsoTts] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -147,9 +146,6 @@ export function BeatEditor() {
           <input type="checkbox" checked={alsoTts} onChange={(e) => setAlsoTts(e.target.checked)} />
           翻译后合成语音
         </label>
-        <button className="rounded bg-copper px-2 py-1 text-sm text-paper" onClick={() => setDialog("tts")}>
-          AI 配音
-        </button>
         <span className="text-[11px] text-ink-400">
           {clip ? (clip.stale ? "配音已过期" : `${(clip.durationMs / 1000).toFixed(1)}s`) : "未合成则按时长估算"}
         </span>

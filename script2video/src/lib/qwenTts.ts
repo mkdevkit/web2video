@@ -75,6 +75,41 @@ export function qwenVoiceId(data: Json): string {
   throw new Error("千问未返回音色 ID");
 }
 
+export function qwenPreviewBase64(data: Json): { b64: string; type: string } | null {
+  const preview = asRecord(outputOf(data).preview_audio);
+  const raw = preview.data;
+  if (typeof raw !== "string" || !raw) return null;
+  const m = /^data:([^;]+);base64,(.+)$/.exec(raw);
+  if (m) return { b64: m[2], type: m[1] };
+  return { b64: raw, type: "audio/wav" };
+}
+
+export async function qwenListVoices(model: "qwen-voice-design" | "qwen-voice-enrollment"): Promise<
+  { voice: string; targetModel: string }[]
+> {
+  const data = await qwenCustomize({
+    model,
+    input: { action: "list", page_size: 100, page_index: 0 },
+  });
+  const list = outputOf(data).voice_list ?? outputOf(data).voices;
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((row) => {
+      const r = asRecord(row);
+      const voice = typeof r.voice === "string" ? r.voice : typeof r.voice_id === "string" ? r.voice_id : "";
+      const targetModel = typeof r.target_model === "string" ? r.target_model : "";
+      return { voice, targetModel };
+    })
+    .filter((r) => r.voice);
+}
+
+export async function qwenDeleteVoice(
+  model: "qwen-voice-design" | "qwen-voice-enrollment",
+  voice: string,
+): Promise<void> {
+  await qwenCustomize({ model, input: { action: "delete", voice } });
+}
+
 export async function qwenCreateDesign(opts: {
   prompt: string;
   previewText: string;

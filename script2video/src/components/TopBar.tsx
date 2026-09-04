@@ -1,3 +1,4 @@
+import { Mic } from "lucide-react";
 import { useStudio } from "../store/useStudio";
 import { LANGS } from "../lib/langs";
 import { isTauri } from "../lib/platform";
@@ -57,6 +58,13 @@ export function TopBar() {
       >
         保存
       </button>
+      <button
+        className="inline-flex items-center gap-1 rounded border border-ink-600 px-2 py-1 text-sm hover:border-copper"
+        onClick={() => setDialog("tts")}
+      >
+        <Mic className="h-3.5 w-3.5" />
+        配音
+      </button>
       <div className="mx-1 h-4 w-px bg-ink-600" />
       <label className="text-xs text-ink-400">
         源
@@ -101,9 +109,6 @@ export function TopBar() {
       <div className="flex-1" />
       <button className="rounded border border-ink-600 px-2 py-1 text-sm hover:border-copper" onClick={() => setDialog("stage")}>
         外观
-      </button>
-      <button className="rounded border border-ink-600 px-2 py-1 text-sm hover:border-copper" onClick={() => setDialog("tts")}>
-        配音
       </button>
       <button
         className="rounded border border-ink-600 px-2 py-1 text-sm hover:border-copper"

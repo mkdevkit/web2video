@@ -4,11 +4,12 @@ import { LANGS, langZhName, type LangId } from "../../lib/langs";
 import { sourceLangOf, writeI18n } from "../../lib/textI18n";
 import { synthScenes } from "../../lib/synthProject";
 import { isGapSpeak, lineDurationMs, newGapLine, newSpeakLine, speakLineText, speaksOf } from "../../lib/speaks";
+import { sceneBlocks } from "../../lib/blocks";
 import { markAllAudioStale, markLangAudioStale } from "../../lib/narration";
 import { defaultRoleForLang } from "../../lib/tts";
 import { profileLabel, qwenRoles } from "../../lib/voices";
 import { useEditor } from "../../store/useEditor";
-import type { Scene, SpeakLine } from "../../types";
+import type { LayoutBlock, Scene, SpeakLine, TimeRef } from "../../types";
 import { Field, Modal } from "../ui";
 
 function secInput(ms: number) {
@@ -21,6 +22,28 @@ function parseSec(raw: string, max = 60) {
   return Math.round(Math.min(max, Math.max(0, n)) * 1000);
 }
 
+function remapRef(ref: TimeRef | undefined, from: string, to: string): TimeRef | undefined {
+  if (!ref || ref.speakId !== from) return ref;
+  if (ref.kind === "fixed" || ref.kind === "scene") return ref;
+  return { ...ref, speakId: to };
+}
+
+function remapSpeakId(scene: Scene, from: string, to: string): Scene {
+  const speaks = speaksOf(scene).map((line) => (line.id === from ? { ...line, id: to } : line));
+  const blocks = sceneBlocks(scene).map((b) => {
+    const effects = b.effects?.map((fx) => ({
+      ...fx,
+      from: remapRef(fx.from, from, to) ?? fx.from,
+      to: remapRef(fx.to, from, to),
+    }));
+    const playFrom = remapRef(b.settings?.playFrom, from, to);
+    const playTarget = b.settings?.playTarget === from ? to : b.settings?.playTarget;
+    const settings = { ...b.settings, playFrom, playTarget };
+    return { ...b, effects, settings } satisfies LayoutBlock;
+  });
+  return { ...scene, speaks, blocks };
+}
+
 export function SpeakEditorDialog() {
   const project = useEditor((s) => s.project);
   const sceneId = useEditor((s) => s.currentSceneId);
@@ -31,10 +54,12 @@ export function SpeakEditorDialog() {
   const fallback = defaultRoleForLang(project, preview);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
-  const [alsoTts, setAlsoTts] = useState(true);
+  const [alsoTts, setAlsoTts] = useState(false);
+  const [filter, setFilter] = useState("");
 
   if (!scene) return null;
   const lines = speaksOf(scene);
+  const clip = scene.audioByLang?.[preview];
 
   const write = (next: SpeakLine[], staleLang?: LangId | "all") => {
     useEditor.getState().patchScene(
@@ -56,6 +81,14 @@ export function SpeakEditorDialog() {
       ),
       staleLang,
     );
+  };
+
+  const renameLine = (from: string, raw: string) => {
+    const to = raw.trim();
+    if (!to || to === from) return;
+    const latest = speaksOf(useEditor.getState().project.scenes.find((s) => s.id === scene.id) ?? scene);
+    if (latest.some((x) => x.id === to)) return;
+    useEditor.getState().patchScene(scene.id, (s) => remapSpeakId(s, from, to), true);
   };
 
   const move = (id: string, dir: -1 | 1) => {
@@ -117,6 +150,28 @@ export function SpeakEditorDialog() {
     }
   };
 
+  const translateRow = async (line: SpeakLine) => {
+    if (isGapSpeak(line)) return;
+    setBusy(line.id);
+    setError("");
+    try {
+      await Promise.all(LANGS.filter((l) => l.id !== source).map((l) => translateLine(line, l.id, true)));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "翻译失败");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const rows = lines.filter((line) => {
+    const q = filter.trim().toLowerCase();
+    if (!q) return true;
+    if (line.id.toLowerCase().includes(q)) return true;
+    if ((line.name ?? "").toLowerCase().includes(q)) return true;
+    if (isGapSpeak(line)) return "延时".includes(q) || "gap".includes(q);
+    return Object.values(line.i18n ?? {}).some((t) => (t ?? "").toLowerCase().includes(q));
+  });
+
   return (
     <Modal title={`口播 · ${scene.name}`} xl onClose={() => useEditor.getState().setDialog(null)}>
       <div className="mb-3 flex flex-wrap items-end gap-2">
@@ -146,6 +201,18 @@ export function SpeakEditorDialog() {
             ))}
           </select>
         </Field>
+        <button className="btn" onClick={() => write([...lines, newSpeakLine(source)], "all")}>
+          加一句
+        </button>
+        <button className="btn" onClick={() => write([...lines, newGapLine()])}>
+          加延时
+        </button>
+        <input
+          className="field w-36"
+          placeholder="筛选 id / 内容"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+        />
         <button className="btn" disabled={Boolean(busy)} onClick={() => void translateAll(false)}>
           {busy === "empty" ? "翻译中…" : "一键翻译空缺"}
         </button>
@@ -156,104 +223,135 @@ export function SpeakEditorDialog() {
           <input type="checkbox" checked={alsoTts} onChange={(e) => setAlsoTts(e.target.checked)} />
           翻译后合成语音
         </label>
+        <span className="pb-1 text-[11px] text-ink-400">
+          {clip ? (clip.stale ? "配音已过期" : `${(clip.durationMs / 1000).toFixed(1)}s`) : "未合成则按时长估算"}
+        </span>
       </div>
       <p className="mb-3 text-[11px] leading-relaxed text-ink-400">
-        每条口播有独立 id 与时长。口播驱动按此列表走时钟；句间留白请加延时。时长各语言共用，未手改时用合成实测或按字数估计。机翻请校对专有名词。
+        九种语言写在同一张表里。口播驱动按此列表走时钟；句间留白请加延时。时长各语言共用，未手改时用合成实测或按字数估计。机翻请校对专有名词。
       </p>
       {error && <p className="mb-2 text-xs text-red-400">{error}</p>}
-      <div className="space-y-2">
-        {lines.map((line, i) => (
-          <div key={line.id} className="rounded-lg border border-ink-600 p-2">
-            <div className="mb-1 flex flex-wrap items-center gap-1">
-              <span className="w-5 shrink-0 text-[10px] text-ink-500">{i + 1}</span>
-              {isGapSpeak(line) ? (
-                <span className="text-[11px] text-ink-200">延时</span>
-              ) : (
-                <input
-                  className="field max-w-[10rem] py-0.5 text-[11px]"
-                  placeholder="备注名（可选）"
-                  value={line.name ?? ""}
-                  onChange={(e) => patchLine(line.id, { name: e.target.value })}
-                />
-              )}
-              <span className="truncate font-mono text-[10px] text-ink-500" title={line.id}>
-                {line.id}
-              </span>
-              <Field label="时长（秒）">
-                <input
-                  type="number"
-                  min={0}
-                  step={0.1}
-                  className="field w-20 py-0.5"
-                  value={secInput(lineDurationMs(scene, line, preview, source))}
-                  onChange={(e) => patchLine(line.id, { durationMs: Math.max(50, parseSec(e.target.value)) })}
-                />
-              </Field>
-              {!isGapSpeak(line) && roles.length > 0 && (
-                <Field label="角色">
-                  <select
-                    className="field w-36 py-0.5"
-                    value={roles.some((r) => r.id === (line.role ?? "")) ? line.role : ""}
-                    onChange={(e) => patchLine(line.id, { role: e.target.value.trim() || undefined }, "all")}
-                  >
-                    <option value="">默认（{fallback ? profileLabel(fallback) : "语言默认"}）</option>
-                    {roles.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {profileLabel(r)}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-              )}
-              <button className="btn px-1 py-0.5" disabled={i === 0} onClick={() => move(line.id, -1)}>
-                ↑
-              </button>
-              <button className="btn px-1 py-0.5" disabled={i === lines.length - 1} onClick={() => move(line.id, 1)}>
-                ↓
-              </button>
-              <button className="btn px-1.5 py-0.5" onClick={() => write(lines.filter((x) => x.id !== line.id), "all")}>
-                ×
-              </button>
-            </div>
-            {!isGapSpeak(line) && (
-              <div className="grid gap-1 sm:grid-cols-2 lg:grid-cols-3">
-                {LANGS.map((l) => (
-                  <Field key={l.id} label={`${langZhName(l.id)}${l.id === source ? " · 源" : ""}${l.id === preview ? " · 预览" : ""}`}>
-                    <textarea
-                      className="field min-h-[52px] text-[11px]"
-                      value={line.i18n?.[l.id] ?? ""}
-                      onChange={(e) =>
-                        patchLine(line.id, { i18n: writeI18n(line.i18n, l.id, source, e.target.value) }, l.id)
-                      }
+      <div className="overflow-auto rounded-lg border border-ink-600">
+        <table className="min-w-full border-collapse text-left text-xs">
+          <thead className="sticky top-0 z-10 bg-ink-900 text-[10px] text-ink-400">
+            <tr>
+              <th className="px-2 py-1.5 font-medium">id</th>
+              <th className="whitespace-nowrap px-2 py-1.5 font-medium">时长</th>
+              <th className="px-2 py-1.5 font-medium">角色</th>
+              <th className="px-2 py-1.5 font-medium">操作</th>
+              {LANGS.map((l) => (
+                <th key={l.id} className="min-w-[140px] px-2 py-1.5 font-medium">
+                  {langZhName(l.id)}
+                  {l.id === source ? " · 源" : ""}
+                  {l.id === preview ? " · 预览" : ""}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((line) => {
+              const idx = lines.findIndex((x) => x.id === line.id);
+              return isGapSpeak(line) ? (
+                <tr key={line.id} className="border-t border-ink-700 bg-ink-950/50 align-top">
+                  <td className="px-1 py-1">
+                    <input
+                      className="field w-24 py-0.5 font-mono text-[11px]"
+                      defaultValue={line.id}
+                      key={line.id}
+                      onBlur={(e) => renameLine(line.id, e.target.value)}
                     />
-                  </Field>
-                ))}
-              </div>
-            )}
-            {!isGapSpeak(line) && (
-              <button
-                className="btn mt-1"
-                disabled={Boolean(busy)}
-                onClick={() => {
-                  setBusy(line.id);
-                  void Promise.all(LANGS.filter((l) => l.id !== source).map((l) => translateLine(line, l.id, true)))
-                    .catch((e) => setError(e instanceof Error ? e.message : "翻译失败"))
-                    .finally(() => setBusy(null));
-                }}
-              >
-                {busy === line.id ? "…" : "翻译此条"}
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
-      <div className="mt-3 flex gap-2">
-        <button className="btn" onClick={() => write([...lines, newSpeakLine(source)], "all")}>
-          添加口播
-        </button>
-        <button className="btn" onClick={() => write([...lines, newGapLine()])}>
-          加延时
-        </button>
+                    <div className="px-1 text-[10px] text-ink-500">延时</div>
+                  </td>
+                  <td className="whitespace-nowrap px-2 py-1.5">
+                    <label className="flex items-center gap-1 font-mono text-brass">
+                      <input
+                        type="number"
+                        min={0.05}
+                        step={0.05}
+                        className="field w-16 py-0.5"
+                        value={secInput(lineDurationMs(scene, line, preview, source))}
+                        onChange={(e) => patchLine(line.id, { durationMs: Math.max(50, parseSec(e.target.value)) })}
+                      />
+                      s
+                    </label>
+                  </td>
+                  <td className="px-2 py-1.5 text-ink-500">—</td>
+                  <td className="whitespace-nowrap px-1 py-1">
+                    <button className="btn px-1 py-0.5" disabled={idx <= 0} onClick={() => move(line.id, -1)}>
+                      ↑
+                    </button>
+                    <button className="btn ml-0.5 px-1 py-0.5" disabled={idx < 0 || idx >= lines.length - 1} onClick={() => move(line.id, 1)}>
+                      ↓
+                    </button>
+                    <button className="btn ml-0.5 px-1.5 py-0.5" onClick={() => write(lines.filter((x) => x.id !== line.id), "all")}>
+                      删
+                    </button>
+                  </td>
+                  <td className="px-2 py-1.5 text-ink-500" colSpan={LANGS.length}>
+                    无文案。插入这段静音后，后面的口播后移。
+                  </td>
+                </tr>
+              ) : (
+                <tr key={line.id} className="border-t border-ink-700 align-top">
+                  <td className="px-1 py-1">
+                    <input
+                      className="field w-24 py-0.5 font-mono text-[11px]"
+                      defaultValue={line.id}
+                      key={line.id}
+                      onBlur={(e) => renameLine(line.id, e.target.value)}
+                    />
+                  </td>
+                  <td className="whitespace-nowrap px-2 py-1.5 font-mono text-brass" title="由合成实测或按字数估计，不可手改">
+                    {secInput(lineDurationMs(scene, line, preview, source)).toFixed(2)}s
+                  </td>
+                  <td className="px-1 py-1">
+                    <select
+                      className="field min-w-[7rem] py-0.5"
+                      value={roles.some((r) => r.id === (line.role ?? "")) ? line.role : ""}
+                      onChange={(e) => patchLine(line.id, { role: e.target.value.trim() || undefined }, "all")}
+                    >
+                      <option value="">默认{fallback ? `（${profileLabel(fallback)}）` : ""}</option>
+                      {roles.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {profileLabel(r)}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="whitespace-nowrap px-1 py-1">
+                    <button
+                      className="btn px-1.5 py-0.5"
+                      disabled={Boolean(busy)}
+                      onClick={() => void translateRow(line)}
+                    >
+                      {busy === line.id ? "…" : "翻译此句"}
+                    </button>
+                    <button className="btn ml-0.5 px-1 py-0.5" disabled={idx <= 0} onClick={() => move(line.id, -1)}>
+                      ↑
+                    </button>
+                    <button className="btn ml-0.5 px-1 py-0.5" disabled={idx < 0 || idx >= lines.length - 1} onClick={() => move(line.id, 1)}>
+                      ↓
+                    </button>
+                    <button className="btn ml-0.5 px-1.5 py-0.5" onClick={() => write(lines.filter((x) => x.id !== line.id), "all")}>
+                      删
+                    </button>
+                  </td>
+                  {LANGS.map((l) => (
+                    <td key={l.id} className="px-1 py-1">
+                      <textarea
+                        className={`field min-h-[52px] w-full text-[11px] ${l.id === source ? "border-brass/50" : ""}`}
+                        value={line.i18n?.[l.id] ?? ""}
+                        onChange={(e) =>
+                          patchLine(line.id, { i18n: writeI18n(line.i18n, l.id, source, e.target.value) }, l.id)
+                        }
+                      />
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </Modal>
   );

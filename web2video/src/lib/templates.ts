@@ -350,8 +350,8 @@ export function normalizeProject(data: Project): Project {
         ? b.effects.filter((fx) => fx && fx.id && fx.from?.speakId).map((fx) => ({
             ...fx,
             durationMs: finiteMs(fx.durationMs),
-            from: { ...fx.from, offsetMs: finiteLead(fx.from.offsetMs) },
-            to: fx.to ? { ...fx.to, offsetMs: finiteLead(fx.to.offsetMs) } : undefined,
+            from: { ...fx.from, offsetMs: finiteLead(fx.from.offsetMs), atMs: finiteMs(fx.from.atMs) },
+            to: fx.to ? { ...fx.to, offsetMs: finiteLead(fx.to.offsetMs), atMs: finiteMs(fx.to.atMs) } : undefined,
           }))
         : undefined;
       return { ...b, name: name || undefined, effects };
