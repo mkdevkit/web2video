@@ -43,6 +43,7 @@ npm run tauri:build   # 安装包
 | 用在哪 | 字体 | 许可 |
 | --- | --- | --- |
 | 工作台界面 | DM Sans、Noto Sans SC | SIL OFL |
+| 默认舞台字体 | 外观 → 字体 → 默认舞台字体（缺省跟正文字体） | SIL OFL |
 | 舞台正文 | 外观 → 字体 → 正文字体（默认 Noto Sans） | SIL OFL |
 | 舞台标题 | 外观 → 字体 → 标题字体（默认 Noto Serif） | SIL OFL |
 | 字幕条（预览与烧录）、节拍卡 | 外观 → 字体 → 字幕字体（默认 Noto Sans） | SIL OFL |
@@ -50,7 +51,15 @@ npm run tauri:build   # 安装包
 | HyperFrames 示例页 | Noto Sans SC | SIL OFL |
 | KaTeX 公式（脚本自行引入时） | KaTeX_* | SIL OFL |
 
-成片可选字体（外观 → 字体里下拉，均为 SIL OFL）：Noto Sans / Noto Serif、Source Sans 3 / Source Serif 4、IBM Plex Sans、PT Sans、Nunito Sans、Inter、Literata、DM Sans。工作台「外观 → 字体」分「用在哪」「每种字体」两页表。
+成片可选字体（外观 → 字体里下拉，均为 SIL OFL）：Noto Sans / Noto Serif、Source Sans 3 / Source Serif 4、IBM Plex Sans、PT Sans、Nunito Sans、Inter、Literata、DM Sans。工作台「外观 → 字体」分「用在哪」「每种字体」两页表。禁止在舞台 CSS/HTML 写 Arial、微软雅黑、`system-ui`、`sans-serif`。
+
+### 舞台外观是工程全局的
+
+画幅、字体、底色、全局 CSS（`stageTheme` / `stageCss`）写在 `project.json`，**整片共用**。每个脚本自己的是舞台 HTML（`script.json` 的 DOM）和 GSAP。各脚本结构可以不同，但继承同一套变量：`var(--stage-base-font)`、`var(--stage-font)`、`var(--stage-title-font)`、`var(--stage-caption-font)`。
+
+**默认舞台字体**打在舞台根节点上（`font-family` + `--stage-base-font`）。HTML/CSS 没写 `font-family` 的节点会整台继承它。某个节点写了自己的 `font-family`，或用了 `var(--stage-title-font)` / `var(--stage-font)`，就不再用默认这套。默认 CSS 里 `.title` 走标题字体、`.stat` 走正文字体，不走默认舞台字体。旧工程没有 `baseFontId` 时跟正文字体。
+
+实现：`src/lib/stage.ts` 的 `mountStage` / `stageBoxStyle`（预览 `PreviewPane`、导出 `ExportStage` 会调）。下拉在顶栏「外观 → 字体」。
 
 ## 用例
 
@@ -77,7 +86,7 @@ speech.totalS()            // 全片
 
 入场用固定秒；**这一段代码的总时长 = `speech.s(id)`**。换语言只换 TTS，代码不用改。
 
-舞台 HTML 写在**每个脚本**上（DOM，不是 canvas）。画幅在顶栏；字体、底色、全局 CSS 在顶栏「外观」（字体 / 舞台两页）。舞台与字幕字体均为 SIL OFL（免费可商用）；烧录字幕条用「外观 → 字体 → 字幕字体」。中日文不足会回落 Noto CJK。每个脚本自己选引擎，导出按左侧列表顺序拼成一条片子。口播时长怎么取、各工具怎么写：工作台「用法」页，或下文 [工具用法](#工具用法)。字体用在哪、每种字体：顶栏「外观 → 字体」。
+舞台 HTML 写在**每个脚本**上（DOM，不是 canvas）。画幅在顶栏；字体、底色、全局 CSS 是工程级，在顶栏「外观」（见上文 [舞台外观是工程全局的](#舞台外观是工程全局的)）。烧录字幕条用「外观 → 字体 → 字幕字体」。每个脚本自己选引擎，导出按左侧列表顺序拼成一条片子。口播时长怎么取、各工具怎么写：工作台「用法」页，或下文 [工具用法](#工具用法)。
 
 适合：科普、产品介绍、课程片头——同一套分镜要出很多语种。
 

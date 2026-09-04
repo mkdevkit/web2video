@@ -1,6 +1,6 @@
 import { BLOCK_TYPES, LAYOUTS, type AnimKind, type AspectId, type BlockType, type CaptionStyle, type CueBind, type CueStay, type LayoutId, type ListMarkerStyle, type ProgressStyle, type StageFontId } from "../../types";
 import { sceneBlocks } from "../blocks";
-import { captionStyleOf, isStageFontId, progressStyleOf, STAGE_FONTS } from "../fonts";
+import { captionStyleOf, isStageFontId, progressStyleOf, STAGE_FONTS, stampLegacyBlockFonts } from "../fonts";
 import { listMarkerStyleOf } from "../listMarker";
 import { exportSettingsOf } from "../exportSettings";
 import { itemSpeakKey } from "../narration";
@@ -23,7 +23,7 @@ const FONT_IDS = STAGE_FONTS.map((f) => f.id);
 
 /** In-app AI + Cursor MCP. Keep in sync with skill/web2video 字体. */
 export const FONT_POLICY =
-  "成片字体必须免费可商用。只用 list_catalog.fonts 的 id（均为 SIL OFL，字文件随工具打包，不请求 Google Fonts）。缺省：正文/列表/字幕 noto-sans，标题/数字/金句 noto-serif。元件覆盖也必须是目录 id。栈末回落 Noto。禁止 Arial、微软雅黑、PingFang、Hiragino、Times、system-ui、sans-serif、serif。不要发明目录外字体名。KaTeX_* 同样 SIL OFL。嵌进视频可以，不要把字体文件单独拿去卖。";
+  "成片字体必须免费可商用。只用 list_catalog.fonts 的 id（均为 SIL OFL，字文件随工具打包，不请求 Google Fonts）。片级 fontId 是所有文字元件的默认，captionFontId 是口播字幕条。标题/金句等也是元件，未指定时跟 fontId；要例外写元件 settings.fontId。进度条场次名用 progressStyle.fontId（可回落字幕）。栈末回落 Noto。禁止 Arial、微软雅黑、PingFang、Hiragino、Times、system-ui、sans-serif、serif。不要发明目录外字体名。KaTeX_* 同样 SIL OFL。嵌进视频可以，不要把字体文件单独拿去卖。";
 
 const sceneSpecProperties = {
   name: { type: "string", description: "场景短名，时间轴与进度条上显示" },
@@ -196,10 +196,10 @@ export const AI_TOOLS: ChatTool[] = [
           bilingualCaptions: { type: "boolean", description: "双语字幕：主行当前配音语言，副行第二语言" },
           bilingualCaptionLang: { type: "string", enum: ["zh", "en", "ja", "fr", "de", "ru", "es", "pt", "it"], description: "双语字幕的第二语言" },
           showTopProgress: { type: "boolean", description: "画布进度条，会进导出" },
-          fontId: { type: "string", enum: FONT_IDS, description: "正文/列表。仅 list_catalog.fonts，SIL OFL，默认 noto-sans" },
-          titleFontId: { type: "string", enum: FONT_IDS, description: "标题/数字。仅目录 id，默认 noto-serif" },
-          subtitleFontId: { type: "string", enum: FONT_IDS, description: "副标题/署名。仅目录 id，默认 noto-sans" },
-          quoteFontId: { type: "string", enum: FONT_IDS, description: "金句。仅目录 id，默认 noto-serif" },
+          fontId: { type: "string", enum: FONT_IDS, description: "元件默认。标题/正文/金句等未单独指定时都用这个。仅 list_catalog.fonts，SIL OFL，默认 noto-sans" },
+          titleFontId: { type: "string", enum: FONT_IDS, description: "兼容旧字段。打开旧工程时会盖到标题/数字元件上；新片请用 fontId 或元件 settings.fontId" },
+          subtitleFontId: { type: "string", enum: FONT_IDS, description: "兼容旧字段。打开旧工程时会盖到副标题/署名元件上；新片请用 fontId 或元件 settings.fontId" },
+          quoteFontId: { type: "string", enum: FONT_IDS, description: "兼容旧字段。打开旧工程时会盖到金句元件上；新片请用 fontId 或元件 settings.fontId" },
           captionFontId: { type: "string", enum: FONT_IDS, description: "口播字幕条。仅目录 id，默认 noto-sans。禁止系统字体" },
           captionStyle: { type: "object", properties: captionStyleProperties },
           progressStyle: { type: "object", properties: progressStyleProperties },
@@ -294,7 +294,7 @@ export const AI_TOOLS: ChatTool[] = [
               fill: { type: "string" },
               fontSize: { type: "number" },
               fontWeight: { type: "string", enum: ["normal", "medium", "bold"] },
-              fontId: { type: "string", enum: FONT_IDS, description: "仅 list_catalog.fonts（SIL OFL）。禁止 Arial/微软雅黑/system-ui" },
+              fontId: { type: "string", enum: FONT_IDS, description: "覆盖片级元件默认。仅 list_catalog.fonts（SIL OFL）。禁止 Arial/微软雅黑/system-ui" },
               tex: { type: "string", description: "katex 元件的 TeX 源，如 E = mc^{2}" },
               displayMode: { type: "boolean", description: "katex 是否独立成行，默认 true" },
               threeSrc: { type: "string", description: "three 元件脚本：可用 THREE/scene/camera，可 return function update({ t, localMs })。不要 rAF，不要编造模型/贴图 URL" },
@@ -469,10 +469,10 @@ export function executeTool(name: string, rawArgs: unknown): string {
         fonts: {
           policy: FONT_POLICY,
           fontId: p.fontId,
+          captionFontId: p.captionFontId,
           titleFontId: p.titleFontId,
           subtitleFontId: p.subtitleFontId,
           quoteFontId: p.quoteFontId,
-          captionFontId: p.captionFontId,
         },
         captionStyle: captionStyleOf(p.captionStyle),
         progressStyle: progressStyleOf(p.progressStyle),
@@ -538,7 +538,13 @@ export function executeTool(name: string, rawArgs: unknown): string {
       if (typeof args.bilingualCaptions === "boolean") patch.bilingualCaptions = args.bilingualCaptions;
       if (isLangId(String(args.bilingualCaptionLang ?? ""))) patch.bilingualCaptionLang = args.bilingualCaptionLang as LangId;
       if (typeof args.showTopProgress === "boolean") patch.showTopProgress = args.showTopProgress;
-      for (const k of ["fontId", "titleFontId", "subtitleFontId", "quoteFontId", "captionFontId"] as const) {
+      if (isStageFontId(args.fontId)) {
+        patch.fontId = args.fontId as StageFontId;
+        if (!isStageFontId(args.titleFontId)) patch.titleFontId = args.fontId as StageFontId;
+        if (!isStageFontId(args.subtitleFontId)) patch.subtitleFontId = args.fontId as StageFontId;
+        if (!isStageFontId(args.quoteFontId)) patch.quoteFontId = args.fontId as StageFontId;
+      }
+      for (const k of ["titleFontId", "subtitleFontId", "quoteFontId", "captionFontId"] as const) {
         if (isStageFontId(args[k])) patch[k] = args[k] as StageFontId;
       }
       if (args.captionStyle && typeof args.captionStyle === "object") {
@@ -554,6 +560,20 @@ export function executeTool(name: string, rawArgs: unknown): string {
       }
       if (args.exportSettings && typeof args.exportSettings === "object") {
         patch.exportSettings = exportSettingsOf({ ...store.project.exportSettings, ...(args.exportSettings as object) });
+      }
+      const typedFont =
+        isStageFontId(args.titleFontId) || isStageFontId(args.subtitleFontId) || isStageFontId(args.quoteFontId);
+      if (typedFont) {
+        const fonts = {
+          fontId: (patch.fontId as StageFontId | undefined) ?? store.project.fontId,
+          titleFontId: (patch.titleFontId as StageFontId | undefined) ?? store.project.titleFontId,
+          subtitleFontId: (patch.subtitleFontId as StageFontId | undefined) ?? store.project.subtitleFontId,
+          quoteFontId: (patch.quoteFontId as StageFontId | undefined) ?? store.project.quoteFontId,
+        };
+        patch.scenes = store.project.scenes.map((sc) => ({
+          ...sc,
+          blocks: stampLegacyBlockFonts(sc.blocks?.length ? sc.blocks : sceneBlocks(sc), fonts),
+        }));
       }
       if (!Object.keys(patch).length) return fail("没有可更新的字段");
       store.updateProject(patch);

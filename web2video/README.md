@@ -56,17 +56,14 @@ npm run tauri:build   # 安装包
 | --- | --- | --- |
 | 工作台界面（按钮、表单、检视） | DM Sans、Noto Sans SC | SIL OFL |
 | 工作台标题（顶栏品牌、对话框标题） | Fraunces、Noto Serif SC | SIL OFL |
-| 画面正文、列表 | 配置 → 字体 → 正文 / 列表（默认 Noto Sans） | SIL OFL |
-| 画面标题、数字 | 配置 → 字体 → 标题 / 数字（默认 Noto Serif） | SIL OFL |
-| 副标题、署名 | 配置 → 字体 → 副标题 / 署名（默认 Noto Sans） | SIL OFL |
-| 金句 | 配置 → 字体 → 金句（默认 Noto Serif） | SIL OFL |
+| 画面元件（未单独指定） | 配置 → 字体 → 元件默认（默认 Noto Sans） | SIL OFL |
 | 口播字幕条（预览与烧录到画面） | 配置 → 字体 → 口播字幕（默认 Noto Sans） | SIL OFL |
 | 画布进度条场次名 | 配置 → 字体 → 进度条场次名（可回落字幕字体） | SIL OFL |
 | 公式元件 | KaTeX 自带（KaTeX_*） | SIL OFL |
-| 单个元件覆盖 | 检视里可选；缺省跟该类型全局字体 | SIL OFL |
+| 单个元件覆盖 | 检视里可选；缺省跟元件默认 | SIL OFL |
 | 中日文缺字回落 | Noto Sans/Serif SC、JP；IBM Plex 日文走 IBM Plex Sans JP | SIL OFL |
 
-成片可选字体（配置里下拉，均为 SIL OFL）：Noto Sans / Noto Serif、Source Sans 3 / Source Serif 4、IBM Plex Sans、PT Sans、Nunito Sans、Inter、Literata、DM Sans。工作台「配置 → 字体」与「?」帮助里分「用在哪」「每种字体」两页表。
+成片可选字体（配置里下拉，均为 SIL OFL）：Noto Sans / Noto Serif、Source Sans 3 / Source Serif 4、IBM Plex Sans、PT Sans、Nunito Sans、Inter、Literata、DM Sans。工作台「配置 → 字体」与「?」帮助里分「用在哪」「每种字体」两页表。标题、金句等也是元件：全局只配「元件默认」和字幕；某个元件要换字体，在检视里选，说明与配置目录同样详细。
 
 ## 技术方案
 

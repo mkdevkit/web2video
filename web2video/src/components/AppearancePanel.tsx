@@ -1,9 +1,10 @@
-import { STAGE_FONTS, captionStyleOf, fontStack, progressStyleOf } from "../lib/fonts";
+import { captionStyleOf, fontStack, progressStyleOf } from "../lib/fonts";
 import { listMarkerRadius, listMarkerStyleOf } from "../lib/listMarker";
 import { pickImageFile } from "../lib/insertImage";
 import { useEditor } from "../store/useEditor";
 import type { CaptionBox, ListMarkerKind, ListMarkerShape, StageFontId } from "../types";
 import { Field } from "./ui";
+import { FontSelect } from "./FontSelect";
 import { FontUsageGuide } from "./FontUsageGuide";
 import { LANGS, langZhName, type LangId } from "../lib/langs";
 
@@ -20,18 +21,7 @@ function FontPick({
 }) {
   return (
     <Field label={label}>
-      <select
-        className="field"
-        value={value}
-        style={{ fontFamily: fontStack(value, lang) }}
-        onChange={(e) => onChange(e.target.value as StageFontId)}
-      >
-        {STAGE_FONTS.map((f) => (
-          <option key={f.id} value={f.id} title={f.detail} style={{ fontFamily: fontStack(f.id, lang) }}>
-            {f.label} · {f.langs}
-          </option>
-        ))}
-      </select>
+      <FontSelect value={value} lang={lang} onChange={(id) => id && onChange(id)} />
     </Field>
   );
 }
@@ -44,18 +34,15 @@ export function FontFields() {
   return (
     <div className="space-y-2">
       <p className="text-xs leading-relaxed text-ink-400">
-        均为 SIL OFL，免费可商用，字文件随工具打包。中日文不足时回落到 Noto，不走系统字体。当前预览语言：按该语言优先选字形。口播字幕条（预览和烧录）用「口播字幕」这一项。
+        均为 SIL OFL，免费可商用，字文件随工具打包。中日文不足时回落到 Noto，不走系统字体。当前预览语言：按该语言优先选字形。标题、金句等也是元件，未单独指定时跟「元件默认」；要例外在检视里改该元件。
       </p>
       <div className="grid gap-2 md:grid-cols-2">
-        <FontPick label="正文 / 列表" value={project.fontId} lang={lang} onChange={(fontId) => set({ fontId })} />
-        <FontPick label="标题 / 数字" value={project.titleFontId} lang={lang} onChange={(titleFontId) => set({ titleFontId })} />
         <FontPick
-          label="副标题 / 署名"
-          value={project.subtitleFontId}
+          label="元件默认"
+          value={project.fontId}
           lang={lang}
-          onChange={(subtitleFontId) => set({ subtitleFontId })}
+          onChange={(fontId) => set({ fontId, titleFontId: fontId, subtitleFontId: fontId, quoteFontId: fontId })}
         />
-        <FontPick label="金句" value={project.quoteFontId} lang={lang} onChange={(quoteFontId) => set({ quoteFontId })} />
         <FontPick label="口播字幕" value={project.captionFontId} lang={lang} onChange={(captionFontId) => set({ captionFontId })} />
         <FontPick
           label="进度条场次名"
@@ -253,7 +240,7 @@ export function ProgressFields() {
         />
         画面上显示全片进度条
       </label>
-      <p className="text-[10px] text-ink-500">画在舞台画布里，预览和导出都会带上。字体可在「字体」页单独选。</p>
+      <p className="text-[10px] text-ink-500">画在舞台画布里，预览和导出都会带上。场次名字体在「字体」页，不选则跟口播字幕。</p>
       {project.showTopProgress && (
         <>
           <div className="grid grid-cols-2 gap-2">

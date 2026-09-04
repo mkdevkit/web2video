@@ -2,7 +2,7 @@ import { uid } from "./ids";
 import { defaultCues } from "./blocks";
 import { t18 } from "./scriptSplit";
 import { defaultVoiceByLang, defaultVoiceProfiles } from "./ttsSecrets";
-import { DEFAULT_CAPTION_STYLE, DEFAULT_PROGRESS_STYLE, DEFAULT_CAPTION_FONT_ID, DEFAULT_FONT_ID, DEFAULT_QUOTE_FONT_ID, DEFAULT_SUBTITLE_FONT_ID, DEFAULT_TITLE_FONT_ID, captionStyleOf, progressStyleOf, isStageFontId } from "./fonts";
+import { DEFAULT_CAPTION_STYLE, DEFAULT_PROGRESS_STYLE, DEFAULT_CAPTION_FONT_ID, DEFAULT_FONT_ID, DEFAULT_QUOTE_FONT_ID, DEFAULT_SUBTITLE_FONT_ID, DEFAULT_TITLE_FONT_ID, captionStyleOf, progressStyleOf, isStageFontId, stampLegacyBlockFonts } from "./fonts";
 import { DEFAULT_LIST_MARKER_STYLE, listMarkerStyleOf } from "./listMarker";
 import { DEFAULT_EXPORT_SETTINGS, exportSettingsOf } from "./exportSettings";
 import { DEFAULT_HOLD_MS, DEFAULT_TRANSITION, DEFAULT_TRANSITION_MS, DEFAULT_OPEN_PAD_BEFORE_MS, DEFAULT_OPEN_PAD_AFTER_MS, DEFAULT_CLOSE_PAD_BEFORE_MS, DEFAULT_CLOSE_PAD_AFTER_MS } from "./timeline";
@@ -132,9 +132,9 @@ export function sampleProject(): Project {
     bilingualCaptions: false,
     showTopProgress: false,
     fontId: DEFAULT_FONT_ID,
-    titleFontId: DEFAULT_TITLE_FONT_ID,
-    subtitleFontId: DEFAULT_SUBTITLE_FONT_ID,
-    quoteFontId: DEFAULT_QUOTE_FONT_ID,
+    titleFontId: DEFAULT_FONT_ID,
+    subtitleFontId: DEFAULT_FONT_ID,
+    quoteFontId: DEFAULT_FONT_ID,
     captionFontId: DEFAULT_CAPTION_FONT_ID,
     captionStyle: { ...DEFAULT_CAPTION_STYLE },
     progressStyle: { ...DEFAULT_PROGRESS_STYLE },
@@ -255,9 +255,9 @@ export function emptyProject(name = DEFAULT_PROJECT_NAME): Project {
     bilingualCaptions: false,
     showTopProgress: false,
     fontId: DEFAULT_FONT_ID,
-    titleFontId: DEFAULT_TITLE_FONT_ID,
-    subtitleFontId: DEFAULT_SUBTITLE_FONT_ID,
-    quoteFontId: DEFAULT_QUOTE_FONT_ID,
+    titleFontId: DEFAULT_FONT_ID,
+    subtitleFontId: DEFAULT_FONT_ID,
+    quoteFontId: DEFAULT_FONT_ID,
     captionFontId: DEFAULT_CAPTION_FONT_ID,
     captionStyle: { ...DEFAULT_CAPTION_STYLE },
     progressStyle: { ...DEFAULT_PROGRESS_STYLE },
@@ -344,18 +344,26 @@ export function normalizeProject(data: Project): Project {
     bgImage: typeof s.bgImage === "string" && s.bgImage.trim() ? s.bgImage : undefined,
     bgFit: asFit(s.bgFit),
     bgDim: finite01(s.bgDim),
-    blocks: s.blocks?.map((b) => {
-      const name = asNameI18n(b.name, data.sourceLang ?? "zh");
-      const effects = Array.isArray(b.effects)
-        ? b.effects.filter((fx) => fx && fx.id && fx.from?.speakId).map((fx) => ({
-            ...fx,
-            durationMs: finiteMs(fx.durationMs),
-            from: { ...fx.from, offsetMs: finiteLead(fx.from.offsetMs), atMs: finiteMs(fx.from.atMs) },
-            to: fx.to ? { ...fx.to, offsetMs: finiteLead(fx.to.offsetMs), atMs: finiteMs(fx.to.atMs) } : undefined,
-          }))
-        : undefined;
-      return { ...b, name: name || undefined, effects };
-    }),
+    blocks: stampLegacyBlockFonts(
+      s.blocks?.map((b) => {
+        const name = asNameI18n(b.name, data.sourceLang ?? "zh");
+        const effects = Array.isArray(b.effects)
+          ? b.effects.filter((fx) => fx && fx.id && fx.from?.speakId).map((fx) => ({
+              ...fx,
+              durationMs: finiteMs(fx.durationMs),
+              from: { ...fx.from, offsetMs: finiteLead(fx.from.offsetMs), atMs: finiteMs(fx.from.atMs) },
+              to: fx.to ? { ...fx.to, offsetMs: finiteLead(fx.to.offsetMs), atMs: finiteMs(fx.to.atMs) } : undefined,
+            }))
+          : undefined;
+        return { ...b, name: name || undefined, effects };
+      }),
+      {
+        fontId: isStageFontId(data.fontId) ? data.fontId : DEFAULT_FONT_ID,
+        titleFontId: isStageFontId(data.titleFontId) ? data.titleFontId : DEFAULT_TITLE_FONT_ID,
+        subtitleFontId: isStageFontId(data.subtitleFontId) ? data.subtitleFontId : isStageFontId(data.fontId) ? data.fontId : DEFAULT_SUBTITLE_FONT_ID,
+        quoteFontId: isStageFontId(data.quoteFontId) ? data.quoteFontId : isStageFontId(data.titleFontId) ? data.titleFontId : DEFAULT_QUOTE_FONT_ID,
+      },
+    ),
     speaks: persistSpeaks({
       ...s,
       speakTrack: Array.isArray(s.speakTrack) ? s.speakTrack : undefined,

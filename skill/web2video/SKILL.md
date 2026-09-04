@@ -61,7 +61,7 @@ description: >-
 
 成片要免费可商用。目录与元件默认均为 **SIL OFL**，字文件**随工具打包**，不请求 Google Fonts，栈末回落 Noto，不走系统字体。
 
-- 只用 `list_catalog.fonts` 的 id：`fontId` `titleFontId` `subtitleFontId` `quoteFontId` `captionFontId`。缺省：正文/列表/字幕 `noto-sans`，标题/数字/金句 `noto-serif`。元件可单独覆盖，也必须是目录里的 id。
+- 只用 `list_catalog.fonts` 的 id。片级：`fontId`（所有文字元件的默认）、`captionFontId`（口播字幕条）。缺省均为 `noto-sans`。标题/金句等也是元件，未指定时跟 `fontId`；要例外写元件 `settings.fontId`，也必须是目录里的 id。进度条场次名用 `progressStyle.fontId`（可回落字幕）。
 - 公式 KaTeX_* 同样 SIL OFL，不要换成系统字体。
 - **禁止**给画面写 `Arial`、微软雅黑、PingFang、Hiragino、Times、`system-ui`、`sans-serif`、`serif`。不要发明目录外的字体名。
 - SIL OFL：嵌进视频可以；不要把字体文件单独拿去卖。

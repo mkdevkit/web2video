@@ -34,12 +34,13 @@ import {
 import { driveOf, playTargetChoices } from "../lib/calendar";
 import { blockWindow, windowProgress } from "../lib/effects";
 import { synthScenes } from "../lib/synthProject";
-import { BLOCK_TYPES, LAYOUTS, type DriveMode, type DialogueSide, type Scene, type SceneTransition, type StageFontId } from "../types";
+import { BLOCK_TYPES, LAYOUTS, type DriveMode, type DialogueSide, type Scene, type SceneTransition } from "../types";
 import { useEditor } from "../store/useEditor";
 import { Field } from "./ui";
 import type { LangId } from "../lib/langs";
 import type { LayoutBlock, TimeRef } from "../types";
-import { STAGE_FONTS, blockFontId, stageFont } from "../lib/fonts";
+import { blockFontId, stageFont } from "../lib/fonts";
+import { FontSelect } from "./FontSelect";
 import { EffectList, TimeRefFields } from "./EffectEditor";
 import { SpeakTrackEditor } from "./SpeakTrackEditor";
 import { VisualTextEditor } from "./VisualTextEditor";
@@ -816,26 +817,19 @@ function BlockInspector({ scene, block }: { scene: Scene; block: LayoutBlock }) 
         <>
           {block.type !== "katex" && (
             <Field label="字体">
-              <select
-                className="field"
+              <FontSelect
                 value={block.settings?.fontId ?? ""}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  useEditor.getState().patchBlockSettings(scene.id, block.id, {
-                    fontId: v ? (v as StageFontId) : undefined,
-                  });
-                }}
-              >
-                <option value="">默认（{stageFont(blockFontId(project, block.type)).label}）</option>
-                {STAGE_FONTS.map((f) => (
-                  <option key={f.id} value={f.id} title={f.detail}>
-                    {f.label}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-1 text-[10px] leading-relaxed text-ink-500">
-                {stageFont(block.settings?.fontId || blockFontId(project, block.type)).detail}
-              </p>
+                lang={project.previewLang}
+                emptyLabel={`默认（${stageFont(blockFontId(project)).label} · 配置里的元件默认）`}
+                onChange={(fontId) =>
+                  useEditor.getState().patchBlockSettings(scene.id, block.id, { fontId })
+                }
+              />
+              {!block.settings?.fontId && (
+                <p className="mt-1 text-[10px] leading-relaxed text-ink-500">
+                  未单独指定时跟配置 → 字体 → 元件默认。{stageFont(blockFontId(project)).hint} · {stageFont(blockFontId(project)).license}，免费可商用。
+                </p>
+              )}
             </Field>
           )}
           <Field label={`字号 ${set.fontSize}`}>

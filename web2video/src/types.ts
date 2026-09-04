@@ -374,6 +374,7 @@ export interface Project {
   /** Thin global playhead at the top of the stage column. */
   showTopProgress: boolean;
   fontId: StageFontId;
+  /** Legacy type-specific defaults. Opening old files stamps them onto blocks; new UI keeps them equal to fontId. */
   titleFontId: StageFontId;
   subtitleFontId: StageFontId;
   quoteFontId: StageFontId;

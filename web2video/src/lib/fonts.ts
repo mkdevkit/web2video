@@ -21,7 +21,7 @@ export const STAGE_FONTS: StageFont[] = [
     label: "Noto Sans",
     license: "SIL OFL",
     hint: "谷歌多语种无衬线，中英日欧俄都完整",
-    detail: "默认正文、列表、字幕。九语都自带字形，知识讲解片首选，不靠中日文回落。",
+    detail: "默认元件与字幕。九语都自带字形，知识讲解片首选，不靠中日文回落。",
     langs: "中英日法德俄西葡意",
     latin: '"Noto Sans"',
     zh: '"Noto Sans SC"',
@@ -33,7 +33,7 @@ export const STAGE_FONTS: StageFont[] = [
     label: "Noto Serif",
     license: "SIL OFL",
     hint: "谷歌多语种衬线，适合标题和金句",
-    detail: "默认标题、数字、金句。多语衬线，正式，适合大字和引用。",
+    detail: "多语衬线，正式，适合大标题、数字和金句。在检视里给该元件选用。",
     langs: "中英日法德俄西葡意",
     latin: '"Noto Serif"',
     zh: '"Noto Serif SC"',
@@ -155,28 +155,10 @@ export const FONT_USAGE: { where: string; fonts: string; license: "SIL OFL"; det
     detail: "顶栏品牌名、对话框标题。固定衬线，不随工程改。中文走 Noto Serif SC。",
   },
   {
-    where: "画面正文、列表",
-    fonts: "配置 → 字体 → 正文 / 列表（默认 Noto Sans）",
+    where: "画面元件（未单独指定）",
+    fonts: "配置 → 字体 → 元件默认（默认 Noto Sans）",
     license: "SIL OFL",
-    detail: "版面里的正文和列表。上面下拉改 fontId。中日文不足回落 Noto Sans CJK。",
-  },
-  {
-    where: "画面标题、数字",
-    fonts: "配置 → 字体 → 标题 / 数字（默认 Noto Serif）",
-    license: "SIL OFL",
-    detail: "大标题和数字统计。上面下拉改 titleFontId。衬线默认 Noto Serif。",
-  },
-  {
-    where: "副标题、署名",
-    fonts: "配置 → 字体 → 副标题 / 署名（默认 Noto Sans）",
-    license: "SIL OFL",
-    detail: "副标题和金句下的署名。上面下拉改 subtitleFontId。",
-  },
-  {
-    where: "金句",
-    fonts: "配置 → 字体 → 金句（默认 Noto Serif）",
-    license: "SIL OFL",
-    detail: "引用/金句元件。上面下拉改 quoteFontId。",
+    detail: "标题、正文、列表、金句等文字元件共用这一项。上面下拉改 fontId。某个元件要例外，在检视里覆盖。",
   },
   {
     where: "口播字幕条",
@@ -198,9 +180,9 @@ export const FONT_USAGE: { where: string; fonts: string; license: "SIL OFL"; det
   },
   {
     where: "单个元件覆盖",
-    fonts: "检视里可选；缺省跟该类型全局字体",
+    fonts: "检视里可选；缺省跟元件默认",
     license: "SIL OFL",
-    detail: "某个标题或正文可在检视里改字体，只影响该元件。不选则用上面的全局项。",
+    detail: "检视里可选目录中任一 SIL OFL 字体；不选则跟配置里的元件默认。",
   },
   {
     where: "中日文缺字回落",
@@ -298,18 +280,40 @@ export function fontStack(id: string | undefined, lang: LangId): string {
   return `${f.latin}, ${f.zh}, ${f.ja}, ${ofl}`;
 }
 
-export function blockFontId(project: Pick<Project, "fontId" | "titleFontId" | "subtitleFontId" | "quoteFontId">, type: BlockType): StageFontId {
+/** Old type-specific globals. Used only to stamp leftover files onto blocks. */
+export function legacyTypeFontId(
+  project: Pick<Project, "fontId" | "titleFontId" | "subtitleFontId" | "quoteFontId">,
+  type: BlockType,
+): StageFontId {
   if (type === "title" || type === "number") return project.titleFontId || DEFAULT_TITLE_FONT_ID;
   if (type === "quote") return project.quoteFontId || DEFAULT_QUOTE_FONT_ID;
   if (type === "subtitle" || type === "author") return project.subtitleFontId || DEFAULT_SUBTITLE_FONT_ID;
   return project.fontId || DEFAULT_FONT_ID;
 }
 
+export function blockFontId(project: Pick<Project, "fontId">, _type?: BlockType): StageFontId {
+  return project.fontId || DEFAULT_FONT_ID;
+}
+
 export function resolveBlockFont(
-  project: Pick<Project, "fontId" | "titleFontId" | "subtitleFontId" | "quoteFontId">,
+  project: Pick<Project, "fontId">,
   block: { type: BlockType; settings?: { fontId?: StageFontId } },
 ): StageFontId {
-  return isStageFontId(block.settings?.fontId) ? block.settings.fontId : blockFontId(project, block.type);
+  return isStageFontId(block.settings?.fontId) ? block.settings.fontId : blockFontId(project);
+}
+
+export function stampLegacyBlockFonts<T extends { type: BlockType; settings?: { fontId?: StageFontId } }>(
+  blocks: T[] | undefined,
+  project: Pick<Project, "fontId" | "titleFontId" | "subtitleFontId" | "quoteFontId">,
+): T[] | undefined {
+  if (!blocks?.length) return blocks;
+  const base = project.fontId || DEFAULT_FONT_ID;
+  return blocks.map((b) => {
+    if (isStageFontId(b.settings?.fontId)) return b;
+    const typed = legacyTypeFontId(project, b.type);
+    if (typed === base) return b;
+    return { ...b, settings: { ...b.settings, fontId: typed } };
+  });
 }
 
 export function hexAlpha(hex: string, alpha: number): string {

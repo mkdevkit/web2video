@@ -41,7 +41,7 @@
 ## 片级 `set_project`
 
 - 画幅：`16:9` `9:16` `1:1`
-- 字体：`fontId` `titleFontId` `subtitleFontId` `quoteFontId` `captionFontId`（id 以 `list_catalog.fonts` 为准）
+- 字体：`fontId`（元件默认）`captionFontId`（字幕条）。旧字段 `titleFontId` `subtitleFontId` `quoteFontId` 打开时会盖到对应元件上；新片不要靠它们。id 以 `list_catalog.fonts` 为准
 - `showCaptions` 默认关，只影响预览；烧录在导出窗勾选（默认也不勾）
 - `showTopProgress`：画布进度条，会进导出（工作区底部全片条不是这个）
 
@@ -51,11 +51,9 @@
 
 | 位置 | 字段 | 默认 |
 | --- | --- | --- |
-| 正文、列表 | `fontId` | `noto-sans` |
-| 标题、数字 | `titleFontId` | `noto-serif` |
-| 副标题、署名 | `subtitleFontId` | `noto-sans` |
-| 金句 | `quoteFontId` | `noto-serif` |
+| 文字元件（未单独指定） | `fontId` | `noto-sans` |
 | 口播字幕条 | `captionFontId` | `noto-sans` |
+| 单个元件覆盖 | 元件 `settings.fontId` | 跟 `fontId` |
 | 公式 | KaTeX_* | 随库，SIL OFL |
 
 不要写 `Arial`、微软雅黑、PingFang、`system-ui`、`sans-serif`。不要用目录外的 id。OFL：可嵌进成片，勿单独售卖字体文件。

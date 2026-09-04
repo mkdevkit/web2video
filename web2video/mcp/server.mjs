@@ -45,7 +45,7 @@ function asMcpTools(raw) {
 }
 
 const FONT_POLICY =
-  "成片字体必须免费可商用。只用 list_catalog.fonts 的 id（均为 SIL OFL，字文件随工具打包，不请求 Google Fonts）。缺省：正文/列表/字幕 noto-sans，标题/数字/金句 noto-serif。元件覆盖也必须是目录 id。栈末回落 Noto。禁止 Arial、微软雅黑、PingFang、Hiragino、Times、system-ui、sans-serif、serif。不要发明目录外字体名。KaTeX_* 同样 SIL OFL。嵌进视频可以，不要把字体文件单独拿去卖。";
+  "成片字体必须免费可商用。只用 list_catalog.fonts 的 id（均为 SIL OFL，字文件随工具打包，不请求 Google Fonts）。片级 fontId 是所有文字元件的默认，captionFontId 是口播字幕条。标题/金句等也是元件，未指定时跟 fontId；要例外写元件 settings.fontId。进度条场次名用 progressStyle.fontId（可回落字幕）。栈末回落 Noto。禁止 Arial、微软雅黑、PingFang、Hiragino、Times、system-ui、sans-serif、serif。不要发明目录外字体名。KaTeX_* 同样 SIL OFL。嵌进视频可以，不要把字体文件单独拿去卖。";
 
 const FALLBACK = [
   {
