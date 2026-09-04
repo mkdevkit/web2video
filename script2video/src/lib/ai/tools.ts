@@ -50,7 +50,7 @@ const scriptSpecProperties = {
     type: "string",
     description: "当前引擎源码。GSAP/HyperFrames：paused timeline，用 speech.s/holdS/startS。脚本驱动用 speech.play(id)。不要写死秒数，不要 timeline.play()。",
   },
-  stageHtml: { type: "string", description: "本脚本舞台 DOM。字体用 inherit 或 var(--stage-*)，禁止 Arial/微软雅黑/system-ui/sans-serif。有字的节点会出现在文本页。画幅/字体/底色/全局 CSS 是工程级，用 set_project。" },
+  stageHtml: { type: "string", description: "本脚本舞台 DOM。字体用 inherit 或 var(--stage-*)，禁止 Arial/微软雅黑/system-ui/sans-serif。含字母/汉字的节点会出现在文本页；纯符号、纯数字不进表。画幅/字体/底色/全局 CSS 是工程级，用 set_project。" },
 };
 
 export const AI_TOOLS: ChatTool[] = [
@@ -199,7 +199,7 @@ export const AI_TOOLS: ChatTool[] = [
     function: {
       name: "manage_stage_texts",
       description:
-        "舞台画面文案（不是口播）。sync 从 HTML 抽出有字的节点；set_text 写某一语言。预览/导出走 previewLang。不要代劳机翻。",
+        "舞台画面文案（不是口播）。sync 从 HTML 抽出需要翻译的节点（含字母或汉字；箭头/省略号/纯数字不进表）；set_text 写某一语言。预览/导出走 previewLang。不要代劳机翻。",
       parameters: {
         type: "object",
         properties: {
@@ -410,7 +410,7 @@ export function executeTool(name: string, rawArgs: unknown): string {
         notes: {
           clock: "不要写死 3 秒。入场用固定秒；换语言只换 TTS。",
           gsap: "timeline 已 paused。不要 timeline.play()。脚本驱动用 speech.play(id)。预览和导出 seek。",
-          stage: "每个脚本自己的 stageHtml。画幅/字体/底色/stageCss 是工程级。HTML 里用 #title 等选择器。有字的节点会出现在文本页，预览/导出按 previewLang 覆盖。",
+          stage: "每个脚本自己的 stageHtml。画幅/字体/底色/stageCss 是工程级。HTML 里用 #title 等选择器。含字母/汉字的节点会出现在文本页，纯符号不进表。预览/导出按 previewLang 覆盖。",
           fonts: FONT_POLICY,
           sleep: "口播驱动：句间留白用延时行（kind=gap）。sleepS 加在片尾。脚本驱动：speech.play + sleepS。",
           tts: "密钥和配音合成不用你处理。用户在顶栏「配音」：合成 / AI 配置 / 配音角色 / 音色管理。翻译后合成默认关。改口播后配音会过期。画面文案翻译在「文本」页，不要代劳机翻。",

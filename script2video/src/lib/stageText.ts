@@ -32,6 +32,11 @@ function visibleText(el: Element): string {
   return (el.textContent ?? "").replace(/\s+/g, " ").trim();
 }
 
+/** 有字母/汉字等可译文字。纯符号、纯数字、省略号不进文本页。 */
+export function hasTranslatableCopy(s: string | undefined): boolean {
+  return /\p{L}/u.test((s ?? "").trim());
+}
+
 function nthPath(el: Element): string {
   const parts: string[] = [];
   let n: Element | null = el;
@@ -58,15 +63,15 @@ function locFor(el: Element): { id: string; sel: string } {
 function walk(el: Element, parentId: string | null, out: { id: string; sel: string; text: string }[]) {
   if (SKIP.has(el.tagName)) return;
   const kids = [...el.children].filter((c) => !SKIP.has(c.tagName));
-  if (kids.some((c) => visibleText(c))) {
+  if (kids.some((c) => hasTranslatableCopy(visibleText(c)))) {
     const nextParent = (el.getAttribute("data-text") ?? "").trim() || el.id || parentId;
     for (const c of kids) {
-      if (visibleText(c)) walk(c, nextParent, out);
+      if (hasTranslatableCopy(visibleText(c))) walk(c, nextParent, out);
     }
     return;
   }
   const text = visibleText(el);
-  if (!text) return;
+  if (!hasTranslatableCopy(text)) return;
   const loc = locFor(el);
   let id = loc.id || (parentId ? `${parentId}__${out.filter((r) => r.id.startsWith(`${parentId}__`)).length}` : `t${out.length}`);
   if (out.some((r) => r.id === id)) id = `${id}_${out.length}`;

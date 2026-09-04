@@ -79,6 +79,11 @@ export function isVisualI18nKind(kind: I18nRowKind): boolean {
   return VISUAL_KINDS.has(kind);
 }
 
+/** 有字母/汉字等可译文字。纯符号、纯数字、省略号不进文本页。 */
+export function hasTranslatableCopy(s: string | undefined): boolean {
+  return /\p{L}/u.test((s ?? "").trim());
+}
+
 export interface I18nRow {
   sceneId: string;
   sceneName: string;
@@ -107,6 +112,7 @@ export function collectI18nRows(project: Project): I18nRow[] {
   for (const scene of project.scenes) {
     const push = (kind: Exclude<I18nRowKind, "item" | "speak" | "dialogue" | "blockName">, slot?: TextI18n) => {
       if (!slot) return;
+      if (!Object.values(slot.i18n ?? {}).some((t) => hasTranslatableCopy(t))) return;
       rows.push({
         sceneId: scene.id,
         sceneName: scene.name,
@@ -121,7 +127,7 @@ export function collectI18nRows(project: Project): I18nRow[] {
       const typeLabel = BLOCK_TYPES.find((b) => b.type === block.type)?.label ?? block.type;
       const shown = blockNameOf(block, source, source);
       const nameSlot = asNameI18n(block.name, source);
-      if (nameSlot && Object.values(nameSlot.i18n).some((t) => t?.trim())) {
+      if (nameSlot && Object.values(nameSlot.i18n).some((t) => hasTranslatableCopy(t))) {
         rows.push({
           sceneId: scene.id,
           sceneName: scene.name,
@@ -132,7 +138,7 @@ export function collectI18nRows(project: Project): I18nRow[] {
         });
       }
       const slot = scene.speak?.[block.id];
-      if (!slot) continue;
+      if (!slot || !Object.values(slot.i18n ?? {}).some((t) => hasTranslatableCopy(t))) continue;
       rows.push({
         sceneId: scene.id,
         sceneName: scene.name,
@@ -150,16 +156,18 @@ export function collectI18nRows(project: Project): I18nRow[] {
     push("author", scene.slots.author);
     push("number", scene.slots.number);
     for (const [i, item] of (scene.slots.items ?? []).entries()) {
-      rows.push({
-        sceneId: scene.id,
-        sceneName: scene.name,
-        kind: "item",
-        itemId: item.id,
-        label: `条目 ${i + 1}`,
-        i18n: item.i18n ?? {},
-      });
+      if (Object.values(item.i18n ?? {}).some((t) => hasTranslatableCopy(t))) {
+        rows.push({
+          sceneId: scene.id,
+          sceneName: scene.name,
+          kind: "item",
+          itemId: item.id,
+          label: `条目 ${i + 1}`,
+          i18n: item.i18n ?? {},
+        });
+      }
       const spoken = scene.speak?.[`item:${item.id}`];
-      if (spoken) {
+      if (spoken && Object.values(spoken.i18n ?? {}).some((t) => hasTranslatableCopy(t))) {
         rows.push({
           sceneId: scene.id,
           sceneName: scene.name,
@@ -172,16 +180,18 @@ export function collectI18nRows(project: Project): I18nRow[] {
       }
     }
     for (const [i, line] of (scene.slots.dialogue ?? []).entries()) {
-      rows.push({
-        sceneId: scene.id,
-        sceneName: scene.name,
-        kind: "dialogue",
-        itemId: line.id,
-        label: `对白 ${i + 1}${line.name ? ` · ${line.name}` : ""}`,
-        i18n: line.i18n ?? {},
-      });
+      if (Object.values(line.i18n ?? {}).some((t) => hasTranslatableCopy(t))) {
+        rows.push({
+          sceneId: scene.id,
+          sceneName: scene.name,
+          kind: "dialogue",
+          itemId: line.id,
+          label: `对白 ${i + 1}${line.name ? ` · ${line.name}` : ""}`,
+          i18n: line.i18n ?? {},
+        });
+      }
       const spoken = scene.speak?.[`item:${line.id}`];
-      if (spoken) {
+      if (spoken && Object.values(spoken.i18n ?? {}).some((t) => hasTranslatableCopy(t))) {
         rows.push({
           sceneId: scene.id,
           sceneName: scene.name,
@@ -202,7 +212,7 @@ export function collectVisualRows(project: Project, sceneId?: string): I18nRow[]
     (r) =>
       isVisualI18nKind(r.kind) &&
       (!sceneId || r.sceneId === sceneId) &&
-      Object.values(r.i18n).some((t) => (t ?? "").trim()),
+      Object.values(r.i18n).some((t) => hasTranslatableCopy(t)),
   );
 }
 

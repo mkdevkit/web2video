@@ -114,7 +114,7 @@ export function StageTextEditor() {
         </button>
       </div>
       <p className="mb-3 text-[11px] leading-relaxed text-ink-400">
-        从本脚本舞台 HTML 抽出有字的节点（id 或 data-text）。和口播分开。预览 / 导出走顶栏预览语言。脚本里可用{" "}
+        从本脚本舞台 HTML 抽出需要翻译的节点（含字母或汉字；id 或 data-text）。箭头、间隔号、省略号、纯数字等只有符号的不进表。和口播分开。预览 / 导出走顶栏预览语言。脚本里可用{" "}
         <code className="text-brass">stage.text("id")</code>。改 HTML 后会重新扫描；已译的其它语言会尽量保留。
       </p>
       {err && <p className="mb-2 text-xs text-copper">{err}</p>}
