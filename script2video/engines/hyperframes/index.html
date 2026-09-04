@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <title>Script2Video scene</title>
     <style>
-      html, body { margin: 0; height: 100%; background: #10120e; color: #f3eee3; font-family: "Noto Sans SC", sans-serif; /* SIL OFL */ }
+      html, body { margin: 0; height: 100%; background: #10120e; color: #f3eee3; font-family: "Noto Sans SC", "Noto Sans", "Noto Sans JP"; /* SIL OFL, no system fallback */ }
       .clip { position: absolute; inset: 0; }
       #title { top: 28%; left: 8%; font-size: 64px; font-weight: 700; opacity: 0; }
       #stat { top: 52%; left: 8%; font-size: 36px; color: #d4a84b; opacity: 0; }
@@ -26,6 +26,7 @@
        * Replace data-duration with sceneDurationMs(script, audio)/1000 per language after TTS.
        * Do not call timeline.play().
        */
+      import "./fonts.ts";
       import { bindGsapTimeline, registerHyperframes } from "./bind-gsap.ts";
       import { sceneDurationMs } from "../../src/clock.ts";
       import { sampleAudio, sampleScript } from "../../src/sample.ts";

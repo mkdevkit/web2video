@@ -77,7 +77,7 @@ export function FontUsageGuide() {
         </div>
       )}
       <p className="text-[10px] leading-relaxed text-ink-500">
-        可选字体均为 SIL OFL，免费可商用。不随工具分发任何专有字体。system-ui 只是系统回落，不是捆绑字体。
+        可选与成片默认字体均为 SIL OFL，免费可商用，字文件随工具打包，不依赖 Google Fonts。栈末不回落 system-ui / 微软雅黑 / Arial。自定义舞台 CSS 也不要写这些系统字体名。
       </p>
     </div>
   );

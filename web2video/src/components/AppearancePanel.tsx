@@ -44,7 +44,7 @@ export function FontFields() {
   return (
     <div className="space-y-2">
       <p className="text-xs leading-relaxed text-ink-400">
-        均为 SIL OFL，可商用。中日文不足时回落到 Noto。当前预览语言：按该语言优先选字形。口播字幕条（预览和烧录）用「口播字幕」这一项。
+        均为 SIL OFL，免费可商用，字文件随工具打包。中日文不足时回落到 Noto，不走系统字体。当前预览语言：按该语言优先选字形。口播字幕条（预览和烧录）用「口播字幕」这一项。
       </p>
       <div className="grid gap-2 md:grid-cols-2">
         <FontPick label="正文 / 列表" value={project.fontId} lang={lang} onChange={(fontId) => set({ fontId })} />

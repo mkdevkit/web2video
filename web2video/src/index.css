@@ -16,8 +16,8 @@ body,
 }
 
 body {
-  /* SIL OFL: DM Sans (Colophon) + Noto Sans SC (Google). Generic system-ui is not bundled. */
-  font-family: "DM Sans", "Noto Sans SC", system-ui, sans-serif;
+  /* SIL OFL: DM Sans + Noto, bundled in embeddedFonts.ts. */
+  font-family: "DM Sans", "Noto Sans SC", "Noto Sans", "Noto Sans JP";
   overflow: hidden;
 }
 

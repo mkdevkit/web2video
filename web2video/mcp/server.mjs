@@ -44,6 +44,9 @@ function asMcpTools(raw) {
     }));
 }
 
+const FONT_POLICY =
+  "成片字体必须免费可商用。只用 list_catalog.fonts 的 id（均为 SIL OFL，字文件随工具打包，不请求 Google Fonts）。缺省：正文/列表/字幕 noto-sans，标题/数字/金句 noto-serif。元件覆盖也必须是目录 id。栈末回落 Noto。禁止 Arial、微软雅黑、PingFang、Hiragino、Times、system-ui、sans-serif、serif。不要发明目录外字体名。KaTeX_* 同样 SIL OFL。嵌进视频可以，不要把字体文件单独拿去卖。";
+
 const FALLBACK = [
   {
     name: "get_project",
@@ -52,7 +55,7 @@ const FALLBACK = [
   },
   {
     name: "list_catalog",
-    description: "列出版面、元件、字体。请先打开 Web2Video 编辑器。",
+    description: `列出版面、元件、字体。${FONT_POLICY} 请先打开 Web2Video 编辑器。`,
     inputSchema: { type: "object", properties: {} },
   },
 ];
@@ -68,6 +71,16 @@ async function listTools() {
   }
 }
 
+async function serverInstructions() {
+  try {
+    const data = await getJson("/__mcp/tools");
+    if (typeof data.instructions === "string" && data.instructions.trim()) return data.instructions;
+  } catch {
+    /* editor not open */
+  }
+  return FONT_POLICY;
+}
+
 async function handle(msg) {
   if (!msg || msg.jsonrpc !== "2.0" || !msg.method) return null;
   const { id, method, params } = msg;
@@ -79,6 +92,7 @@ async function handle(msg) {
         protocolVersion: params?.protocolVersion || "2024-11-05",
         capabilities: { tools: {} },
         serverInfo: { name: "web2video", version: "0.1.0" },
+        instructions: await serverInstructions(),
       },
     };
   }

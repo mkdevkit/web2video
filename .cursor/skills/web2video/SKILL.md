@@ -10,7 +10,9 @@ description: >-
 
 可视化场景编辑器。改的是**正在打开的工程**（Zustand），不是磁盘上另一份。密钥、翻译、配音合成不要代劳。
 
-和 Script2Video 的差别：这边是一场一场摆元件；那边是脚本 + `speech.*` 节拍。不要把 web2video 的 `scenes` 当成 script2video 工程打开。
+和 Script2Video 的差别：这边是一场一场摆元件；那边是脚本 + `speech.*` 节拍。不要把 web2video 的 `scene.json` 当成 script2video 工程打开。
+
+工程目录：`project.json` 片级，`scene.json` 场景，`aisession.json` AI 会话。旧版场景仍可能在 `project.json` 里。
 
 ## 前置
 
@@ -54,10 +56,19 @@ description: >-
 - 公式：`katex`，`settings.tex`。三维：`three`，`settings.threeSrc`，`update({ t, localMs })` 跟播放头，**不要 rAF**。
 - 不要编造图片 / 视频 / GIF / 模型 / 贴图 URL。媒体让用户在检视里选本地文件。
 - 动效跟口播 id 或场景锚点，不要按主体 0–1 拉伸。`set_cue` 的 `at`/`until` 仅兼容旧片。
-- 字体 id 来自 `list_catalog`（SIL OFL）。
+
+## 字体
+
+成片要免费可商用。目录与元件默认均为 **SIL OFL**，字文件**随工具打包**，不请求 Google Fonts，栈末回落 Noto，不走系统字体。
+
+- 只用 `list_catalog.fonts` 的 id：`fontId` `titleFontId` `subtitleFontId` `quoteFontId` `captionFontId`。缺省：正文/列表/字幕 `noto-sans`，标题/数字/金句 `noto-serif`。元件可单独覆盖，也必须是目录里的 id。
+- 公式 KaTeX_* 同样 SIL OFL，不要换成系统字体。
+- **禁止**给画面写 `Arial`、微软雅黑、PingFang、Hiragino、Times、`system-ui`、`sans-serif`、`serif`。不要发明目录外的字体名。
+- SIL OFL：嵌进视频可以；不要把字体文件单独拿去卖。
 
 ## 不要做的
 
 - 为 Script2Video 写 `speech.s` / GSAP timeline（那是另一个工具）
-- 把 `project.json` 当 script2video 工程打开
+- 把 web2video 的 `scene.json` 当 script2video 工程打开
+- 给画面写系统字体名（见上文「字体」）
 - 代劳配音窗口（合成 / 角色 / 音色）或 Edge 翻译

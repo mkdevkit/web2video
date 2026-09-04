@@ -146,6 +146,8 @@ export interface StageTheme {
   bg: string;
   color: string;
   accent: string;
+  /** Inherited default when HTML/CSS does not set font-family. */
+  baseFontId: StageFontId;
   fontId: StageFontId;
   titleFontId: StageFontId;
   /** Burned-in / preview caption bar. */

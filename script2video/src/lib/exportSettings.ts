@@ -49,7 +49,7 @@ export const DEFAULT_EXPORT_SETTINGS: ExportSettings = {
   fps: 24,
   videoMbps: 6,
   audioKbps: 128,
-  exportSubtitles: true,
+  exportSubtitles: false,
   subtitleFormat: "srt",
 };
 

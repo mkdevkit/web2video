@@ -13,7 +13,6 @@ export interface StageFont {
   zh: string;
   ja: string;
   generic: "sans-serif" | "serif";
-  google: string[];
 }
 
 /** All SIL Open Font License — free for commercial use. CJK/Cyrillic via Noto fallbacks. */
@@ -29,7 +28,6 @@ export const STAGE_FONTS: StageFont[] = [
     zh: '"Noto Sans SC"',
     ja: '"Noto Sans JP"',
     generic: "sans-serif",
-    google: ["Noto+Sans:wght@400;500;700", "Noto+Sans+SC:wght@400;500;700", "Noto+Sans+JP:wght@400;500;700"],
   },
   {
     id: "noto-serif",
@@ -42,7 +40,6 @@ export const STAGE_FONTS: StageFont[] = [
     zh: '"Noto Serif SC"',
     ja: '"Noto Serif JP"',
     generic: "serif",
-    google: ["Noto+Serif:wght@400;700", "Noto+Serif+SC:wght@400;700", "Noto+Serif+JP:wght@400;700"],
   },
   {
     id: "source-sans",
@@ -55,7 +52,6 @@ export const STAGE_FONTS: StageFont[] = [
     zh: '"Noto Sans SC"',
     ja: '"Noto Sans JP"',
     generic: "sans-serif",
-    google: ["Source+Sans+3:wght@400;600;700", "Noto+Sans+SC:wght@400;500;700", "Noto+Sans+JP:wght@400;500;700"],
   },
   {
     id: "source-serif",
@@ -68,7 +64,6 @@ export const STAGE_FONTS: StageFont[] = [
     zh: '"Noto Serif SC"',
     ja: '"Noto Serif JP"',
     generic: "serif",
-    google: ["Source+Serif+4:opsz,wght@8..60,400;8..60,700", "Noto+Serif+SC:wght@400;700", "Noto+Serif+JP:wght@400;700"],
   },
   {
     id: "ibm-plex",
@@ -81,11 +76,6 @@ export const STAGE_FONTS: StageFont[] = [
     zh: '"Noto Sans SC"',
     ja: '"IBM Plex Sans JP"',
     generic: "sans-serif",
-    google: [
-      "IBM+Plex+Sans:wght@400;500;600;700",
-      "IBM+Plex+Sans+JP:wght@400;500;700",
-      "Noto+Sans+SC:wght@400;500;700",
-    ],
   },
   {
     id: "pt-sans",
@@ -98,7 +88,6 @@ export const STAGE_FONTS: StageFont[] = [
     zh: '"Noto Sans SC"',
     ja: '"Noto Sans JP"',
     generic: "sans-serif",
-    google: ["PT+Sans:wght@400;700", "Noto+Sans+SC:wght@400;500;700", "Noto+Sans+JP:wght@400;500;700"],
   },
   {
     id: "nunito",
@@ -111,7 +100,6 @@ export const STAGE_FONTS: StageFont[] = [
     zh: '"Noto Sans SC"',
     ja: '"Noto Sans JP"',
     generic: "sans-serif",
-    google: ["Nunito+Sans:wght@400;600;700", "Noto+Sans+SC:wght@400;500;700", "Noto+Sans+JP:wght@400;500;700"],
   },
   {
     id: "inter",
@@ -124,7 +112,6 @@ export const STAGE_FONTS: StageFont[] = [
     zh: '"Noto Sans SC"',
     ja: '"Noto Sans JP"',
     generic: "sans-serif",
-    google: ["Inter:wght@400;500;600;700", "Noto+Sans+SC:wght@400;500;700", "Noto+Sans+JP:wght@400;500;700"],
   },
   {
     id: "literata",
@@ -137,7 +124,6 @@ export const STAGE_FONTS: StageFont[] = [
     zh: '"Noto Serif SC"',
     ja: '"Noto Serif JP"',
     generic: "serif",
-    google: ["Literata:wght@400;700", "Noto+Serif+SC:wght@400;700", "Noto+Serif+JP:wght@400;700"],
   },
   {
     id: "dm-sans",
@@ -150,7 +136,6 @@ export const STAGE_FONTS: StageFont[] = [
     zh: '"Noto Sans SC"',
     ja: '"Noto Sans JP"',
     generic: "sans-serif",
-    google: ["DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700", "Noto+Sans+SC:wght@400;500;700", "Noto+Sans+JP:wght@400;500;700"],
   },
 ];
 
@@ -163,6 +148,12 @@ export const FONT_USAGE: { where: string; fonts: string; license: "SIL OFL"; det
     fonts: "DM Sans、Noto Sans SC",
     license: "SIL OFL",
     detail: "按钮、表单、用法页、时间轴。固定用这两套，不随工程改。中文走 Noto Sans SC。",
+  },
+  {
+    where: "默认舞台字体",
+    fonts: "外观 → 字体 → 默认舞台字体（缺省跟正文字体）",
+    license: "SIL OFL",
+    detail: "舞台根继承。HTML 不写 font-family 时用它。CSS 里是 var(--stage-base-font)。旧工程没有这项时跟正文字体。",
   },
   {
     where: "舞台正文",
@@ -186,13 +177,13 @@ export const FONT_USAGE: { where: string; fonts: string; license: "SIL OFL"; det
     where: "中日文缺字回落",
     fonts: "Noto Sans/Serif SC、JP；IBM Plex 日文走 IBM Plex Sans JP",
     license: "SIL OFL",
-    detail: "西文/俄文字体没有中日文时自动回落。九语口播用 Noto 覆盖最完整。",
+    detail: "西文/俄文字体没有中日文时自动回落。九语口播用 Noto 覆盖最完整。栈末不回落系统字体。字文件随工具打包。",
   },
   {
     where: "HyperFrames 示例页",
     fonts: "Noto Sans SC",
     license: "SIL OFL",
-    detail: "HyperFrames 内置示例页用 Noto Sans SC，不随工程字体改。",
+    detail: "HyperFrames 内置示例页用随工具打包的 Noto Sans SC，不随工程字体改。",
   },
   {
     where: "KaTeX 公式",
@@ -208,6 +199,7 @@ export const DEFAULT_STAGE_THEME: StageTheme = {
   bg: "#10120e",
   color: "#ece7db",
   accent: "#d4a84b",
+  baseFontId: "noto-sans",
   fontId: "noto-sans",
   titleFontId: "noto-serif",
   captionFontId: "noto-sans",
@@ -218,7 +210,7 @@ export const DEFAULT_STAGE_HTML = `<div id="title" class="clip title">黑洞不�
 <div id="ring" class="clip ring"></div>`;
 
 /** Shared layout classes. Sizes follow --stage-w so preview scale and export match. */
-export const DEFAULT_STAGE_CSS = `.root, .fill { position: absolute; inset: 0; }
+export const DEFAULT_STAGE_CSS = `.root, .fill { position: absolute; inset: 0; font-family: inherit; color: inherit; }
 .clip { position: absolute; }
 .title {
   top: 22%;
@@ -267,50 +259,53 @@ export function fontOf(id: StageFontId): StageFont {
   return STAGE_FONTS.find((f) => f.id === id) ?? STAGE_FONTS[0];
 }
 
+const OFL_SANS = '"Noto Sans", "Noto Sans SC", "Noto Sans JP"';
+const OFL_SERIF = '"Noto Serif", "Noto Serif SC", "Noto Serif JP"';
+
 export function fontStack(id: StageFontId, lang?: LangId): string {
   const f = fontOf(id);
-  if (lang === "zh") return `${f.zh}, ${f.ja}, ${f.latin}, ${f.generic}`;
-  if (lang === "ja") return `${f.ja}, ${f.zh}, ${f.latin}, ${f.generic}`;
-  return `${f.latin}, ${f.zh}, ${f.ja}, ${f.generic}`;
+  const ofl = f.generic === "serif" ? OFL_SERIF : OFL_SANS;
+  if (lang === "zh") return `${f.zh}, ${f.ja}, ${f.latin}, ${ofl}`;
+  if (lang === "ja") return `${f.ja}, ${f.zh}, ${f.latin}, ${ofl}`;
+  return `${f.latin}, ${f.zh}, ${f.ja}, ${ofl}`;
 }
 
-/** Load only the selected families (plus Noto CJK/Cyrillic fallbacks). */
-export function ensureStageFonts(...ids: StageFontId[]) {
-  if (typeof document === "undefined") return;
-  const families = new Set<string>(["Noto+Sans:wght@400;500;700", "Noto+Sans+SC:wght@400;500;700", "Noto+Sans+JP:wght@400;500;700"]);
-  for (const id of ids) {
-    for (const g of fontOf(id).google) families.add(g);
-  }
-  const key = [...families].sort().join("|");
-  let link = document.getElementById("stage-fonts") as HTMLLinkElement | null;
-  if (!link) {
-    link = document.createElement("link");
-    link.id = "stage-fonts";
-    link.rel = "stylesheet";
-    document.head.appendChild(link);
-  }
-  if (link.dataset.key === key) return;
-  link.dataset.key = key;
-  link.href = `https://fonts.googleapis.com/css2?${[...families].map((f) => `family=${f}`).join("&")}&display=swap`;
+/** Faces are bundled in embeddedFonts.ts. Kept so App/export callers stay the same. */
+export function ensureStageFonts(..._ids: StageFontId[]) {
+  /* no-op */
 }
 
-/** Load selected families then wait until the browser has them (export frames). */
-export async function waitStageFonts(...ids: StageFontId[]) {
-  ensureStageFonts(...ids);
+/** Wait until bundled faces are ready (export frames). */
+export async function waitStageFonts(..._ids: StageFontId[]) {
   if (typeof document === "undefined" || !document.fonts) return;
+  const samples = [
+    '16px "Noto Sans"',
+    '700 16px "Noto Sans"',
+    '16px "Noto Sans SC"',
+    '700 16px "Noto Sans SC"',
+    '16px "Noto Serif SC"',
+    '700 16px "Noto Serif SC"',
+    '16px "Noto Sans JP"',
+    '16px "Noto Serif JP"',
+  ];
   try {
-    await Promise.race([document.fonts.ready, new Promise<void>((r) => window.setTimeout(r, 4000))]);
+    await Promise.race([
+      Promise.all([document.fonts.ready, ...samples.map((s) => document.fonts.load(s))]),
+      new Promise<void>((r) => window.setTimeout(r, 8000)),
+    ]);
   } catch {
     /* ignore */
   }
 }
 
 export function stageThemeOf(raw?: Partial<StageTheme> | null): StageTheme {
+  const fontId = isStageFontId(raw?.fontId) ? raw.fontId : DEFAULT_STAGE_THEME.fontId;
   return {
     bg: asCssHex(raw?.bg, DEFAULT_STAGE_THEME.bg),
     color: asCssHex(raw?.color, DEFAULT_STAGE_THEME.color),
     accent: asCssHex(raw?.accent, DEFAULT_STAGE_THEME.accent),
-    fontId: isStageFontId(raw?.fontId) ? raw.fontId : DEFAULT_STAGE_THEME.fontId,
+    baseFontId: isStageFontId(raw?.baseFontId) ? raw.baseFontId : fontId,
+    fontId,
     titleFontId: isStageFontId(raw?.titleFontId) ? raw.titleFontId : DEFAULT_STAGE_THEME.titleFontId,
     captionFontId: isStageFontId(raw?.captionFontId) ? raw.captionFontId : DEFAULT_STAGE_THEME.captionFontId,
   };
@@ -333,21 +328,32 @@ export function stageBoxStyle(project: Project, w: number, h: number): CSSProper
     height: h,
     background: t.bg,
     color: t.color,
-    fontFamily: fontStack(t.fontId),
+    fontFamily: fontStack(t.baseFontId),
     ["--stage-w" as string]: `${w}px`,
     ["--stage-h" as string]: `${h}px`,
     ["--stage-bg" as string]: t.bg,
     ["--stage-color" as string]: t.color,
     ["--stage-accent" as string]: t.accent,
+    ["--stage-base-font" as string]: fontStack(t.baseFontId),
     ["--stage-font" as string]: fontStack(t.fontId),
     ["--stage-title-font" as string]: fontStack(t.titleFontId),
     ["--stage-caption-font" as string]: fontStack(t.captionFontId),
   };
 }
 
-export function mountStage(root: HTMLElement, script: { stageHtml?: string }, project: { stageCss?: string }) {
+export function mountStage(root: HTMLElement, script: { stageHtml?: string }, project: { stageCss?: string; stageTheme?: Partial<StageTheme> | null }) {
+  const t = stageThemeOf(project.stageTheme);
   const css = stageCssOf(project);
-  const base = `.root,.fill{position:absolute;inset:0;overflow:hidden}.fill{overflow:visible}`;
+  root.style.fontFamily = fontStack(t.baseFontId);
+  root.style.color = t.color;
+  root.style.setProperty("--stage-base-font", fontStack(t.baseFontId));
+  root.style.setProperty("--stage-font", fontStack(t.fontId));
+  root.style.setProperty("--stage-title-font", fontStack(t.titleFontId));
+  root.style.setProperty("--stage-caption-font", fontStack(t.captionFontId));
+  root.style.setProperty("--stage-bg", t.bg);
+  root.style.setProperty("--stage-color", t.color);
+  root.style.setProperty("--stage-accent", t.accent);
+  const base = `.root,.fill{position:absolute;inset:0;overflow:hidden;font-family:inherit;color:inherit}.fill{overflow:visible}`;
   root.innerHTML = `<style data-stage-css>${base}\n${css}</style>${stageHtmlOf(script)}`;
 }
 

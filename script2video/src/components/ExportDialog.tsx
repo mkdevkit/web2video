@@ -44,7 +44,7 @@ export function ExportDialog() {
   const [subLangs, setSubLangs] = useState<LangId[]>(
     project.sourceLang !== defaultLang ? [defaultLang, project.sourceLang] : [defaultLang],
   );
-  const [captions, setCaptions] = useState(true);
+  const [captions, setCaptions] = useState(false);
   const [includeVideoLangInSubs, setIncludeVideoLangInSubs] = useState(true);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -82,7 +82,7 @@ export function ExportDialog() {
     const stage = document.getElementById("export-stage");
     if (!stage) throw new Error("找不到导出舞台");
     const theme = stageThemeOf(useStudio.getState().project.stageTheme);
-    await waitStageFonts(theme.fontId, theme.titleFontId, theme.captionFontId);
+    await waitStageFonts(theme.baseFontId, theme.fontId, theme.titleFontId, theme.captionFontId);
     store.setStatus(`${langZhName(lang)}：正在录制…`);
     const { blob, ext } = await recordProject({
       project: useStudio.getState().project,
@@ -171,10 +171,7 @@ export function ExportDialog() {
           </button>
           <button
             className={`rounded border px-2 py-1 text-sm ${mode === "videoPlusSubs" ? "border-copper bg-ink-800" : "border-ink-600"}`}
-            onClick={() => {
-              setMode("videoPlusSubs");
-              if (!st.exportSubtitles) patch({ exportSubtitles: true });
-            }}
+            onClick={() => setMode("videoPlusSubs")}
           >
             一段视频 + 多语言字幕
           </button>

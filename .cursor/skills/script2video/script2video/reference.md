@@ -68,6 +68,19 @@ timeline.to("#stat", { duration: speech.holdS("fact", 0.42) }, t1 + 0.42);
 
 KaTeX / Three.js 是 GSAP 脚本里的库，时长仍跟 `speech` 走。
 
+## 字体约束
+
+舞台与字幕均为 **SIL OFL**，免费可商用，随工具打包，不走 Google Fonts / 系统字体。
+
+| 用途 | 字段 / CSS | 默认 |
+| --- | --- | --- |
+| 默认舞台（HTML 未写 font-family） | `baseFontId`，`var(--stage-base-font)` | 跟正文字体 |
+| 正文 | `fontId`，`var(--stage-font)` | `noto-sans` |
+| 标题 | `titleFontId`，`var(--stage-title-font)` | `noto-serif` |
+| 字幕条 | `captionFontId`，`var(--stage-caption-font)` | `noto-sans` |
+
+`stageHtml` / `stageCss` 只用上面的变量或 `inherit`。禁止 `Arial`、微软雅黑、PingFang、`system-ui`、`sans-serif`。id 以 `list_catalog.fonts` 为准。OFL：可嵌进成片，勿单独售卖字体文件。
+
 ## beats
 
 ```json

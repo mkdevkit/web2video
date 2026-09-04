@@ -16,7 +16,7 @@ export const LANGS: LangMeta[] = [
     native: "中文",
     html: "zh-CN",
     cjk: true,
-    sans: '"Noto Sans SC", sans-serif',
+    sans: '"Noto Sans SC", "Noto Sans JP", "Noto Sans"',
   },
   {
     id: "en",
@@ -24,7 +24,7 @@ export const LANGS: LangMeta[] = [
     native: "English",
     html: "en",
     cjk: false,
-    sans: '"Noto Sans", "Noto Sans SC", sans-serif',
+    sans: '"Noto Sans", "Noto Sans SC", "Noto Sans JP"',
   },
   {
     id: "ja",
@@ -32,7 +32,7 @@ export const LANGS: LangMeta[] = [
     native: "日本語",
     html: "ja",
     cjk: true,
-    sans: '"Noto Sans JP", "Noto Sans SC", sans-serif',
+    sans: '"Noto Sans JP", "Noto Sans SC", "Noto Sans"',
   },
   {
     id: "fr",
@@ -40,7 +40,7 @@ export const LANGS: LangMeta[] = [
     native: "Français",
     html: "fr",
     cjk: false,
-    sans: '"Noto Sans", "Noto Sans SC", sans-serif',
+    sans: '"Noto Sans", "Noto Sans SC", "Noto Sans JP"',
   },
   {
     id: "de",
@@ -48,7 +48,7 @@ export const LANGS: LangMeta[] = [
     native: "Deutsch",
     html: "de",
     cjk: false,
-    sans: '"Noto Sans", "Noto Sans SC", sans-serif',
+    sans: '"Noto Sans", "Noto Sans SC", "Noto Sans JP"',
   },
   {
     id: "ru",
@@ -56,7 +56,7 @@ export const LANGS: LangMeta[] = [
     native: "Русский",
     html: "ru",
     cjk: false,
-    sans: '"Noto Sans", "Noto Sans SC", sans-serif',
+    sans: '"Noto Sans", "Noto Sans SC", "Noto Sans JP"',
   },
   {
     id: "es",
@@ -64,7 +64,7 @@ export const LANGS: LangMeta[] = [
     native: "Español",
     html: "es",
     cjk: false,
-    sans: '"Noto Sans", "Noto Sans SC", sans-serif',
+    sans: '"Noto Sans", "Noto Sans SC", "Noto Sans JP"',
   },
   {
     id: "pt",
@@ -72,7 +72,7 @@ export const LANGS: LangMeta[] = [
     native: "Português",
     html: "pt",
     cjk: false,
-    sans: '"Noto Sans", "Noto Sans SC", sans-serif',
+    sans: '"Noto Sans", "Noto Sans SC", "Noto Sans JP"',
   },
   {
     id: "it",
@@ -80,7 +80,7 @@ export const LANGS: LangMeta[] = [
     native: "Italiano",
     html: "it",
     cjk: false,
-    sans: '"Noto Sans", "Noto Sans SC", sans-serif',
+    sans: '"Noto Sans", "Noto Sans SC", "Noto Sans JP"',
   },
 ];
 

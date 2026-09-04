@@ -42,12 +42,31 @@
 
 - 画幅：`16:9` `9:16` `1:1`
 - 字体：`fontId` `titleFontId` `subtitleFontId` `quoteFontId` `captionFontId`（id 以 `list_catalog.fonts` 为准）
-- `showCaptions` 默认关，只影响预览；烧录在导出窗勾选
+- `showCaptions` 默认关，只影响预览；烧录在导出窗勾选（默认也不勾）
 - `showTopProgress`：画布进度条，会进导出（工作区底部全片条不是这个）
+
+## 字体约束
+
+目录与打包字体均为 **SIL OFL**，免费可商用，随工具打包，不走 Google Fonts / 系统字体。
+
+| 位置 | 字段 | 默认 |
+| --- | --- | --- |
+| 正文、列表 | `fontId` | `noto-sans` |
+| 标题、数字 | `titleFontId` | `noto-serif` |
+| 副标题、署名 | `subtitleFontId` | `noto-sans` |
+| 金句 | `quoteFontId` | `noto-serif` |
+| 口播字幕条 | `captionFontId` | `noto-sans` |
+| 公式 | KaTeX_* | 随库，SIL OFL |
+
+不要写 `Arial`、微软雅黑、PingFang、`system-ui`、`sans-serif`。不要用目录外的 id。OFL：可嵌进成片，勿单独售卖字体文件。
 
 ## 画面文案
 
 源语言用 `update_scene` 的 `title` / `items` / `dialogue`。其它语言用 `set_visual_text`（`kind` + 可选 `itemId` + `lang` + `text`）。用户在属性「口播」下面的「文本」里翻译。KaTeX `tex` 不走画面翻译。
+
+## 工程文件
+
+`project.json` 片级设置；`scene.json` 各场；`aisession.json` 应用内 AI 会话。打开工程文件夹会加载会话。没有向量记忆，恢复即选回 `aisession.json` 里那条对话。
 
 ## MCP 链路
 

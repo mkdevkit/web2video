@@ -27,6 +27,7 @@ function json(res: ServerResponse, status: number, data: unknown) {
 export function mcpBridgePlugin(): Plugin {
   let browser: WebSocket | null = null;
   let tools: unknown[] = [];
+  let instructions = "";
   const pending = new Map<string, Pending>();
 
   const callEditor = (name: string, args: unknown) =>
@@ -62,7 +63,7 @@ export function mcpBridgePlugin(): Plugin {
       return;
     }
     if (path === "/__mcp/tools" && req.method === "GET") {
-      json(res, 200, { tools });
+      json(res, 200, { tools, instructions });
       return;
     }
     if (path === "/__mcp/call" && req.method === "POST") {
@@ -92,7 +93,7 @@ export function mcpBridgePlugin(): Plugin {
         if (browser && browser.readyState === WebSocket.OPEN) browser.close();
         browser = ws;
         ws.on("message", (raw) => {
-          let msg: { type?: string; id?: string; result?: string; tools?: unknown[] };
+          let msg: { type?: string; id?: string; result?: string; tools?: unknown[]; instructions?: string };
           try {
             msg = JSON.parse(String(raw)) as typeof msg;
           } catch {
@@ -100,6 +101,7 @@ export function mcpBridgePlugin(): Plugin {
           }
           if (msg.type === "hello" && Array.isArray(msg.tools)) {
             tools = msg.tools;
+            if (typeof msg.instructions === "string") instructions = msg.instructions;
             return;
           }
           if (msg.type === "result" && typeof msg.id === "string") {

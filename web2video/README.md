@@ -45,12 +45,12 @@ npm run tauri:build   # 安装包
 - 生成式 AI 分镜（DeepSeek 等 Chat Completions + 本地工具调用）；同一套工具可通过 MCP 给 Cursor 调用（需先打开编辑器）
 - 一键机翻：中、英、日、法、德、俄、西班牙、葡萄牙、意大利
 - 导出 WebM（VP8/VP9）或 MP4（H.264，视浏览器而定）；分辨率 / 帧率 / 码率可配
-- 默认不烧录字幕；可另存 SRT / VTT；也可只出一段视频、配多语言字幕（同一时间轴）
+- 默认不烧录字幕、不另存字幕文件；导出窗里勾选后才写 SRT / VTT，或只出一段视频、配多语言字幕（同一时间轴）
 - 工程写入所选目录下的「项目名」子文件夹：`project.json`（片级）+ `scene.json`（场景）+ `aisession.json`（AI 会话）+ `media/`。旧版把场景写在 `project.json` 里仍能打开，再保存会拆开。
 
 ## 字体
 
-全部为 **SIL Open Font License**，免费可商用。不随工具分发专有字体。`system-ui` 只是系统回落。
+全部为 **SIL Open Font License**，免费可商用。字文件随工具打包（[Fontsource](https://fontsource.org/) 的 woff2），**不请求 Google Fonts**。离线导出也是同一套。
 
 | 用在哪 | 字体 | 许可 |
 | --- | --- | --- |

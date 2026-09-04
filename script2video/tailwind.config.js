@@ -20,7 +20,7 @@ export default {
       },
       fontFamily: {
         /* SIL OFL — workbench UI. Stage fonts are chosen in 外观. */
-        sans: ['"DM Sans"', '"Noto Sans SC"', "system-ui", "sans-serif"],
+        sans: ['"DM Sans"', '"Noto Sans SC"', '"Noto Sans"', '"Noto Sans JP"'],
       },
     },
   },

@@ -18,7 +18,7 @@ npm run tauri:dev  # 桌面（需 Rust）
 
 建议 **Chrome 或 Edge**。开发时必须用 `npm run dev`，本机 Vite 插件会代理千问 TTS、LLM 和 Edge 翻译。密钥只存在本机 `localStorage`，不进工程文件。
 
-两个工具的界面与成片字体均为 **SIL OFL（免费可商用）**，明细见 [`web2video/README.md`](./web2video/README.md#字体) 与 [`script2video/README.md`](./script2video/README.md#字体)。
+两个工具的界面与成片字体均为 **SIL OFL（免费可商用）**，字文件随工具打包，默认与回落都是 Noto 等开源字体，不走系统字体、也不依赖 Google Fonts。明细见 [`web2video/README.md`](./web2video/README.md#字体) 与 [`script2video/README.md`](./script2video/README.md#字体)。
 
 ## MCP
 

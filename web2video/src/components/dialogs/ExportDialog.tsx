@@ -71,7 +71,6 @@ export function ExportDialog() {
   const pickMode = (next: ExportMode) => {
     setMode(next);
     setErr("");
-    if (next === "videoPlusSubs" && !st.exportSubtitles) patch({ exportSubtitles: true });
   };
 
   const ensureAudio = async (lang: LangId) => {

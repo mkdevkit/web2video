@@ -30,7 +30,7 @@ export default function App() {
 
   useEffect(() => {
     const t = stageThemeOf(stageTheme);
-    ensureStageFonts(t.fontId, t.titleFontId, t.captionFontId);
+    ensureStageFonts(t.baseFontId, t.fontId, t.titleFontId, t.captionFontId);
   }, [stageTheme]);
 
   useEffect(() => {

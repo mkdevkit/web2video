@@ -74,6 +74,16 @@ stage.text("title")         // 当前预览语言画面文案（文本页）
 
 入场用固定秒（各语言一样快）。换语言只换 TTS，代码不用改。
 
+## 字体
+
+成片要免费可商用。舞台与字幕均为 **SIL OFL**，字文件**随工具打包**，不请求 Google Fonts，栈末回落 Noto，不走系统字体。
+
+- 用 `set_project.stageTheme` 的 id（见 `list_catalog.fonts`）：`baseFontId`（HTML 没写 font-family 时整台继承）、`fontId`（正文）、`titleFontId`、`captionFontId`（字幕条）。缺省正文/字幕 `noto-sans`，标题 `noto-serif`。
+- 舞台 CSS 用 `var(--stage-base-font)` / `var(--stage-font)` / `var(--stage-title-font)` / `var(--stage-caption-font)`，或 `font-family: inherit`。
+- **禁止**在 `stageHtml` / `stageCss` / 内联样式里写 `Arial`、微软雅黑、PingFang、Hiragino、Times、`system-ui`、`sans-serif`、`serif`。不要发明目录外的字体名。
+- 脚本若引入 KaTeX，公式字体 KaTeX_* 同样 SIL OFL。
+- SIL OFL：嵌进视频可以；不要把字体文件单独拿去卖。
+
 ## 不要做的
 
 - 假装已有 Cursor MCP，或去改正在打开的 Zustand 工程
@@ -81,4 +91,5 @@ stage.text("title")         // 当前预览语言画面文案（文本页）
 - 整条时间轴 `timeScale`；CSS `animation-duration: 8s`；Remotion `durationInFrames={150}`
 - 用英文字幕时间轴驱动中文画面（字幕可以共用轴，动画不行）
 - 把 web2video 的场景元件 / `manage_blocks` 用到这边
+- 舞台 CSS/HTML 写系统字体名（见上文「字体」）
 - 代劳配音窗口或 Edge 翻译

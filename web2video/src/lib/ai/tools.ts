@@ -21,6 +21,10 @@ export type ChatTool = {
 
 const FONT_IDS = STAGE_FONTS.map((f) => f.id);
 
+/** In-app AI + Cursor MCP. Keep in sync with skill/web2video 字体. */
+export const FONT_POLICY =
+  "成片字体必须免费可商用。只用 list_catalog.fonts 的 id（均为 SIL OFL，字文件随工具打包，不请求 Google Fonts）。缺省：正文/列表/字幕 noto-sans，标题/数字/金句 noto-serif。元件覆盖也必须是目录 id。栈末回落 Noto。禁止 Arial、微软雅黑、PingFang、Hiragino、Times、system-ui、sans-serif、serif。不要发明目录外字体名。KaTeX_* 同样 SIL OFL。嵌进视频可以，不要把字体文件单独拿去卖。";
+
 const sceneSpecProperties = {
   name: { type: "string", description: "场景短名，时间轴与进度条上显示" },
   layout: { type: "string", description: "版面 id，见 list_catalog。对白场用 dialogue" },
@@ -123,7 +127,7 @@ const progressStyleProperties = {
   activeColor: { type: "string", description: "当前场次名颜色" },
   fontSize: { type: "number" },
   fontWeight: { type: "string", enum: ["normal", "medium", "bold"] },
-  fontId: { type: "string", enum: FONT_IDS },
+  fontId: { type: "string", enum: FONT_IDS, description: "仅 list_catalog SIL OFL id" },
   showNames: { type: "boolean" },
   showPlayhead: { type: "boolean" },
   showDividers: { type: "boolean" },
@@ -167,7 +171,7 @@ export const AI_TOOLS: ChatTool[] = [
     type: "function",
     function: {
       name: "list_catalog",
-      description: "列出版面、元件、字体，以及字幕/进度条可配字段。",
+      description: "列出版面、元件、字体（SIL OFL，随工具打包；禁止系统字体），以及字幕/进度条可配字段。",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -175,7 +179,7 @@ export const AI_TOOLS: ChatTool[] = [
     type: "function",
     function: {
       name: "set_project",
-      description: "修改片级设置：名称、画幅、停留、切场、字体、字幕条、画布进度条、列表序号、导出规格。只传要改的字段。",
+      description: "修改片级设置：名称、画幅、停留、切场、字体（仅 list_catalog SIL OFL id）、字幕条、画布进度条、列表序号、导出规格。只传要改的字段。",
       parameters: {
         type: "object",
         properties: {
@@ -192,11 +196,11 @@ export const AI_TOOLS: ChatTool[] = [
           bilingualCaptions: { type: "boolean", description: "双语字幕：主行当前配音语言，副行第二语言" },
           bilingualCaptionLang: { type: "string", enum: ["zh", "en", "ja", "fr", "de", "ru", "es", "pt", "it"], description: "双语字幕的第二语言" },
           showTopProgress: { type: "boolean", description: "画布进度条，会进导出" },
-          fontId: { type: "string", enum: FONT_IDS, description: "正文/列表" },
-          titleFontId: { type: "string", enum: FONT_IDS, description: "标题/数字" },
-          subtitleFontId: { type: "string", enum: FONT_IDS, description: "副标题/署名" },
-          quoteFontId: { type: "string", enum: FONT_IDS, description: "金句" },
-          captionFontId: { type: "string", enum: FONT_IDS, description: "口播字幕条（预览和烧录）" },
+          fontId: { type: "string", enum: FONT_IDS, description: "正文/列表。仅 list_catalog.fonts，SIL OFL，默认 noto-sans" },
+          titleFontId: { type: "string", enum: FONT_IDS, description: "标题/数字。仅目录 id，默认 noto-serif" },
+          subtitleFontId: { type: "string", enum: FONT_IDS, description: "副标题/署名。仅目录 id，默认 noto-sans" },
+          quoteFontId: { type: "string", enum: FONT_IDS, description: "金句。仅目录 id，默认 noto-serif" },
+          captionFontId: { type: "string", enum: FONT_IDS, description: "口播字幕条。仅目录 id，默认 noto-sans。禁止系统字体" },
           captionStyle: { type: "object", properties: captionStyleProperties },
           progressStyle: { type: "object", properties: progressStyleProperties },
           listMarkerStyle: { type: "object", properties: listMarkerStyleProperties },
@@ -209,7 +213,7 @@ export const AI_TOOLS: ChatTool[] = [
               fps: { type: "number", enum: [24, 25, 30] },
               videoMbps: { type: "number" },
               audioKbps: { type: "number" },
-              exportSubtitles: { type: "boolean", description: "导出时另存 SRT/VTT" },
+              exportSubtitles: { type: "boolean", description: "导出时另存 SRT/VTT，默认关。烧录字幕条也默认关，需在导出窗勾选" },
               subtitleFormat: { type: "string", enum: ["srt", "vtt"] },
             },
           },
@@ -290,7 +294,7 @@ export const AI_TOOLS: ChatTool[] = [
               fill: { type: "string" },
               fontSize: { type: "number" },
               fontWeight: { type: "string", enum: ["normal", "medium", "bold"] },
-              fontId: { type: "string", enum: FONT_IDS },
+              fontId: { type: "string", enum: FONT_IDS, description: "仅 list_catalog.fonts（SIL OFL）。禁止 Arial/微软雅黑/system-ui" },
               tex: { type: "string", description: "katex 元件的 TeX 源，如 E = mc^{2}" },
               displayMode: { type: "boolean", description: "katex 是否独立成行，默认 true" },
               threeSrc: { type: "string", description: "three 元件脚本：可用 THREE/scene/camera，可 return function update({ t, localMs })。不要 rAF，不要编造模型/贴图 URL" },
@@ -463,6 +467,7 @@ export function executeTool(name: string, rawArgs: unknown): string {
         bilingualCaptionLang: p.bilingualCaptionLang ?? null,
         showTopProgress: Boolean(p.showTopProgress),
         fonts: {
+          policy: FONT_POLICY,
           fontId: p.fontId,
           titleFontId: p.titleFontId,
           subtitleFontId: p.subtitleFontId,
@@ -502,15 +507,16 @@ export function executeTool(name: string, rawArgs: unknown): string {
         blocks: BLOCK_TYPES.map((b) => ({ type: b.type, label: b.label })),
         fonts: STAGE_FONTS.map((f) => ({ id: f.id, label: f.label, langs: f.langs, hint: f.hint, detail: f.detail, license: f.license })),
         notes: {
+          fonts: FONT_POLICY,
           speaks: "口播是场景上的独立列表，各有 id。时长只读（合成 beatMs 或字数估计）。句间留白用延时行。不要再拆开场/结束口播。",
           speakBind: "动效 TimeRef.kind：speak（某句开始/结束+偏移）、scene（场景/主体起止+偏移）、fixed（从场景开始的绝对毫秒）。终点也可只用 durationMs。不要 0–1 拉伸。",
           play: "play 元件只在配置驱动里播口播。开场/结束空白只在配置驱动下生效。",
           dialogue: "dialogue 版面是左右双人对话窗。对白写在 dialogue 数组，口播写在 speaks，每句可配 role",
           bg: "bg 是场景底色；bgImage / 图片 / 视频 / GIF 只能用户本地选文件，不要编造 URL",
           media: "video、gif 元件用 manage_blocks 添加后，src 由用户在检视里选择，存在 settings.src",
-          katex: "katex 元件写 settings.tex（TeX 源）。公式跟元件动效走。不要编造公式图片 URL。",
+          katex: "katex 元件写 settings.tex（TeX 源）。公式跟元件动效走。字体是 KaTeX_*（SIL OFL）。不要编造公式图片 URL。",
           three: "three 元件写 settings.threeSrc。可用 THREE、scene、camera；可 return function update({ t, localMs })。t 是本元件窗口 0–1。不要 requestAnimationFrame / setAnimationLoop，不要编造模型或贴图 URL，只用内置几何。",
-          captions: "showCaptions 只控制预览字幕条。captionFontId 是烧录/预览字幕字体（SIL OFL）。bilingualCaptions 双语。导出窗可选：每种语言各一段视频，或一段视频+多语言字幕（时间轴跟视频语言走）",
+          captions: "showCaptions 只控制预览字幕条。烧录/另存字幕文件默认关，导出窗勾选。captionFontId 仅目录 SIL OFL。bilingualCaptions 双语。导出窗可选：每种语言各一段视频，或一段视频+多语言字幕（时间轴跟视频语言走）",
           progress: "工作区底部是全片进度条。showTopProgress + progressStyle 是画布上的进度条，会进导出。",
           listMarker: "listMarkerStyle 控制全片列表序号：show 开关，kind=number 色块或 image 用户上传图，不要编造图片 URL",
           speakRole: "每句 speaks[].role 填 get_project.voices 的 id；缺省用 voiceByLang 该语言默认",
@@ -731,11 +737,11 @@ export const SYSTEM_PROMPT = `你是 Web2Video 的分镜助手。这是本地口
 - 公式用 katex 元件，settings.tex 写 TeX。三维用 three 元件，settings.threeSrc 写内置几何脚本，用 update({ t, localMs }) 跟播放头，不要自己开动画循环。
 
 外观：
-- 口播字幕条：showCaptions 默认关，只影响预览。烧录字体用 captionFontId（SIL OFL，见 list_catalog.fonts）。双语：bilingualCaptions + bilingualCaptionLang。导出烧录在导出窗勾选；exportSettings.exportSubtitles 可另存 SRT/VTT。
+- 口播字幕条：showCaptions 默认关，只影响预览。导出窗里「烧录字幕条」和「同时导出字幕文件」默认都不勾；要烧录或另存 SRT/VTT 需用户勾选。双语：bilingualCaptions + bilingualCaptionLang。
 - 画布进度条：showTopProgress + progressStyle，画在画布顶/底，导出会带上。工作区底部另有全片分段条，不是这个。
 - 密钥、翻译、配音合成不用你处理。用户在配音窗口操作（合成 / AI 配置 / 角色 / 音色）。画面文案翻译在属性「文本」。
 - 列表序号：listMarkerStyle.show / kind / 颜色 / 形状。图片只能用户在全局配置里上传，不要编造 URL。
-- 字体用 fontId / titleFontId / subtitleFontId / quoteFontId / captionFontId，取值见 list_catalog。
+- 字体：${FONT_POLICY}
 - 每句口播可指定角色，id 来自 get_project.voices。
 
 写作要求：

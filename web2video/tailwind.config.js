@@ -20,8 +20,8 @@ export default {
       },
       fontFamily: {
         /* SIL OFL — UI only, not burned into video unless also chosen as a stage font. */
-        sans: ['"DM Sans"', '"Noto Sans SC"', "system-ui", "sans-serif"],
-        display: ['"Fraunces"', '"Noto Serif SC"', "serif"],
+        sans: ['"DM Sans"', '"Noto Sans SC"', '"Noto Sans"', '"Noto Sans JP"'],
+        display: ['"Fraunces"', '"Noto Serif SC"', '"Noto Serif"', '"Noto Serif JP"'],
       },
       boxShadow: {
         paper: "0 24px 80px rgba(0,0,0,.45), 0 2px 8px rgba(0,0,0,.3)",

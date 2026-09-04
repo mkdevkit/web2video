@@ -18,6 +18,10 @@ export type ChatTool = {
   };
 };
 
+/** In-app AI. Keep in sync with skill/script2video 字体. */
+export const FONT_POLICY =
+  "成片字体必须免费可商用。舞台/字幕只用 list_catalog.fonts 的 id（均为 SIL OFL，字文件随工具打包，不请求 Google Fonts）。baseFontId（HTML 未写 font-family 时）/ fontId（正文）/ titleFontId / captionFontId。CSS 用 var(--stage-base-font)、var(--stage-font)、var(--stage-title-font)、var(--stage-caption-font) 或 inherit。禁止在 stageHtml/stageCss 写 Arial、微软雅黑、PingFang、Hiragino、Times、system-ui、sans-serif、serif。不要发明目录外字体名。KaTeX_* 同样 SIL OFL。嵌进视频可以，不要把字体文件单独拿去卖。";
+
 const LANG_ENUM = LANGS.map((l) => l.id);
 const ENGINE_ENUM = ENGINES.map((e) => e.id);
 
@@ -46,7 +50,7 @@ const scriptSpecProperties = {
     type: "string",
     description: "当前引擎源码。GSAP/HyperFrames：paused timeline，用 speech.s/holdS/startS。脚本驱动用 speech.play(id)。不要写死秒数，不要 timeline.play()。",
   },
-  stageHtml: { type: "string", description: "本脚本舞台 DOM。有字的节点会出现在文本页。画幅/字体/底色/全局 CSS 是工程级，用 set_project。" },
+  stageHtml: { type: "string", description: "本脚本舞台 DOM。字体用 inherit 或 var(--stage-*)，禁止 Arial/微软雅黑/system-ui/sans-serif。有字的节点会出现在文本页。画幅/字体/底色/全局 CSS 是工程级，用 set_project。" },
 };
 
 export const AI_TOOLS: ChatTool[] = [
@@ -75,7 +79,7 @@ export const AI_TOOLS: ChatTool[] = [
     type: "function",
     function: {
       name: "list_catalog",
-      description: "列出引擎、语言、speech API 与写作规则。写 GSAP 前先看。",
+      description: "列出引擎、语言、speech API、字体约束（SIL OFL，禁止系统字体）与写作规则。写 GSAP 前先看。",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -91,17 +95,18 @@ export const AI_TOOLS: ChatTool[] = [
           sourceLang: { type: "string", enum: LANG_ENUM },
           previewLang: { type: "string", enum: LANG_ENUM },
           aspect: { type: "string", enum: ["16:9", "9:16", "1:1"] },
-          stageCss: { type: "string", description: "全工程共用舞台 CSS。可用 var(--stage-color) 等。" },
+          stageCss: { type: "string", description: "全工程共用舞台 CSS。字体用 var(--stage-font) 等，禁止 Arial/微软雅黑/system-ui/sans-serif。" },
           stageTheme: {
             type: "object",
-            description: "全工程舞台外观",
+            description: "全工程舞台外观。字体 id 仅 list_catalog（SIL OFL，随工具打包）",
             properties: {
               bg: { type: "string", description: "#rrggbb 底色" },
               color: { type: "string", description: "#rrggbb 字色" },
               accent: { type: "string", description: "#rrggbb 强调色" },
-              fontId: { type: "string", enum: STAGE_FONT_IDS },
-              titleFontId: { type: "string", enum: STAGE_FONT_IDS },
-              captionFontId: { type: "string", enum: STAGE_FONT_IDS, description: "烧录/预览字幕条" },
+              fontId: { type: "string", enum: STAGE_FONT_IDS, description: "正文字体 var(--stage-font)。仅目录 SIL OFL id，默认 noto-sans" },
+              titleFontId: { type: "string", enum: STAGE_FONT_IDS, description: "标题字体 var(--stage-title-font)。默认 noto-serif" },
+              baseFontId: { type: "string", enum: STAGE_FONT_IDS, description: "默认舞台字体 var(--stage-base-font)：HTML 没写 font-family 时用。缺省跟 fontId" },
+              captionFontId: { type: "string", enum: STAGE_FONT_IDS, description: "字幕条。仅目录 id，禁止系统字体" },
             },
           },
           showCaptions: { type: "boolean" },
@@ -121,7 +126,7 @@ export const AI_TOOLS: ChatTool[] = [
         properties: {
           mode: { type: "string", enum: ["replace", "append"], description: "默认 replace" },
           projectName: { type: "string" },
-          stageCss: { type: "string", description: "可选：覆盖工程级全局 CSS" },
+          stageCss: { type: "string", description: "可选：覆盖工程级全局 CSS。字体用 var(--stage-*)，禁止系统字体名" },
           scripts: { type: "array", items: { type: "object", properties: scriptSpecProperties, required: ["name", "beats"] } },
         },
         required: ["scripts"],
@@ -367,6 +372,7 @@ export function executeTool(name: string, rawArgs: unknown): string {
         bilingualCaptions: Boolean(p.bilingualCaptions),
         bilingualCaptionLang: p.bilingualCaptionLang ?? null,
         stageTheme: stageThemeOf(p.stageTheme),
+        fontPolicy: FONT_POLICY,
         stageCss: p.stageCss ?? "",
         voices: p.voices.map((v) => ({ id: v.id, name: v.name, gender: v.gender })),
         voiceId: p.voiceId ?? "",
@@ -405,7 +411,7 @@ export function executeTool(name: string, rawArgs: unknown): string {
           clock: "不要写死 3 秒。入场用固定秒；换语言只换 TTS。",
           gsap: "timeline 已 paused。不要 timeline.play()。脚本驱动用 speech.play(id)。预览和导出 seek。",
           stage: "每个脚本自己的 stageHtml。画幅/字体/底色/stageCss 是工程级。HTML 里用 #title 等选择器。有字的节点会出现在文本页，预览/导出按 previewLang 覆盖。",
-          fonts: "舞台与字幕字体均为 SIL OFL，免费可商用。字幕条用 captionFontId。中日文不足时回落 Noto CJK。",
+          fonts: FONT_POLICY,
           sleep: "口播驱动：句间留白用延时行（kind=gap）。sleepS 加在片尾。脚本驱动：speech.play + sleepS。",
           tts: "密钥和配音合成不用你处理。用户在顶栏「配音」：合成 / AI 配置 / 配音角色 / 音色管理。翻译后合成默认关。改口播后配音会过期。画面文案翻译在「文本」页，不要代劳机翻。",
           role: "每句可设 roleId（get_project.voices）。缺省用 voiceId / voiceByLang。",
@@ -595,7 +601,7 @@ export const SYSTEM_PROMPT = `你是 Script2Video 的分镜助手。这是本地
 舞台与代码：
 - 每个脚本自己的舞台 HTML（DOM，不是 canvas）。GSAP 只写 paused timeline。
 - 画幅、字体、底色、全局 CSS 是工程级，用 set_project（stageTheme / stageCss / aspect）。
-- 舞台字体均为 SIL OFL（免费可商用）。fontId / titleFontId / captionFontId 用 list_catalog.fonts 里的 id。字幕条烧录到画面时走 captionFontId。中日文不足会回落 Noto CJK。
+- 字体：${FONT_POLICY}
 - 口播文案用 speech.text(id)；画面文案用 stage.text(id)（文本页），不要把口播写进舞台字。
 - Remotion / Manim 工作台里是节拍卡；仍把口播写进 beats，code 可留草稿。
 

@@ -1,4 +1,4 @@
-import { AI_TOOLS, executeTool } from "./ai/tools";
+import { AI_TOOLS, executeTool, FONT_POLICY } from "./ai/tools";
 
 export function connectMcpBridge() {
   if (!import.meta.env.DEV) return;
@@ -13,7 +13,7 @@ export function connectMcpBridge() {
     ws = new WebSocket(url);
     ws.addEventListener("open", () => {
       delay = 800;
-      ws?.send(JSON.stringify({ type: "hello", tools: AI_TOOLS }));
+      ws?.send(JSON.stringify({ type: "hello", tools: AI_TOOLS, instructions: FONT_POLICY }));
     });
     ws.addEventListener("message", (ev) => {
       let msg: { type?: string; id?: string; name?: string; args?: unknown };

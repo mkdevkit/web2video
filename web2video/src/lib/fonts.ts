@@ -12,7 +12,6 @@ export interface StageFont {
   zh: string;
   ja: string;
   generic: "sans-serif" | "serif";
-  google: string[];
 }
 
 /** All SIL Open Font License, free for commercial use. CJK falls back to Noto. */
@@ -28,7 +27,6 @@ export const STAGE_FONTS: StageFont[] = [
     zh: '"Noto Sans SC"',
     ja: '"Noto Sans JP"',
     generic: "sans-serif",
-    google: ["Noto+Sans:wght@400;500;700", "Noto+Sans+SC:wght@400;500;700", "Noto+Sans+JP:wght@400;500;700"],
   },
   {
     id: "noto-serif",
@@ -41,7 +39,6 @@ export const STAGE_FONTS: StageFont[] = [
     zh: '"Noto Serif SC"',
     ja: '"Noto Serif JP"',
     generic: "serif",
-    google: ["Noto+Serif:wght@400;700", "Noto+Serif+SC:wght@400;700", "Noto+Serif+JP:wght@400;700"],
   },
   {
     id: "source-sans",
@@ -54,7 +51,6 @@ export const STAGE_FONTS: StageFont[] = [
     zh: '"Noto Sans SC"',
     ja: '"Noto Sans JP"',
     generic: "sans-serif",
-    google: ["Source+Sans+3:wght@400;600;700", "Noto+Sans+SC:wght@400;500;700", "Noto+Sans+JP:wght@400;500;700"],
   },
   {
     id: "source-serif",
@@ -67,7 +63,6 @@ export const STAGE_FONTS: StageFont[] = [
     zh: '"Noto Serif SC"',
     ja: '"Noto Serif JP"',
     generic: "serif",
-    google: ["Source+Serif+4:opsz,wght@8..60,400;8..60,700", "Noto+Serif+SC:wght@400;700", "Noto+Serif+JP:wght@400;700"],
   },
   {
     id: "ibm-plex",
@@ -80,11 +75,6 @@ export const STAGE_FONTS: StageFont[] = [
     zh: '"Noto Sans SC"',
     ja: '"IBM Plex Sans JP"',
     generic: "sans-serif",
-    google: [
-      "IBM+Plex+Sans:wght@400;500;600;700",
-      "IBM+Plex+Sans+JP:wght@400;500;700",
-      "Noto+Sans+SC:wght@400;500;700",
-    ],
   },
   {
     id: "pt-sans",
@@ -97,7 +87,6 @@ export const STAGE_FONTS: StageFont[] = [
     zh: '"Noto Sans SC"',
     ja: '"Noto Sans JP"',
     generic: "sans-serif",
-    google: ["PT+Sans:wght@400;700", "Noto+Sans+SC:wght@400;500;700", "Noto+Sans+JP:wght@400;500;700"],
   },
   {
     id: "nunito",
@@ -110,7 +99,6 @@ export const STAGE_FONTS: StageFont[] = [
     zh: '"Noto Sans SC"',
     ja: '"Noto Sans JP"',
     generic: "sans-serif",
-    google: ["Nunito+Sans:wght@400;600;700", "Noto+Sans+SC:wght@400;500;700", "Noto+Sans+JP:wght@400;500;700"],
   },
   {
     id: "inter",
@@ -123,7 +111,6 @@ export const STAGE_FONTS: StageFont[] = [
     zh: '"Noto Sans SC"',
     ja: '"Noto Sans JP"',
     generic: "sans-serif",
-    google: ["Inter:wght@400;500;600;700", "Noto+Sans+SC:wght@400;500;700", "Noto+Sans+JP:wght@400;500;700"],
   },
   {
     id: "literata",
@@ -136,7 +123,6 @@ export const STAGE_FONTS: StageFont[] = [
     zh: '"Noto Serif SC"',
     ja: '"Noto Serif JP"',
     generic: "serif",
-    google: ["Literata:wght@400;700", "Noto+Serif+SC:wght@400;700", "Noto+Serif+JP:wght@400;700"],
   },
   {
     id: "dm-sans",
@@ -149,7 +135,6 @@ export const STAGE_FONTS: StageFont[] = [
     zh: '"Noto Sans SC"',
     ja: '"Noto Sans JP"',
     generic: "sans-serif",
-    google: ["DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700", "Noto+Sans+SC:wght@400;500;700", "Noto+Sans+JP:wght@400;500;700"],
   },
 ];
 
@@ -221,7 +206,7 @@ export const FONT_USAGE: { where: string; fonts: string; license: "SIL OFL"; det
     where: "中日文缺字回落",
     fonts: "Noto Sans/Serif SC、JP；IBM Plex 日文走 IBM Plex Sans JP",
     license: "SIL OFL",
-    detail: "西文/俄文字体没有中日文时自动回落。九语口播用 Noto 覆盖最完整。",
+    detail: "西文/俄文字体没有中日文时自动回落。九语口播用 Noto 覆盖最完整。栈末不回落系统字体。字文件随工具打包。",
   },
 ];
 
@@ -275,42 +260,42 @@ export function stageFont(id: string | undefined): StageFont {
   return STAGE_FONTS.find((f) => f.id === id) ?? STAGE_FONTS[0];
 }
 
-/** Load only the selected families (plus Noto CJK fallbacks). */
-export function ensureStageFonts(...ids: Array<StageFontId | undefined>) {
-  if (typeof document === "undefined") return;
-  const families = new Set<string>(["Noto+Sans:wght@400;500;700", "Noto+Sans+SC:wght@400;500;700", "Noto+Sans+JP:wght@400;500;700"]);
-  for (const id of ids) {
-    if (!isStageFontId(id)) continue;
-    for (const g of stageFont(id).google) families.add(g);
-  }
-  const key = [...families].sort().join("|");
-  let link = document.getElementById("stage-fonts") as HTMLLinkElement | null;
-  if (!link) {
-    link = document.createElement("link");
-    link.id = "stage-fonts";
-    link.rel = "stylesheet";
-    document.head.appendChild(link);
-  }
-  if (link.dataset.key === key) return;
-  link.dataset.key = key;
-  link.href = `https://fonts.googleapis.com/css2?${[...families].map((f) => `family=${f}`).join("&")}&display=swap`;
+/** Faces are bundled in embeddedFonts.ts. Kept so App/export callers stay the same. */
+export function ensureStageFonts(..._ids: Array<StageFontId | undefined>) {
+  /* no-op */
 }
 
-export async function waitStageFonts(...ids: Array<StageFontId | undefined>) {
-  ensureStageFonts(...ids);
+export async function waitStageFonts(..._ids: Array<StageFontId | undefined>) {
   if (typeof document === "undefined" || !document.fonts) return;
+  const samples = [
+    '16px "Noto Sans"',
+    '700 16px "Noto Sans"',
+    '16px "Noto Sans SC"',
+    '700 16px "Noto Sans SC"',
+    '16px "Noto Serif SC"',
+    '700 16px "Noto Serif SC"',
+    '16px "Noto Sans JP"',
+    '16px "Noto Serif JP"',
+  ];
   try {
-    await Promise.race([document.fonts.ready, new Promise<void>((r) => window.setTimeout(r, 4000))]);
+    await Promise.race([
+      Promise.all([document.fonts.ready, ...samples.map((s) => document.fonts.load(s))]),
+      new Promise<void>((r) => window.setTimeout(r, 8000)),
+    ]);
   } catch {
     /* ignore */
   }
 }
 
+const OFL_SANS = '"Noto Sans", "Noto Sans SC", "Noto Sans JP"';
+const OFL_SERIF = '"Noto Serif", "Noto Serif SC", "Noto Serif JP"';
+
 export function fontStack(id: string | undefined, lang: LangId): string {
   const f = stageFont(id);
-  if (lang === "zh") return `${f.zh}, ${f.ja}, ${f.latin}, ${f.generic}`;
-  if (lang === "ja") return `${f.ja}, ${f.zh}, ${f.latin}, ${f.generic}`;
-  return `${f.latin}, ${f.zh}, ${f.ja}, ${f.generic}`;
+  const ofl = f.generic === "serif" ? OFL_SERIF : OFL_SANS;
+  if (lang === "zh") return `${f.zh}, ${f.ja}, ${f.latin}, ${ofl}`;
+  if (lang === "ja") return `${f.ja}, ${f.zh}, ${f.latin}, ${ofl}`;
+  return `${f.latin}, ${f.zh}, ${f.ja}, ${ofl}`;
 }
 
 export function blockFontId(project: Pick<Project, "fontId" | "titleFontId" | "subtitleFontId" | "quoteFontId">, type: BlockType): StageFontId {
