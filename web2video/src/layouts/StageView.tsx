@@ -1,7 +1,7 @@
 import { useRef, type CSSProperties, type MouseEvent } from "react";
 import { sceneBlocks } from "../lib/blocks";
 import { isPlayBlock } from "../lib/calendar";
-import { blockWindow, targetWindow } from "../lib/effects";
+import { blockWindow, targetWindow, windowProgress } from "../lib/effects";
 import { mergedSettings, sampleBlock } from "../lib/interpolate";
 import { bilingualCaptionLangOf, captionSecondaryText, itemSpeakKey } from "../lib/narration";
 import { captionStyleOf, fontStack, hexAlpha, resolveBlockFont } from "../lib/fonts";
@@ -10,6 +10,8 @@ import { type LangId } from "../lib/langs";
 import { sceneCalendar } from "../lib/timeline";
 import { captionSpanAt } from "../lib/calendar";
 import { MediaFrame } from "./MediaFrame";
+import { KatexFrame } from "./KatexFrame";
+import { ThreeFrame } from "./ThreeFrame";
 import { mediaSrcOf } from "../lib/insertImage";
 import { listMarkerRadius, listMarkerStyleOf } from "../lib/listMarker";
 import type { LayoutBlock, ListMarkerStyle, Project, Scene } from "../types";
@@ -235,6 +237,21 @@ export function StageView({
                 ▶ {tgt || "播放口播"}
               </div>
             );
+          }
+          if (b.type === "katex") {
+            return (
+              <KatexFrame
+                tex={set.tex ?? ""}
+                displayMode={set.displayMode !== false}
+                color={set.color}
+                fontSize={set.fontSize}
+                align={set.align}
+              />
+            );
+          }
+          if (b.type === "three") {
+            const spinT = cueWin ? windowProgress(sampleT, cueWin) : sampleT / Math.max(1, cal.totalMs);
+            return <ThreeFrame src={set.threeSrc ?? ""} localMs={sampleT} t={spinT} fill={set.fill} />;
           }
           if (b.type === "shape") {
             return <div className="h-full w-full" style={{ background: set.fill || "#c45c26", borderRadius: `${set.radius ?? 1}cqw` }} />;

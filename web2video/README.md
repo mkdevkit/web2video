@@ -14,10 +14,16 @@ npm run dev
 ## 功能
 
 - 视频 / GIF 元件（跟场景时间走，导出时按当前帧画进画面）
+- 公式（KaTeX）与三维（Three.js）元件：公式写 TeX；三维脚本跟播放头 seek，导出时画进画面
 - 多种版面：封面、图文、要点、金句、步骤、对话窗、自定义等
 - 场景底色 / 背景图、口播字幕条（字体与样式可配，烧录到画面）、画布进度条（样式可配，画在舞台上会进导出）
-- 每场独立口播列表（id + 时长）；口播驱动或配置驱动；元件可配多条动效（口播开始/结束 + 偏移）；配置驱动用播放元件排期
-- 千问 TTS：声音设计、声音复刻、角色与语言默认音色
+- 每场独立口播表（id、只读时长、角色、九种语言同一行）；口播驱动或配置驱动
+- 元件可配多条动效：起点/终点分口播、场景锚点、固定时间；终点也可设时长。缓推缩放等
+- 配置驱动用「播放口播」元件排期；开场/结束空白只在此模式下生效
+- 工作区底部只有全片进度条；画布进度条（`showTopProgress`）会进导出
+- 点舞台元件显示该元件属性（含动效）；点空白回到场景属性
+- 千问 TTS：合成 / AI 配置 / 配音角色 / 音色管理；各语言可指定默认角色
+- 「翻译后合成语音」默认关闭
 - 生成式 AI 分镜（DeepSeek 等 Chat Completions + 本地工具调用）
 - 一键机翻：中、英、日、法、德、俄、西班牙、葡萄牙、意大利
 - 导出 WebM（VP8/VP9）或 MP4（H.264，视浏览器而定）；分辨率 / 帧率 / 码率可配
@@ -38,6 +44,7 @@ npm run dev
 | 金句 | 配置 → 字体 → 金句（默认 Noto Serif） | SIL OFL |
 | 口播字幕条（预览与烧录到画面） | 配置 → 字体 → 口播字幕（默认 Noto Sans） | SIL OFL |
 | 画布进度条场次名 | 配置 → 字体 → 进度条场次名（可回落字幕字体） | SIL OFL |
+| 公式元件 | KaTeX 自带（KaTeX_*） | SIL OFL |
 | 单个元件覆盖 | 检视里可选；缺省跟该类型全局字体 | SIL OFL |
 | 中日文缺字回落 | Noto Sans/Serif SC、JP；IBM Plex 日文走 IBM Plex Sans JP | SIL OFL |
 
@@ -53,11 +60,12 @@ npm run dev
 | --- | --- |
 | 构建 | Vite 6 + TypeScript + `@vitejs/plugin-react-swc` |
 | UI | React 18、Tailwind CSS、lucide-react |
+| 公式 / 三维 | KaTeX、Three.js（元件内 seek 渲染，无独立 rAF） |
 | 状态 | Zustand（工程、播放头、撤销栈、对话框） |
 | 配音 | 阿里云百炼 / 千问 TTS（设计 `qwen-voice-design`、复刻 `qwen-voice-enrollment`、合成 `qwen3-tts-vd` / `qwen3-tts-vc`） |
 | 分镜 AI | OpenAI 兼容 Chat Completions（默认 DeepSeek），function calling |
 | 翻译 | Microsoft Edge 翻译接口（Vite 反代 `/__edge_translate`） |
-| 导出画面 | `html-to-image` 逐帧截舞台 → `canvas.captureStream` + `MediaRecorder`；视频/GIF 先画到元件 canvas 再截 |
+| 导出画面 | `html-to-image` 逐帧截舞台 → `canvas.captureStream` + `MediaRecorder`；视频/GIF/三维先画到 2D canvas 再截 |
 | 导出音频 | Web Audio API 按场景时钟切片对齐口播 |
 | 工程磁盘 | File System Access API（目录句柄存 IndexedDB） |
 | 口播缓存 | IndexedDB（`web2video-audio`） |
@@ -67,23 +75,23 @@ npm run dev
 `src/types.ts` 里的 `Project` 是唯一真相：画幅、字体、字幕/进度条样式、导出规格、场景列表。
 
 - `drive`：`narration`（默认，列表即时钟，可加延时行）或 `config`（播放元件排期）
-- `speaks`：本场口播（id、多语言文本、时长、角色）；延时为 `kind: "gap"`
+- `speaks`：本场口播（id、多语言文本、角色）；时长只读，来自合成 `beatMs` 或字数估计；延时为 `kind: "gap"`
 - `slots`：画面文案（含列表、对话窗）
 - `cues`：旧入场绑定（无 `effects` 时仍可读）
-- `blocks`：元件几何、样式、多条 `effects`（TimeRef）；`play` 元件只排期口播
+- `blocks`：元件几何、样式、多条 `effects`；`TimeRef.kind` 为 `speak` / `scene` / `fixed`，终点也可只用 `durationMs`；`play` 元件只排期口播
 - `audioByLang`：各语言配音元数据（时长、`beatMs`、是否过期）
 
-时间轴在 `src/lib/timeline.ts` + `calendar.ts`：口播驱动按 `speaks` 列表（含延时）+ 停留；配置驱动按播放元件与动效窗口，全部结束后切场。换语言用各句实际时长，不再把画面按 0–1 拉伸。
+时间轴在 `src/lib/timeline.ts` + `calendar.ts`：口播驱动按 `speaks` 列表（含延时）+ 停留；配置驱动按播放元件与动效窗口，全部结束后切场。换语言用各句实际时长，不再把画面按 0–1 拉伸。工作区底部进度条是全片一条，可点各场分段。
 
 ### 配音
 
 合成入口 `src/lib/synthProject.ts`：按句合成后写入 `beatMs`。口播驱动按列表拼接（延时插入静音）；配置驱动按播放元件开始时刻混音。
 
-浏览器不能直连 DashScope，开发服务器插件把请求转到 `/__tts/qwen`、`/__tts/qwen-voice`。API Key 在请求头里带上，存在 `web2video.tts-secrets`。音色库在 `web2video.voice-library`，可跨工程复用。
+浏览器不能直连 DashScope，开发服务器插件把请求转到 `/__tts/qwen`、`/__tts/qwen-voice`。API Key 在请求头里带上，存在 `web2video.tts-secrets`。音色库在 `web2video.voice-library`，可跨工程复用。配音窗口四个标签：合成、AI 配置、配音角色、音色管理（设计 / 复刻 / 从千问同步 / 试听）。
 
 ### 分镜 AI
 
-`src/lib/ai/agent.ts` 循环调用 Chat Completions，把 `src/lib/ai/tools.ts` 里的工具交给模型：读工程、写分镜、改场景/元件/入场、改片级外观与导出规格。密钥在 `web2video.llm-secrets`。跨域由 `vite-plugin-llm-proxy.ts` 的 `/__llm/chat` 转发（只允许 https 或本机 http）。
+`src/lib/ai/agent.ts` 循环调用 Chat Completions，把 `src/lib/ai/tools.ts` 里的工具交给模型：读工程、写分镜、改场景/元件/动效锚点、改片级外观与导出规格。密钥在 `web2video.llm-secrets`。跨域由 `vite-plugin-llm-proxy.ts` 的 `/__llm/chat` 转发（只允许 https 或本机 http）。工具约定见该文件 `SYSTEM_PROMPT` 与 `AI_TOOLS`。
 
 ### 导出
 

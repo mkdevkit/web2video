@@ -1,4 +1,5 @@
 import type { AnimKind, BlockKeyframe, BlockSettings, EaseKind, LayoutBlock } from "../types";
+import { DEFAULT_THREE_SRC } from "./threePreset";
 
 export type MsWindow = { startMs: number; endMs: number; anim: AnimKind };
 
@@ -24,10 +25,13 @@ export function defaultSettings(type: LayoutBlock["type"]): BlockSettings {
     dialogue: 1.7,
   };
   return {
-    align: type === "title" || type === "quote" || type === "number" || type === "author" ? "center" : "left",
+    align: type === "title" || type === "quote" || type === "number" || type === "author" || type === "katex" ? "center" : "left",
     color: type === "number" ? "#d4a84b" : type === "subtitle" || type === "author" ? "#d8d2c4" : "#f3eee3",
-    fill: type === "shape" ? "#c45c26" : "transparent",
-    fontSize: text[type] ?? 2,
+    fill: type === "shape" ? "#c45c26" : type === "three" ? "#141811" : "transparent",
+    fontSize: type === "katex" ? 2.8 : (text[type] ?? 2),
+    tex: type === "katex" ? "E = mc^{2}" : undefined,
+    displayMode: type === "katex" ? true : undefined,
+    threeSrc: type === "three" ? DEFAULT_THREE_SRC : undefined,
     fontWeight: type === "title" || type === "number" ? "bold" : "normal",
     lineHeight: 1.25,
     padding: type === "list" || type === "dialogue" ? 0.6 : 0,

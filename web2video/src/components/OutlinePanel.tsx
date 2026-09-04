@@ -1,4 +1,4 @@
-import { Film, Hash, Image, ImagePlay, List, MessageSquare, Quote, Square, Type, User, Volume2 } from "lucide-react";
+import { Box, Film, Hash, Image, ImagePlay, List, MessageSquare, Quote, Sigma, Square, Type, User, Volume2 } from "lucide-react";
 import { sceneBlocks } from "../lib/blocks";
 import { blockNameOf, itemText, sourceLangOf, textOf } from "../lib/textI18n";
 import { itemSpeakKey, speakText } from "../lib/narration";
@@ -21,6 +21,8 @@ const TYPE_ICON: Record<BlockType, typeof Type> = {
   gif: ImagePlay,
   shape: Square,
   play: Volume2,
+  katex: Sigma,
+  three: Box,
 };
 
 function typeLabel(type: BlockType) {
@@ -33,6 +35,8 @@ function previewOf(scene: Scene, block: LayoutBlock, lang: LangId, source: LangI
   if (block.type === "gif") return "GIF";
   if (block.type === "shape") return "色块";
   if (block.type === "play") return block.settings?.playTarget ? `播 ${block.settings.playTarget}` : "播放口播";
+  if (block.type === "katex") return (block.settings?.tex ?? "").replace(/\s+/g, " ").trim() || "公式";
+  if (block.type === "three") return "三维";
   if (block.type === "list") return `${scene.slots.items?.length ?? 0} 项`;
   if (block.type === "dialogue") return `${scene.slots.dialogue?.length ?? 0} 句`;
   const key = block.type as "title" | "subtitle" | "body" | "caption" | "quote" | "author" | "number";

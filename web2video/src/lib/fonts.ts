@@ -206,6 +206,12 @@ export const FONT_USAGE: { where: string; fonts: string; license: "SIL OFL"; det
     detail: "画布顶/底进度条上的场次名。不单独选则跟口播字幕同一套。",
   },
   {
+    where: "公式元件",
+    fonts: "KaTeX 自带（KaTeX_*）",
+    license: "SIL OFL",
+    detail: "公式元件用 KaTeX 排版，字体随库走，不跟成片 fontId。免费可商用。",
+  },
+  {
     where: "单个元件覆盖",
     fonts: "检视里可选；缺省跟该类型全局字体",
     license: "SIL OFL",

@@ -4,8 +4,8 @@
 
 | 目录 | 说明 |
 | --- | --- |
-| [`web2video`](./web2video) | 把口播做成网页场景，配 TTS 与时间轴，再按语言导出视频 |
-| [`script2video`](./script2video) | Script2Video：脚本与口播工作台（Web / Tauri）：DeepSeek 生成、翻译、千问配音、画面跟节拍走 |
+| [`web2video`](./web2video) | 网页场景编辑器：口播列表、元件动效（口播/场景/固定时间）、千问配音、按语言导出 |
+| [`script2video`](./script2video) | 脚本工作台（Web / Tauri）：口播驱动或脚本驱动、DeepSeek、翻译、千问配音（角色/音色管理）、画面跟节拍走 |
 
 ```bash
 cd web2video       # 网页场景编辑器

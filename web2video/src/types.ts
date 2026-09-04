@@ -33,7 +33,9 @@ export type BlockType =
   | "video"
   | "gif"
   | "shape"
-  | "play";
+  | "play"
+  | "katex"
+  | "three";
 export type TtsProvider = "edge" | "azure" | "openai" | "qwen";
 export type SceneTransition = "cut" | "crossfade";
 export type StageFontId =
@@ -260,6 +262,12 @@ export interface BlockSettings {
   playTarget?: string;
   /** Play block: when to start (default = after previous play / scene start). */
   playFrom?: TimeRef;
+  /** KaTeX: TeX source (language-agnostic). */
+  tex?: string;
+  /** KaTeX: display (block) vs inline. Default true. */
+  displayMode?: boolean;
+  /** Three.js: setup script; may return `update({ t, localMs })`. Seek-driven, no rAF. */
+  threeSrc?: string;
 }
 
 export interface LayoutBlock {
@@ -430,4 +438,6 @@ export const BLOCK_TYPES: { type: BlockType; label: string }[] = [
   { type: "gif", label: "GIF" },
   { type: "shape", label: "色块" },
   { type: "play", label: "播放口播" },
+  { type: "katex", label: "公式" },
+  { type: "three", label: "三维" },
 ];

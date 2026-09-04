@@ -25,6 +25,7 @@ const beatProperties = {
   kind: { type: "string", enum: ["speech", "gap"], description: "speech 为台词；gap 为延时行，只有时长。" },
   text: { type: "string", description: "源语言口播文案。口语化，一句一事。gap 行不要填。" },
   gapMs: { type: "number", description: "延时行时长（毫秒），跨语言相同。默认 400。" },
+  roleId: { type: "string", description: "配音角色 VoiceProfile.id，见 get_project.voices。省略用该语言默认。" },
   i18n: {
     type: "object",
     description: "可选：各语言文案。键为 zh/en/ja/fr/de/ru/es/pt/it。省略则只写源语言。",
@@ -52,7 +53,7 @@ export const AI_TOOLS: ChatTool[] = [
     type: "function",
     function: {
       name: "get_project",
-      description: "读取工程概要：名称、语言、画幅、舞台外观、脚本列表。改之前先调用。",
+      description: "读取工程概要：名称、语言、画幅、舞台外观、配音角色、脚本列表。改之前先调用。",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -175,6 +176,7 @@ export const AI_TOOLS: ChatTool[] = [
           beatId: { type: "string" },
           name: { type: "string", description: "rename 的新 id" },
           text: { type: "string", description: "set_text / add 的源语言文案" },
+          roleId: { type: "string", description: "add 时的配音角色 id" },
           lang: { type: "string", enum: LANG_ENUM, description: "set_text 的语言，默认源语言" },
           beats: {
             type: "array",
@@ -201,7 +203,7 @@ function sanitizeBeatId(raw: string, used: Set<string>): string {
   return n;
 }
 
-function beatFromSpec(spec: { id?: unknown; text?: unknown; i18n?: unknown; kind?: unknown; gapMs?: unknown }, lang: LangId, used: Set<string>): Beat {
+function beatFromSpec(spec: { id?: unknown; text?: unknown; i18n?: unknown; kind?: unknown; gapMs?: unknown; roleId?: unknown }, lang: LangId, used: Set<string>): Beat {
   const id = sanitizeBeatId(String(spec.id ?? "beat"), used);
   if (spec.kind === "gap") {
     const gapMs = typeof spec.gapMs === "number" && spec.gapMs > 0 ? Math.round(spec.gapMs) : DEFAULT_GAP_MS;
@@ -215,7 +217,8 @@ function beatFromSpec(spec: { id?: unknown; text?: unknown; i18n?: unknown; kind
       if (isLangId(k) && typeof v === "string" && v.trim()) text[k] = v.trim();
     }
   }
-  return { id, kind: "speech", text };
+  const roleId = typeof spec.roleId === "string" && spec.roleId.trim() ? spec.roleId.trim() : undefined;
+  return { id, kind: "speech", text, roleId };
 }
 
 function codeFromBeats(ids: string[]): string {
@@ -252,7 +255,7 @@ function scriptFromSpec(spec: Record<string, unknown>, lang: LangId, fallbackHtm
   const used = new Set<string>();
   const rawBeats = Array.isArray(spec.beats) ? spec.beats : [];
   const beats = rawBeats.map((b, i) => {
-    const row = b && typeof b === "object" ? (b as { id?: unknown; text?: unknown; i18n?: unknown; kind?: unknown; gapMs?: unknown }) : {};
+    const row = b && typeof b === "object" ? (b as { id?: unknown; text?: unknown; i18n?: unknown; kind?: unknown; gapMs?: unknown; roleId?: unknown }) : {};
     return beatFromSpec({ ...row, id: row.id ?? `beat${i + 1}` }, lang, used);
   });
   const ids = beats.filter((b) => b.kind !== "gap").map((b) => b.id);
@@ -294,6 +297,7 @@ function dumpScript(scriptId?: string) {
             id: b.id,
             kind: "speech",
             text: b.text[lang] ?? "",
+            roleId: b.roleId ?? "",
             langs: Object.fromEntries(Object.entries(b.text).filter(([, t]) => (t ?? "").trim())),
           },
     ),
@@ -340,6 +344,8 @@ export function executeTool(name: string, rawArgs: unknown): string {
         stageTheme: stageThemeOf(p.stageTheme),
         stageCss: p.stageCss ?? "",
         voices: p.voices.map((v) => ({ id: v.id, name: v.name, gender: v.gender })),
+        voiceId: p.voiceId ?? "",
+        voiceByLang: p.voiceByLang ?? {},
         scripts: p.scripts.map((sc) => ({
           id: sc.id,
           name: sc.name,
@@ -375,7 +381,8 @@ export function executeTool(name: string, rawArgs: unknown): string {
           stage: "每个脚本自己的 stageHtml。画幅/字体/底色/stageCss 是工程级。HTML 里用 #title 等选择器。",
           fonts: "舞台与字幕字体均为 SIL OFL，免费可商用。字幕条用 captionFontId。中日文不足时回落 Noto CJK。",
           sleep: "口播驱动：句间留白用延时行（kind=gap）。sleepS 加在片尾。脚本驱动：speech.play + sleepS。",
-          tts: "密钥和配音合成不用你处理。改口播后配音会过期，用户自己点配音。",
+          tts: "密钥和配音合成不用你处理。用户在顶栏「配音」：合成 / AI 配置 / 配音角色 / 音色管理。翻译后合成默认关。改口播后配音会过期。",
+          role: "每句可设 roleId（get_project.voices）。缺省用 voiceId / voiceByLang。",
         },
         fonts: STAGE_FONTS.map((f) => ({ id: f.id, label: f.label, langs: f.langs, hint: f.hint, detail: f.detail, license: f.license })),
       });
@@ -478,7 +485,7 @@ export function executeTool(name: string, rawArgs: unknown): string {
         if (!list.length) return fail("beats 为空");
         const used = new Set<string>();
         const beats = list.map((b, i) => {
-          const row = b && typeof b === "object" ? (b as { id?: unknown; text?: unknown; i18n?: unknown; kind?: unknown; gapMs?: unknown }) : {};
+          const row = b && typeof b === "object" ? (b as { id?: unknown; text?: unknown; i18n?: unknown; kind?: unknown; gapMs?: unknown; roleId?: unknown }) : {};
           return beatFromSpec({ ...row, id: row.id ?? `beat${i + 1}` }, lang, used);
         });
         const keep = new Set(beats.map((b) => b.id));
@@ -491,7 +498,7 @@ export function executeTool(name: string, rawArgs: unknown): string {
       }
       if (action === "add") {
         const used = new Set(script.beats.map((b) => b.id));
-        const beat = beatFromSpec({ id: args.beatId ?? args.name, text: args.text }, lang, used);
+        const beat = beatFromSpec({ id: args.beatId ?? args.name, text: args.text, roleId: args.roleId }, lang, used);
         store.patchScript(scriptId, { beats: [...script.beats, beat], audioByLang: staleAll(script) });
         return ok({ ok: true, beatId: beat.id });
       }
@@ -545,5 +552,6 @@ export const SYSTEM_PROMPT = `你是 Script2Video 的分镜助手。这是本地
 - 整片重做：apply_scripts mode=replace，每个脚本给出 stageHtml 与 GSAP code。
 - 加一段：mode=append，或 manage_scripts add。
 - 改现有工程先 get_project / get_script，再 update_script / manage_beats。
-- 密钥、翻译、TTS、导出不用你处理。
+- 每句可指定 roleId（get_project.voices）；缺省用语言默认角色。
+- 密钥、翻译、TTS、导出不用你处理。用户在顶栏「配音」操作（合成 / AI 配置 / 角色 / 音色）。翻译后合成默认关。
 - 用中文回复用户，简短说明做了什么。`;

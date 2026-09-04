@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, Film, Hash, Image, ImagePlay, List, MessageSquare, Plus, Quote, Square, Type, User, Volume2 } from "lucide-react";
+import { Box, ChevronDown, Film, Hash, Image, ImagePlay, List, MessageSquare, Plus, Quote, Sigma, Square, Type, User, Volume2 } from "lucide-react";
 import { BLOCK_TYPES, type BlockType } from "../types";
 import { useEditor } from "../store/useEditor";
 import { pickGifFile, pickVideoFile } from "../lib/insertImage";
@@ -20,6 +20,8 @@ const TYPE_ICON: Record<BlockType, typeof Type> = {
   gif: ImagePlay,
   shape: Square,
   play: Volume2,
+  katex: Sigma,
+  three: Box,
 };
 
 export function AddBlockMenu() {

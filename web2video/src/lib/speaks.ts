@@ -58,7 +58,7 @@ function fromLegacyMap(scene: Scene): SpeakLine[] {
 
   pushSpeech(SPEAK_OPEN, slotI18n(scene.narration), scene.speakRole?.[SPEAK_OPEN]);
   for (const block of sceneBlocks(scene)) {
-    if (block.type === "play") continue;
+    if (block.type === "play" || block.type === "katex" || block.type === "three") continue;
     pushSpeech(block.id, scene.speak?.[block.id]?.i18n, scene.speakRole?.[block.id]);
     if (block.type === "list") {
       for (const it of scene.slots.items ?? []) {

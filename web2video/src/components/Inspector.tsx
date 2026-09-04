@@ -13,6 +13,7 @@ import {
   StretchVertical,
 } from "lucide-react";
 import { pickGifFile, pickImageFile, pickVideoFile } from "../lib/insertImage";
+import { DEFAULT_THREE_SRC } from "../lib/threePreset";
 import { alignBlockBox, boxAlignActive, sceneBlocks, type BoxAlign } from "../lib/blocks";
 import { mergedSettings, restPose } from "../lib/interpolate";
 import { itemText, sourceLangOf, textOf, writeI18n } from "../lib/textI18n";
@@ -605,7 +606,9 @@ function BlockInspector({ scene, block }: { scene: Scene; block: LayoutBlock }) 
         block.type !== "shape" &&
         block.type !== "list" &&
         block.type !== "dialogue" &&
-        block.type !== "play" && (
+        block.type !== "play" &&
+        block.type !== "katex" &&
+        block.type !== "three" && (
         <div className="mt-2">
           <SlotField scene={scene} lang={lang} source={source} field={block.type as "title"} label="内容" />
         </div>
@@ -706,6 +709,49 @@ function BlockInspector({ scene, block }: { scene: Scene; block: LayoutBlock }) 
           })}
         </div>
       )}
+      {block.type === "katex" && (
+        <div className="mt-2 space-y-2">
+          <Field label="TeX">
+            <textarea
+              className="field min-h-[72px] font-mono text-[11px]"
+              placeholder="E = mc^{2}"
+              value={set.tex ?? ""}
+              onChange={(e) => useEditor.getState().patchBlockSettings(scene.id, block.id, { tex: e.target.value })}
+            />
+          </Field>
+          <label className="flex items-center gap-2 text-[11px] text-ink-200">
+            <input
+              type="checkbox"
+              checked={set.displayMode !== false}
+              onChange={(e) => useEditor.getState().patchBlockSettings(scene.id, block.id, { displayMode: e.target.checked })}
+            />
+            独立成行（display）
+          </label>
+          <p className="text-[10px] text-ink-500">KaTeX 排版，跟元件动效走。字体是 KaTeX 自带（SIL OFL），与成片字体无关。</p>
+        </div>
+      )}
+      {block.type === "three" && (
+        <div className="mt-2 space-y-2">
+          <Field label="场景脚本">
+            <textarea
+              className="field min-h-[140px] font-mono text-[10px] leading-snug"
+              spellCheck={false}
+              value={set.threeSrc ?? ""}
+              onChange={(e) => useEditor.getState().patchBlockSettings(scene.id, block.id, { threeSrc: e.target.value })}
+            />
+          </Field>
+          <button
+            type="button"
+            className="btn w-full"
+            onClick={() => useEditor.getState().patchBlockSettings(scene.id, block.id, { threeSrc: DEFAULT_THREE_SRC })}
+          >
+            恢复默认场景
+          </button>
+          <p className="text-[10px] leading-relaxed text-ink-500">
+            可用 THREE、scene、camera。可 return function update({"{ t, localMs }"})。t 是本元件窗口 0–1（无动效则跟整场）。预览与导出都按播放头 seek，不要 requestAnimationFrame / play()。只用内置几何，不要编造模型或贴图 URL。
+          </p>
+        </div>
+      )}
       {isMediaType(block.type) && (
         <div className="mt-2 space-y-2">
           <button
@@ -760,30 +806,33 @@ function BlockInspector({ scene, block }: { scene: Scene; block: LayoutBlock }) 
         block.type === "author" ||
         block.type === "number" ||
         block.type === "list" ||
-        block.type === "dialogue") && (
+        block.type === "dialogue" ||
+        block.type === "katex") && (
         <>
-          <Field label="字体">
-            <select
-              className="field"
-              value={block.settings?.fontId ?? ""}
-              onChange={(e) => {
-                const v = e.target.value;
-                useEditor.getState().patchBlockSettings(scene.id, block.id, {
-                  fontId: v ? (v as StageFontId) : undefined,
-                });
-              }}
-            >
-              <option value="">默认（{stageFont(blockFontId(project, block.type)).label}）</option>
-              {STAGE_FONTS.map((f) => (
-                <option key={f.id} value={f.id} title={f.detail}>
-                  {f.label}
-                </option>
-              ))}
-            </select>
-            <p className="mt-1 text-[10px] leading-relaxed text-ink-500">
-              {stageFont(block.settings?.fontId || blockFontId(project, block.type)).detail}
-            </p>
-          </Field>
+          {block.type !== "katex" && (
+            <Field label="字体">
+              <select
+                className="field"
+                value={block.settings?.fontId ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  useEditor.getState().patchBlockSettings(scene.id, block.id, {
+                    fontId: v ? (v as StageFontId) : undefined,
+                  });
+                }}
+              >
+                <option value="">默认（{stageFont(blockFontId(project, block.type)).label}）</option>
+                {STAGE_FONTS.map((f) => (
+                  <option key={f.id} value={f.id} title={f.detail}>
+                    {f.label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-[10px] leading-relaxed text-ink-500">
+                {stageFont(block.settings?.fontId || blockFontId(project, block.type)).detail}
+              </p>
+            </Field>
+          )}
           <Field label={`字号 ${set.fontSize}`}>
             <input
               type="range"
@@ -825,12 +874,12 @@ function BlockInspector({ scene, block }: { scene: Scene; block: LayoutBlock }) 
           </Field>
         </>
       )}
-      {block.type === "shape" && (
-        <Field label="填充">
+      {(block.type === "shape" || block.type === "three") && (
+        <Field label={block.type === "three" ? "场景底色" : "填充"}>
           <input
             className="field h-8"
             type="color"
-            value={set.fill ?? "#c45c26"}
+            value={set.fill && set.fill !== "transparent" ? set.fill : block.type === "three" ? "#141811" : "#c45c26"}
             onChange={(e) => useEditor.getState().patchBlockSettings(scene.id, block.id, { fill: e.target.value })}
           />
         </Field>

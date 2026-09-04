@@ -61,6 +61,8 @@ npm run tauri:build   # 安装包
 读：`get_project`、`get_script`、`list_catalog`  
 写：`apply_scripts`（整片生成/追加）、`update_script`、`manage_scripts`、`manage_beats`、`set_project`
 
+工具约定（时钟、口播驱动 / 脚本驱动、`speech.*`）在 `src/lib/ai/tools.ts` 的 `SYSTEM_PROMPT` 与 `AI_TOOLS`。密钥、翻译、配音合成由用户在窗口里操作，模型不要代劳。
+
 例如：「三句口播讲黑洞不是洞，GSAP 跟节拍走」。改完可切口播页改文案、脚本页改 timeline、右侧预览。
 
 ## 用例
@@ -90,7 +92,16 @@ speech.totalS()            // 全片
 
 ### 4. 按语言生成口播，并对齐画面
 
-「配音」里填千问 API Key、加角色并指定音色。按**当前脚本 × 所选语言**逐句合成（一句一条，得到真实 `beatMs`），再拼成整段音频。改了某句文案会标记该语言音频过期。
+顶栏「保存」后面的「配音」打开配音窗口，四个标签与 web2video 相同：
+
+| 标签 | 做什么 |
+| --- | --- |
+| 合成 | 当前角色、各语言默认角色；勾选语言后合成当前脚本或全部脚本 |
+| AI 配置 | 千问 API Key、地域、设计/复刻模型（存在 `script2video.tts-secrets`） |
+| 配音角色 | 从本机音色库挂角色；口播表「角色」列可覆盖 |
+| 音色管理 | 声音设计、声音复刻、从千问同步、试听；库在 `script2video.voice-library` |
+
+按**当前脚本 × 所选语言**逐句合成（一句一条，得到真实 `beatMs`），再拼成整段音频。改了某句文案会标记该语言音频过期。口播时长只读，来自合成或字数估计。
 
 入场用固定毫秒（各语言一样快）；停留跟该句口播拉长/缩短。不要整条时间轴 `timeScale`。
 

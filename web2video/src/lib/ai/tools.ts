@@ -56,7 +56,7 @@ const sceneSpecProperties = {
   speaks: {
     type: "array",
     items: { type: "string" },
-    description: "本场口播列表，顺序即播放顺序。每条有独立 id 与时长。优先用这个，不要再拆开场/结束。",
+    description: "本场口播列表，顺序即播放顺序。每条有独立 id；时长只读。优先用这个，不要再拆开场/结束。",
   },
   narration: { type: "string", description: "兼容旧字段。无 speaks 时作为口播列表的一句" },
   narrationClose: { type: "string", description: "兼容旧字段。无 speaks 时接到口播列表末尾" },
@@ -154,7 +154,7 @@ export const AI_TOOLS: ChatTool[] = [
     type: "function",
     function: {
       name: "get_scene",
-      description: "读取一场的画面文案、口播、元件与入场绑定。",
+      description: "读取一场的画面文案、口播列表、元件与动效（TimeRef：口播/场景/固定时间）。",
       parameters: {
         type: "object",
         properties: {
@@ -291,6 +291,9 @@ export const AI_TOOLS: ChatTool[] = [
               fontSize: { type: "number" },
               fontWeight: { type: "string", enum: ["normal", "medium", "bold"] },
               fontId: { type: "string", enum: FONT_IDS },
+              tex: { type: "string", description: "katex 元件的 TeX 源，如 E = mc^{2}" },
+              displayMode: { type: "boolean", description: "katex 是否独立成行，默认 true" },
+              threeSrc: { type: "string", description: "three 元件脚本：可用 THREE/scene/camera，可 return function update({ t, localMs })。不要 rAF，不要编造模型/贴图 URL" },
             },
           },
         },
@@ -302,19 +305,19 @@ export const AI_TOOLS: ChatTool[] = [
     type: "function",
     function: {
       name: "set_cue",
-      description: "设置元件动效锚点。target 为元件 id 或 item:{id}。跟口播用该句开始/结束；不要再用主体 0–1 拉伸。",
+      description: "设置元件动效（兼容旧 cues，无 effects 时仍可读）。target 为元件 id 或 item:{id}。优先用口播 id 的开始/结束，不要用主体 0–1 拉伸。用户侧动效还可选场景锚点、固定时间或时长。",
       parameters: {
         type: "object",
         properties: {
           sceneId: { type: "string" },
           target: { type: "string" },
-          bind: { type: "string", enum: ["speak", "visual"] },
-          anim: { type: "string", enum: ["fade", "slide", "scale", "highlight", "kenburns"] },
-          leadMs: { type: "number", description: "跟口播：提前出现的毫秒，负数为延后" },
-          stay: { type: "string", enum: ["body", "speech"] },
-          trailMs: { type: "number" },
-          at: { type: "number", description: "跟画面：主体 0–1 起点" },
-          until: { type: "number", description: "跟画面：主体 0–1 终点" },
+          bind: { type: "string", enum: ["speak", "visual"], description: "speak=跟口播句；visual=跟主体（仅兼容旧片）" },
+          anim: { type: "string", enum: ["fade", "slide", "scale", "highlight", "kenburns"], description: "kenburns 界面名「缓推缩放」" },
+          leadMs: { type: "number", description: "相对口播开始的偏移毫秒，负数为提前" },
+          stay: { type: "string", enum: ["body", "speech"], description: "speech=跟到该句结束；body=跟到主体结束" },
+          trailMs: { type: "number", description: "相对结束锚点的偏移毫秒" },
+          at: { type: "number", description: "仅兼容旧 visual：主体 0–1 起点，新片不要用" },
+          until: { type: "number", description: "仅兼容旧 visual：主体 0–1 终点，新片不要用" },
         },
         required: ["target"],
       },
@@ -377,6 +380,17 @@ function dumpScene(sceneId?: string) {
       h: b.h,
       z: b.z ?? 1,
       hasSrc: Boolean(b.settings?.src) || (b.type === "image" && Boolean(scene.slots.image)),
+      playTarget: b.settings?.playTarget ?? "",
+      tex: b.settings?.tex ?? "",
+      threeSrc: b.type === "three" ? (b.settings?.threeSrc ?? "").slice(0, 400) : "",
+      effects: (b.effects ?? []).map((fx) => ({
+        id: fx.id,
+        anim: fx.anim,
+        target: fx.target ?? "",
+        from: fx.from,
+        to: fx.to ?? null,
+        durationMs: fx.durationMs ?? null,
+      })),
     })),
     cues: scene.cues.map((c) => ({
       id: c.id,
@@ -460,16 +474,19 @@ export function executeTool(name: string, rawArgs: unknown): string {
         blocks: BLOCK_TYPES.map((b) => ({ type: b.type, label: b.label })),
         fonts: STAGE_FONTS.map((f) => ({ id: f.id, label: f.label, langs: f.langs, hint: f.hint, detail: f.detail, license: f.license })),
         notes: {
-          open: "口播驱动：开场钉第一帧。配置驱动请用播放元件",
-          close: "口播驱动：结束钉最后一帧。句间留白用延时，不要 0–1 拉伸",
-          speakBind: "动效用口播 id 的 start/end + offset；play 元件只在配置驱动里播口播",
-          dialogue: "dialogue 版面是左右双人对话窗。对白写在 dialogue 数组，口播键为 item:{id}，每句可配 role",
+          speaks: "口播是场景上的独立列表，各有 id。时长只读（合成 beatMs 或字数估计）。句间留白用延时行。不要再拆开场/结束口播。",
+          speakBind: "动效 TimeRef.kind：speak（某句开始/结束+偏移）、scene（场景/主体起止+偏移）、fixed（从场景开始的绝对毫秒）。终点也可只用 durationMs。不要 0–1 拉伸。",
+          play: "play 元件只在配置驱动里播口播。开场/结束空白只在配置驱动下生效。",
+          dialogue: "dialogue 版面是左右双人对话窗。对白写在 dialogue 数组，口播写在 speaks，每句可配 role",
           bg: "bg 是场景底色；bgImage / 图片 / 视频 / GIF 只能用户本地选文件，不要编造 URL",
           media: "video、gif 元件用 manage_blocks 添加后，src 由用户在检视里选择，存在 settings.src",
+          katex: "katex 元件写 settings.tex（TeX 源）。公式跟元件动效走。不要编造公式图片 URL。",
+          three: "three 元件写 settings.threeSrc。可用 THREE、scene、camera；可 return function update({ t, localMs })。t 是本元件窗口 0–1。不要 requestAnimationFrame / setAnimationLoop，不要编造模型或贴图 URL，只用内置几何。",
           captions: "showCaptions 只控制预览字幕条。captionFontId 是烧录/预览字幕字体（SIL OFL）。bilingualCaptions 双语。导出窗可选：每种语言各一段视频，或一段视频+多语言字幕（时间轴跟视频语言走）",
-          progress: "showTopProgress + progressStyle 控制画布进度条，画在画布上会进导出，不是工作区装饰",
+          progress: "工作区底部是全片进度条。showTopProgress + progressStyle 是画布上的进度条，会进导出。",
           listMarker: "listMarkerStyle 控制全片列表序号：show 开关，kind=number 色块或 image 用户上传图，不要编造图片 URL",
-          speakRole: "speakRole 填 get_project.voices 的 id；缺省用 voiceByLang 该语言默认",
+          speakRole: "每句 speaks[].role 填 get_project.voices 的 id；缺省用 voiceByLang 该语言默认",
+          tts: "密钥和配音合成不用你处理。用户在配音窗口：合成 / AI 配置 / 配音角色 / 音色管理。翻译后合成默认关。",
         },
       });
     }
@@ -617,6 +634,9 @@ export function executeTool(name: string, rawArgs: unknown): string {
           if (typeof raw.fontSize === "number" && Number.isFinite(raw.fontSize)) settings.fontSize = raw.fontSize;
           if (raw.fontWeight === "normal" || raw.fontWeight === "medium" || raw.fontWeight === "bold") settings.fontWeight = raw.fontWeight;
           if (isStageFontId(raw.fontId)) settings.fontId = raw.fontId;
+          if (typeof raw.tex === "string") settings.tex = raw.tex;
+          if (typeof raw.displayMode === "boolean") settings.displayMode = raw.displayMode;
+          if (typeof raw.threeSrc === "string") settings.threeSrc = raw.threeSrc;
           if (Object.keys(settings).length) {
             store.patchBlockSettings(sceneId, blockId, settings as Parameters<typeof store.patchBlockSettings>[2]);
             did = true;
@@ -658,17 +678,19 @@ export const SYSTEM_PROMPT = `你是 Web2Video 的分镜助手。这是本地口
 
 时间规则：
 - 每场默认口播驱动：口播列表顺序就是时钟。句间留白用延时行，不要按主体时长 0–1 拉伸。
-- 口播是场景上的独立条目，各有 id 和时长，不要再拆开场口播/结束口播。
-- 配置驱动：口播是台词库，用「播放口播」元件排期；元件动效的起点/终点可选口播、场景锚点或固定时间，终点也可设时长。本场播放与动效全部结束后切场。
+- 口播是场景上的独立条目，各有 id；时长只读（合成或按字数估计），不要让用户手改时长。不要再拆开场口播/结束口播。
+- 配置驱动：口播是台词库，用「播放口播」元件排期；元件动效的起点/终点可选口播、场景锚点或固定时间，终点也可设时长。本场播放与动效全部结束后切场。开场/结束空白只在配置驱动下生效。
 
 版面与对白：
 - 封面 cover，要点 bullets/cards，步骤 steps，金句 quote，数据 bigStat，对话 dialogue。
 - 对话场填 dialogue:[{side,name,text,role?}]，左右交替。口播用 speaks 数组，对白每句可单独写成一条口播。
-- 场景底色用 bg；遮罩 bgDim 0–1。不要编造图片、视频、GIF 的 URL。视频/GIF 元件让用户在检视里选本地文件。
+- 场景底色用 bg；遮罩 bgDim 0–1。不要编造图片、视频、GIF、三维模型或贴图的 URL。视频/GIF 元件让用户在检视里选本地文件。
+- 公式用 katex 元件，settings.tex 写 TeX。三维用 three 元件，settings.threeSrc 写内置几何脚本，用 update({ t, localMs }) 跟播放头，不要自己开动画循环。
 
 外观：
 - 口播字幕条：showCaptions 默认关，只影响预览。烧录字体用 captionFontId（SIL OFL，见 list_catalog.fonts）。双语：bilingualCaptions + bilingualCaptionLang。导出烧录在导出窗勾选；exportSettings.exportSubtitles 可另存 SRT/VTT。
-- 全片进度条：showTopProgress + progressStyle，画在画布顶/底，导出会带上。
+- 画布进度条：showTopProgress + progressStyle，画在画布顶/底，导出会带上。工作区底部另有全片分段条，不是这个。
+- 密钥、翻译、配音合成不用你处理。用户在配音窗口操作（合成 / AI 配置 / 角色 / 音色）。
 - 列表序号：listMarkerStyle.show / kind / 颜色 / 形状。图片只能用户在全局配置里上传，不要编造 URL。
 - 字体用 fontId / titleFontId / subtitleFontId / quoteFontId / captionFontId，取值见 list_catalog。
 - 每句口播可指定角色，id 来自 get_project.voices。
@@ -679,5 +701,4 @@ export const SYSTEM_PROMPT = `你是 Web2Video 的分镜助手。这是本地口
 - 改现有工程先 get_project / get_scene，再 update_scene 或 apply_storyboard。
 - 用户要整片重做时 apply_storyboard mode=replace；要加场用 append。
 - 用户提到字幕、进度条、字体、配色时用 set_project，不要只改文案。
-- 密钥和导出不用你处理。
 - 用中文回复用户，简短说明做了什么。`;

@@ -137,10 +137,16 @@ export function makeBlock(type: BlockType): LayoutBlock {
     gif: [8, 18, 84, 64],
     shape: [8, 8, 30, 20],
     play: [82, 2, 16, 8],
+    katex: [10, 30, 80, 24],
+    three: [10, 18, 80, 56],
   };
   const [x, y, w, h] = defaults[type];
+  const unique =
+    type === "shape" || type === "play" || type === "katex" || type === "three"
+      ? uid(type === "play" ? "play" : type === "katex" ? "eq" : type === "three" ? "gl" : "blk")
+      : `${type}_${Math.random().toString(36).slice(2, 6)}`;
   return {
-    id: type === "shape" || type === "play" ? uid(type === "play" ? "play" : "blk") : `${type}_${Math.random().toString(36).slice(2, 6)}`,
+    id: unique,
     type,
     x,
     y,
@@ -177,7 +183,10 @@ export function defaultCues(
     let i = 0;
     for (const b of list) {
       if (b.type === "play") continue;
-      const bind: CueBind = b.type === "image" || b.type === "video" || b.type === "gif" || b.type === "shape" ? "visual" : "speak";
+      const bind: CueBind =
+        b.type === "image" || b.type === "video" || b.type === "gif" || b.type === "shape" || b.type === "katex" || b.type === "three"
+          ? "visual"
+          : "speak";
       if (b.type === "list") {
         out.push(...itemCues(items, 0.12 + i * 0.08));
       } else if (b.type === "dialogue") {
