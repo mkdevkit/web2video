@@ -1,15 +1,33 @@
 # Web2Video
 
-把口播做成网页场景：版面元件、多语言文案、千问 TTS、时间轴动画，再按语言导出视频（可选字幕文件）。
+把口播做成网页场景：版面元件、多语言文案、千问 TTS、时间轴动画，再按语言导出视频（可选字幕文件）。同一套 UI 可跑在浏览器（Vite）或桌面（Tauri）。
 
-建议 **Chrome 或 Edge**（依赖 File System Access、MediaRecorder、IndexedDB）。
+建议 **Chrome 或 Edge**（浏览器依赖 File System Access、MediaRecorder、IndexedDB）。
 
 ```bash
 npm install
 npm run dev
 ```
 
-开发时必须用 `npm run dev`：本机 Vite 插件会代理千问 TTS、LLM 和 Edge 翻译，避免浏览器跨域。
+打开 http://localhost:5173 。必须用 `npm run dev`：本机 Vite 插件会代理千问 TTS、LLM 和 Edge 翻译，避免浏览器跨域。
+
+**桌面（Tauri）**
+
+需本机已装 [Rust](https://rustup.rs/)（含 `cargo`）。
+
+```bash
+npm install
+npm run tauri:dev     # 开发：嵌同一套前端
+npm run tauri:build   # 安装包
+```
+
+| | Web | Tauri |
+| --- | --- | --- |
+| UI | 同一套 React | 同一套 React |
+| 翻译 / TTS / LLM 开发期 | Vite 插件 `/__edge_translate`、`/__tts/qwen`、`/__llm/chat` | 同样走 Vite（`tauri dev`） |
+| 翻译 / TTS 打包后 | 仍需本机预览服务器，或以后接后端 | Rust 命令直连 Edge / DashScope |
+| 工程文件 | 目录选择器；可选 JSON 下载 | 原生打开 / 保存 `project.json` + `media/` |
+
 
 ## 功能
 
@@ -24,7 +42,7 @@ npm run dev
 - 点舞台元件显示该元件属性（含动效）；点空白回到场景属性
 - 千问 TTS：合成 / AI 配置 / 配音角色 / 音色管理；各语言可指定默认角色
 - 「翻译后合成语音」默认关闭
-- 生成式 AI 分镜（DeepSeek 等 Chat Completions + 本地工具调用）
+- 生成式 AI 分镜（DeepSeek 等 Chat Completions + 本地工具调用）；同一套工具可通过 MCP 给 Cursor 调用（需先打开编辑器）
 - 一键机翻：中、英、日、法、德、俄、西班牙、葡萄牙、意大利
 - 导出 WebM（VP8/VP9）或 MP4（H.264，视浏览器而定）；分辨率 / 帧率 / 码率可配
 - 默认不烧录字幕；可另存 SRT / VTT；也可只出一段视频、配多语言字幕（同一时间轴）
@@ -67,8 +85,9 @@ npm run dev
 | 翻译 | Microsoft Edge 翻译接口（Vite 反代 `/__edge_translate`） |
 | 导出画面 | `html-to-image` 逐帧截舞台 → `canvas.captureStream` + `MediaRecorder`；视频/GIF/三维先画到 2D canvas 再截 |
 | 导出音频 | Web Audio API 按场景时钟切片对齐口播 |
-| 工程磁盘 | File System Access API（目录句柄存 IndexedDB） |
+| 工程磁盘 | File System Access API（目录句柄存 IndexedDB）；Tauri 用原生对话框 + 文件系统 |
 | 口播缓存 | IndexedDB（`web2video-audio`） |
+| 桌面 | Tauri 2：WebView + Rust 代理翻译/TTS，打包后不依赖 Vite |
 
 ### 工程模型
 
@@ -91,7 +110,7 @@ npm run dev
 
 ### 分镜 AI
 
-`src/lib/ai/agent.ts` 循环调用 Chat Completions，把 `src/lib/ai/tools.ts` 里的工具交给模型：读工程、写分镜、改场景/元件/动效锚点、改片级外观与导出规格。密钥在 `web2video.llm-secrets`。跨域由 `vite-plugin-llm-proxy.ts` 的 `/__llm/chat` 转发（只允许 https 或本机 http）。工具约定见该文件 `SYSTEM_PROMPT` 与 `AI_TOOLS`。
+工作台内 DeepSeek 等与 Cursor MCP 共用 `src/lib/ai/tools.ts`。链路与工具表见 [MCP](#mcp)。密钥在 `web2video.llm-secrets`；跨域 `/__llm/chat`。不要让模型处理密钥、翻译、配音合成。
 
 ### 导出
 
@@ -106,10 +125,45 @@ src/
   components/     顶栏、舞台、时间轴、检视、各对话框
   layouts/        舞台渲染 StageView
   lib/            时间轴、口播、TTS、导出、工程目录、AI
+  lib/platform.ts Web / Tauri 分支
   store/          Zustand 编辑器
   types.ts        工程与版面类型
-vite-plugin-*.ts  开发期 TTS / LLM / 翻译代理
+src-tauri/        桌面：文件系统 + 打包后的翻译/TTS 代理
+mcp/              Cursor MCP：stdio 转到正在跑的编辑器
+vite-plugin-*.ts  开发期 TTS / LLM / 翻译 / MCP 桥
 ```
+
+## MCP
+
+应用内 AI 与 Cursor MCP **共用** `src/lib/ai/tools.ts`（`AI_TOOLS` + `executeTool`）。`agent.ts` 把工具交给 Chat Completions。约定见 `SYSTEM_PROMPT`。
+
+**应用内：** 顶栏「AI」配接口，右侧「AI」页对话，改当前工程。
+
+**Cursor MCP：** 先 `npm run dev` 或 `tauri:dev` 打开编辑器（`http://127.0.0.1:5173`）。
+
+| 层 | 文件 | 作用 |
+| --- | --- | --- |
+| 执行 | `src/lib/ai/tools.ts` | 工具 Schema 与对 Zustand 的读写 |
+| 页面桥 | `src/lib/mcpBridge.ts` | 开发态连 `ws://主机/__mcp`，上报工具，执行 `call` |
+| Vite 桥 | `vite-plugin-mcp-bridge.ts` | `GET /__mcp/health`、`GET /__mcp/tools`、`POST /__mcp/call` → WebSocket |
+| stdio | `mcp/server.mjs` | MCP JSON-RPC（`initialize` / `tools/list` / `tools/call`），转发到上述 HTTP |
+| Cursor | 仓库根 `.cursor/mcp.json` | `node web2video/mcp/server.mjs`，`WEB2VIDEO_MCP_URL` 默认 `http://127.0.0.1:5173` |
+
+编辑器未开或页面未连上时，`/__mcp/call` 返回 503。调用改的是**正在编辑的工程**，不是磁盘上另一份。
+
+| 工具 | 作用 |
+| --- | --- |
+| `get_project` | 片级概要、场景列表 |
+| `get_scene` | 一场文案、口播、元件、动效 TimeRef |
+| `list_catalog` | 版面、元件（含 katex / three）、字体 |
+| `set_project` | 画幅、字体、字幕/进度条、导出规格等 |
+| `apply_storyboard` | 整片 replace / append |
+| `update_scene` | 改一场 |
+| `manage_scenes` | 增删复制调序选中 |
+| `manage_blocks` | 增删改元件；katex 写 `tex`，three 写 `threeSrc` |
+| `set_cue` | 兼容旧入场窗口 |
+
+公式用 `katex` 元件；三维用 `three` 元件且 `update({ t, localMs })` 跟播放头，不要 rAF，不要编造模型/贴图 URL。
 
 ## 快捷键
 

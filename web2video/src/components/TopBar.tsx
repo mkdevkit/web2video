@@ -14,6 +14,7 @@ import {
   Undo2,
 } from "lucide-react";
 import { LANGS, langZhName, type LangId } from "../lib/langs";
+import { isTauri } from "../lib/platform";
 import { openProjectFolder, saveProjectFolder } from "../lib/projectFolder";
 import { sceneStarts, totalDuration, formatMs } from "../lib/timeline";
 import { useEditor } from "../store/useEditor";
@@ -35,7 +36,10 @@ export function TopBar() {
             <Play className="h-4 w-4" strokeWidth={2.4} fill="currentColor" />
           </div>
           <div className="hidden min-[900px]:block">
-            <div className="font-display text-sm leading-none text-paper">Web2Video</div>
+            <div className="flex items-center gap-1.5">
+              <div className="font-display text-sm leading-none text-paper">Web2Video</div>
+              <span className="rounded border border-ink-600 px-1 py-px text-[10px] text-ink-400">{isTauri() ? "Tauri" : "Web"}</span>
+            </div>
             <div className="text-[10px] text-ink-400">口播网页转视频</div>
           </div>
         </div>

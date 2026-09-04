@@ -15,6 +15,7 @@ import { TtsDialog } from "./components/dialogs/TtsDialog";
 import { WelcomeDialog } from "./components/dialogs/WelcomeDialog";
 import { useKeyboard } from "./hooks/useKeyboard";
 import { restoreBoundDir } from "./lib/projectFolder";
+import { connectMcpBridge } from "./lib/mcpBridge";
 import { ensureStageFonts, progressStyleOf } from "./lib/fonts";
 import { useEditor } from "./store/useEditor";
 
@@ -30,6 +31,7 @@ export default function App() {
 
   useEffect(() => {
     void restoreBoundDir();
+    return connectMcpBridge();
   }, []);
 
   useEffect(() => {

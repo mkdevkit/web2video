@@ -6,9 +6,16 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "mcp": "node mcp/server.mjs"
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.5.0",
+    "@tauri-apps/plugin-dialog": "^2.2.1",
+    "@tauri-apps/plugin-fs": "^2.2.1",
     "file-saver": "^2.0.5",
     "html-to-image": "^1.11.13",
     "katex": "^0.18.5",
@@ -20,6 +27,7 @@
     "zustand": "^5.0.5"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.5.0",
     "@types/file-saver": "^2.0.7",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",

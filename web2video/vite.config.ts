@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import { edgeTtsPlugin } from "./vite-plugin-edge-tts";
 import { llmProxyPlugin } from "./vite-plugin-llm-proxy";
+import { mcpBridgePlugin } from "./vite-plugin-mcp-bridge";
 
 const edgeProxy = {
   "/__edge_translate": {
@@ -13,7 +14,8 @@ const edgeProxy = {
 };
 
 export default defineConfig({
-  plugins: [react(), edgeTtsPlugin(), llmProxyPlugin()],
-  server: { proxy: edgeProxy },
+  plugins: [react(), edgeTtsPlugin(), llmProxyPlugin(), mcpBridgePlugin()],
+  clearScreen: false,
+  server: { port: 5173, strictPort: true, proxy: edgeProxy },
   preview: { proxy: edgeProxy },
 });

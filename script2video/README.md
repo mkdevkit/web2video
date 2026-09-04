@@ -56,12 +56,7 @@ npm run tauri:build   # 安装包
 
 ### 1. 用 AI 生成口播脚本（DeepSeek）
 
-顶栏 **AI** 配置接口（默认 DeepSeek Flash / Pro，也可 OpenAI 兼容网关），再打开中间 **AI** 页用自然语言生成或改脚本。模型和 web2video 一样走 Chat Completions + 本地工具：
-
-读：`get_project`、`get_script`、`list_catalog`  
-写：`apply_scripts`（整片生成/追加）、`update_script`、`manage_scripts`、`manage_beats`、`set_project`
-
-工具约定（时钟、口播驱动 / 脚本驱动、`speech.*`）在 `src/lib/ai/tools.ts` 的 `SYSTEM_PROMPT` 与 `AI_TOOLS`。密钥、翻译、配音合成由用户在窗口里操作，模型不要代劳。
+顶栏 **AI** 配置接口（默认 DeepSeek Flash / Pro，也可 OpenAI 兼容网关），再打开中间 **AI** 页用自然语言生成或改脚本。实现见下文 [MCP](#mcp)。
 
 例如：「三句口播讲黑洞不是洞，GSAP 跟节拍走」。改完可切口播页改文案、脚本页改 timeline、右侧预览。
 
@@ -269,6 +264,27 @@ self.wait(0.4)
 - 口播驱动下用 `sleepS` 做句间留白（它加在片尾）；句间静音用口播表「加延时」
 - 脚本驱动下指望列表顺序自动播；必须 `speech.play(id)`
 
+## MCP
+
+Script2Video **没有** Cursor stdio MCP（没有 `mcp/server.mjs`，根目录 `.cursor/mcp.json` 只登记了 web2video）。工具只在工作台里跑。
+
+实现与 web2video 应用内 AI 同构：`src/lib/ai/tools.ts` 定义 `AI_TOOLS` / `executeTool`，`agent.ts` 做 Chat Completions function calling，改当前 Zustand 工程。密钥在 `script2video.llm-secrets`；跨域走 Vite `/__llm/chat`。约定在 `SYSTEM_PROMPT`（口播驱动 / 脚本驱动、`speech.*`、不要写死秒数）。密钥、翻译、配音合成由用户在窗口里操作。
+
+| 工具 | 作用 |
+| --- | --- |
+| `get_project` | 片级概要、脚本列表 |
+| `get_script` | 一条脚本的 beats、引擎、源码摘要 |
+| `list_catalog` | 引擎、用法、`speech.*` |
+| `set_project` | 名称、画幅、字体、字幕等 |
+| `apply_scripts` | 整片 replace / append |
+| `update_script` | 改一条的文案、代码、引擎 |
+| `manage_scripts` | 增删复制调序选中 |
+| `manage_beats` | 改口播表（id、文案、角色、延时行） |
+
+口播时长只读。画面跟 `speech.s(id)` / `holdS` / `play`，不要 `timeScale`。KaTeX / Three.js 是 GSAP 脚本里的库，不是独立引擎。
+
+若要让 Cursor 直接改脚本工程，需要像 web2video 那样加 Vite `/__mcp` 桥 + stdio 进程；目前未做。
+
 ## 目录
 
 ```
@@ -277,6 +293,7 @@ src/                 共用前端（Web + Tauri WebView）
   lib/clock.ts       节拍 → 毫秒
   lib/engineGuide.ts 用法页 / 各引擎取时长说明
   lib/platform.ts    Web / Tauri 分支（文件、翻译、TTS）
+  lib/ai/            工作台内工具（`tools.ts` / `agent.ts`），无 Cursor stdio MCP
 src-tauri/           桌面：文件系统 + 打包后的翻译/TTS 代理
 engines/hyperframes  HTML 合成 + GSAP
 engines/remotion     Remotion 时钟适配

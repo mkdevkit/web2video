@@ -1,4 +1,5 @@
 import type { LangId } from "./langs";
+import { isTauri } from "./platform";
 import { loadTtsSecrets } from "./ttsSecrets";
 
 export const QWEN_LANG: Record<LangId, string> = {
@@ -28,6 +29,21 @@ function errOf(data: Json, fallback: string): string {
 async function postQwen(path: "/__tts/qwen" | "/__tts/qwen-voice", body: unknown): Promise<Json> {
   const secrets = loadTtsSecrets();
   if (!secrets.dashscopeKey.trim()) throw new Error("请先在配音窗口「AI 配置」填写千问 API Key");
+
+  if (isTauri() && !import.meta.env.DEV) {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const cmd = path === "/__tts/qwen-voice" ? "qwen_customize" : "qwen_generate";
+    const data = asRecord(
+      await invoke<Json>(cmd, {
+        key: secrets.dashscopeKey,
+        base: secrets.dashscopeBaseUrl,
+        body,
+      }),
+    );
+    if (typeof data.error === "string" && data.error) throw new Error(data.error);
+    return data;
+  }
+
   const res = await fetch(path, {
     method: "POST",
     headers: {

@@ -11,5 +11,5 @@
     "noEmit": true,
     "strict": true
   },
-  "include": ["vite.config.ts", "vite-plugin-edge-tts.ts"]
+  "include": ["vite.config.ts", "vite-plugin-edge-tts.ts", "vite-plugin-llm-proxy.ts", "vite-plugin-mcp-bridge.ts"]
 }

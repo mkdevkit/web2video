@@ -1,5 +1,6 @@
 import { formatMs, totalDuration } from "../lib/timeline";
 import { langZhName } from "../lib/langs";
+import { isTauri } from "../lib/platform";
 import { useEditor } from "../store/useEditor";
 
 export function StatusBar() {
@@ -18,7 +19,7 @@ export function StatusBar() {
       </span>
       <span>
         {stale ? "口播已改，需重新合成  ·  " : ""}
-        总时长 {formatMs(total)} · Chrome / Edge
+        总时长 {formatMs(total)} · {isTauri() ? "Tauri" : "Chrome / Edge"}
       </span>
     </footer>
   );

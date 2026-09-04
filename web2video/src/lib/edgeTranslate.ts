@@ -1,4 +1,5 @@
 import type { LangId } from "./langs";
+import { isTauri } from "./platform";
 
 export const MS_LANG: Record<LangId, string> = {
   zh: "zh-Hans",
@@ -66,6 +67,13 @@ export async function translateTexts(texts: string[], from: LangId, to: LangId):
   if (from === to) return [...texts];
   const packed = texts.map((t) => t.trim());
   if (!packed.some(Boolean)) return packed;
+
+  if (isTauri() && !import.meta.env.DEV) {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const rows = await invoke<string[]>("edge_translate", { texts: packed, from: MS_LANG[from], to: MS_LANG[to] });
+    return rows.map((t, i) => t || packed[i]);
+  }
+
   return viaEdgeApi(packed, from, to);
 }
 
