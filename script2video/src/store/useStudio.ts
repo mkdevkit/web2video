@@ -29,7 +29,7 @@ function persist(project: Project) {
 }
 
 type Dialog = null | "tts" | "export" | "ai" | "stage";
-type MainTab = "speech" | "code" | "usage" | "ai";
+type MainTab = "speech" | "text" | "code" | "usage" | "ai";
 
 interface Studio {
   project: Project;

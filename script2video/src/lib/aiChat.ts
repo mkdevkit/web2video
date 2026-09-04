@@ -20,10 +20,13 @@ export type LlmChatSession = {
   history: ChatMessage[];
 };
 
-type ChatStore = {
+export type ChatStore = {
   currentId: string;
   sessions: LlmChatSession[];
 };
+
+type Listener = () => void;
+const listeners = new Set<Listener>();
 
 function emptySession(): LlmChatSession {
   return {
@@ -51,6 +54,26 @@ function capSession(session: LlmChatSession): LlmChatSession {
   };
 }
 
+function normalizeStore(data: Partial<ChatStore> & Partial<LlmChatSession>): ChatStore {
+  if (Array.isArray(data.sessions) && data.sessions.length) {
+    const sessions = data.sessions.map((s) => ({
+      id: s.id || uid("chat"),
+      title: s.title || titleOf(s.lines ?? []),
+      updatedAt: s.updatedAt || Date.now(),
+      lines: Array.isArray(s.lines) ? s.lines.slice(-MAX_LINES) : [],
+      history: Array.isArray(s.history) ? s.history.slice(-MAX_HISTORY) : [],
+    }));
+    const currentId = sessions.some((s) => s.id === data.currentId) ? (data.currentId as string) : sessions[0].id;
+    return { currentId, sessions };
+  }
+  const migrated = capSession({
+    ...emptySession(),
+    lines: Array.isArray(data.lines) ? data.lines : [],
+    history: Array.isArray(data.history) ? data.history : [],
+  });
+  return { currentId: migrated.id, sessions: [migrated] };
+}
+
 function readStore(): ChatStore {
   try {
     const raw = localStorage.getItem(KEY);
@@ -58,31 +81,14 @@ function readStore(): ChatStore {
       const s = emptySession();
       return { currentId: s.id, sessions: [s] };
     }
-    const data = JSON.parse(raw) as Partial<ChatStore> & Partial<LlmChatSession>;
-    if (Array.isArray(data.sessions) && data.sessions.length) {
-      const sessions = data.sessions.map((s) => ({
-        id: s.id || uid("chat"),
-        title: s.title || titleOf(s.lines ?? []),
-        updatedAt: s.updatedAt || Date.now(),
-        lines: Array.isArray(s.lines) ? s.lines.slice(-MAX_LINES) : [],
-        history: Array.isArray(s.history) ? s.history.slice(-MAX_HISTORY) : [],
-      }));
-      const currentId = sessions.some((s) => s.id === data.currentId) ? (data.currentId as string) : sessions[0].id;
-      return { currentId, sessions };
-    }
-    const migrated = capSession({
-      ...emptySession(),
-      lines: Array.isArray(data.lines) ? data.lines : [],
-      history: Array.isArray(data.history) ? data.history : [],
-    });
-    return { currentId: migrated.id, sessions: [migrated] };
+    return normalizeStore(JSON.parse(raw) as Partial<ChatStore> & Partial<LlmChatSession>);
   } catch {
     const s = emptySession();
     return { currentId: s.id, sessions: [s] };
   }
 }
 
-function writeStore(store: ChatStore) {
+function writeStore(store: ChatStore, notify = false) {
   try {
     const sessions = store.sessions.slice(0, MAX_SESSIONS);
     const currentId = sessions.some((s) => s.id === store.currentId) ? store.currentId : sessions[0]?.id ?? "";
@@ -90,6 +96,37 @@ function writeStore(store: ChatStore) {
   } catch {
     /* quota */
   }
+  if (notify) {
+    for (const fn of listeners) fn();
+  }
+}
+
+export function subscribeLlmChat(fn: Listener): () => void {
+  listeners.add(fn);
+  return () => {
+    listeners.delete(fn);
+  };
+}
+
+export function dumpLlmChatStore(): string {
+  const store = readStore();
+  return `${JSON.stringify({ currentId: store.currentId, sessions: store.sessions.slice(0, MAX_SESSIONS) }, null, 2)}\n`;
+}
+
+export function hydrateLlmChatStore(raw: string | null | undefined): LlmChatSession {
+  if (!raw?.trim()) {
+    const s = emptySession();
+    writeStore({ currentId: s.id, sessions: [s] }, true);
+    return s;
+  }
+  try {
+    writeStore(normalizeStore(JSON.parse(raw) as Partial<ChatStore> & Partial<LlmChatSession>), true);
+  } catch {
+    const s = emptySession();
+    writeStore({ currentId: s.id, sessions: [s] }, true);
+    return s;
+  }
+  return loadLlmChat();
 }
 
 export function loadLlmChat(): LlmChatSession {

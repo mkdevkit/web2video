@@ -8,6 +8,8 @@ export const DEFAULT_CODE = `// 用口播 id 取时长，不要写死秒数。
 // 入场用固定秒；holdS(id, fade) = 该句总长 − fade。
 
 const fade = 0.48;
+const title = root.querySelector("#title");
+if (title) title.textContent = speech.text("hook") || title.textContent;
 
 timeline.fromTo("#title", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: fade, ease: "power2.out" }, speech.startS("hook"));
 timeline.to("#title", { duration: speech.holdS("hook", fade) }, speech.startS("hook") + fade);

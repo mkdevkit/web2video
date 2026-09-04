@@ -49,10 +49,6 @@
 
 源语言用 `update_scene` 的 `title` / `items` / `dialogue`。其它语言用 `set_visual_text`（`kind` + 可选 `itemId` + `lang` + `text`）。用户在属性「口播」下面的「文本」里翻译。KaTeX `tex` 不走画面翻译。
 
-## 工程文件
-
-`project.json` 片级设置；`scene.json` 各场；`aisession.json` 应用内 AI 会话。打开工程文件夹会加载会话。没有向量记忆，恢复即选回 `aisession.json` 里那条对话。
-
 ## MCP 链路
 
 页面 `src/lib/mcpBridge.ts` → Vite `/__mcp` → `mcp/server.mjs` stdio。`WEB2VIDEO_MCP_URL` 默认 `http://127.0.0.1:5173`。

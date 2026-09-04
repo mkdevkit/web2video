@@ -42,6 +42,7 @@ import type { LayoutBlock, TimeRef } from "../types";
 import { STAGE_FONTS, blockFontId, stageFont } from "../lib/fonts";
 import { EffectList, TimeRefFields } from "./EffectEditor";
 import { SpeakTrackEditor } from "./SpeakTrackEditor";
+import { VisualTextEditor } from "./VisualTextEditor";
 
 function secInput(ms: number) {
   return Number((Math.max(0, ms) / 1000).toFixed(2));
@@ -481,6 +482,10 @@ function SceneInspector({ scene }: { scene: Scene }) {
       <div className="mt-3 space-y-2">
         <div className="section-label">口播</div>
         <SpeakTrackEditor scene={scene} />
+      </div>
+      <div className="mt-3 space-y-2">
+        <div className="section-label">文本</div>
+        <VisualTextEditor scene={scene} />
       </div>
       <p className="mt-3 text-[11px] leading-relaxed text-ink-400">
         在左侧检视或舞台上点选元件，右侧会只显示该元件的属性。

@@ -6,9 +6,11 @@ import {
   loadLlmChat,
   newLlmChat,
   saveLlmChat,
+  subscribeLlmChat,
   switchLlmChat,
   type ChatLine,
 } from "../lib/aiChat";
+import { persistAiSession } from "../lib/projectFolder";
 import { runAgent, type ChatMessage } from "../lib/ai/agent";
 import { useStudio } from "../store/useStudio";
 
@@ -43,6 +45,7 @@ export function AiChatPanel() {
   useEffect(() => {
     saveLlmChat({ id: sessionId, lines, history: history.current });
     setList(listLlmChats());
+    persistAiSession();
   }, [lines, sessionId]);
 
   const applySession = (session: ReturnType<typeof loadLlmChat>) => {
@@ -54,6 +57,8 @@ export function AiChatPanel() {
     setLines(session.lines);
     setList(listLlmChats());
   };
+
+  useEffect(() => subscribeLlmChat(() => applySession(loadLlmChat())), []);
 
   const send = async (text: string) => {
     const prompt = text.trim();
@@ -83,6 +88,7 @@ export function AiChatPanel() {
       });
       history.current = next.filter((m) => m.role !== "system");
       saveLlmChat({ id: sessionRef.current, lines: linesRef.current, history: history.current });
+      persistAiSession();
       setList(listLlmChats());
     } catch (e) {
       const msg = e instanceof Error ? e.message : "生成失败";
@@ -156,7 +162,7 @@ export function AiChatPanel() {
       <div className="min-h-0 flex-1 space-y-1.5 overflow-auto rounded border border-ink-600 bg-ink-800 p-3">
         {lines.length === 0 && (
           <div className="space-y-2 text-xs text-ink-400">
-            <p>用自然语言生成或改口播脚本。模型会调用本地工具写 beats / 舞台 / GSAP，和 Web2Video 的 AI 分镜同一套方式。</p>
+            <p>用自然语言生成或改口播脚本。会话写入工程目录的 aisession.json，打开该文件夹即可恢复。没有独立记忆库，模型只看到当前会话最近若干轮。</p>
             {!hasKey && <p className="text-copper">还没填 API Key，点「接口配置」或顶栏「AI」。默认 DeepSeek。</p>}
             {EXAMPLES.map((ex) => (
               <button

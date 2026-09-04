@@ -3,7 +3,8 @@ import type { LangId } from "./langs";
 import { driveOf, isGapBeat } from "./beats";
 import { getBeatAudio, mixClips, putAudioBlob } from "./audioStore";
 import { createSpeech, type SpeechApi } from "./speech";
-import { mountStage } from "./stage";
+import { hydrateStageSpeech, mountStage } from "./stage";
+import { applyStageTexts, createStageApi, syncStageTexts } from "./stageText";
 import { sourceOf, usesGsapPreview } from "./engines";
 import { runGsapScript } from "./runGsap";
 import { useStudio } from "../store/useStudio";
@@ -55,8 +56,12 @@ export async function bakeSoundtrack(script: SceneScript, project: Project, lang
   document.body.appendChild(root);
   try {
     mountStage(root, script, project);
+    const source = project.sourceLang;
+    const copies = syncStageTexts(script.stageHtml ?? "", script.stageTexts, source);
+    applyStageTexts(root, copies, lang, source);
     const speech = createSpeech(script, lang);
-    const { revert } = runGsapScript(sourceOf(script), speech, root);
+    hydrateStageSpeech(root, speech);
+    const { revert } = runGsapScript(sourceOf(script), speech, root, createStageApi(copies, lang, source));
     persistSpeechRun(script, speech);
     await mixScriptSoundtrack(script, lang, speech);
     revert();

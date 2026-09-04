@@ -62,6 +62,23 @@ export type I18nRowKind =
   | "dialogue"
   | "blockName";
 
+const VISUAL_KINDS = new Set<I18nRowKind>([
+  "title",
+  "subtitle",
+  "body",
+  "caption",
+  "quote",
+  "author",
+  "number",
+  "item",
+  "dialogue",
+  "blockName",
+]);
+
+export function isVisualI18nKind(kind: I18nRowKind): boolean {
+  return VISUAL_KINDS.has(kind);
+}
+
 export interface I18nRow {
   sceneId: string;
   sceneName: string;
@@ -178,6 +195,15 @@ export function collectI18nRows(project: Project): I18nRow[] {
     }
   }
   return rows;
+}
+
+export function collectVisualRows(project: Project, sceneId?: string): I18nRow[] {
+  return collectI18nRows(project).filter(
+    (r) =>
+      isVisualI18nKind(r.kind) &&
+      (!sceneId || r.sceneId === sceneId) &&
+      Object.values(r.i18n).some((t) => (t ?? "").trim()),
+  );
 }
 
 export function sourceTextOf(row: I18nRow, source: LangId): string {

@@ -15,9 +15,7 @@ description: >-
 - 写出 beats + 舞台 HTML + paused GSAP，让用户粘贴到口播页 / 脚本页；或
 - 让用户在工作台中间「AI」页用同一套工具（`src/lib/ai/tools.ts`）应用。
 
-和 Web2Video 的差别：这边是脚本 + `speech.*`；那边是场景元件。两边工程文件不能互换（`script.json` ≠ `scene.json`）。不要改既有双模式（口播驱动 / 脚本驱动），除非用户明确要求。
-
-工程目录：`project.json` 片级，`script.json` 脚本/口播/舞台，`aisession.json` 工作台 AI 会话。打开文件夹会恢复会话；没有向量记忆。
+和 Web2Video 的差别：这边是脚本 + `speech.*`；那边是场景元件。两边的 `project.json` 不能互换。不要改既有双模式（口播驱动 / 脚本驱动），除非用户明确要求。
 
 ## 前置
 

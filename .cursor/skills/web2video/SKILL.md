@@ -10,9 +10,7 @@ description: >-
 
 可视化场景编辑器。改的是**正在打开的工程**（Zustand），不是磁盘上另一份。密钥、翻译、配音合成不要代劳。
 
-和 Script2Video 的差别：这边是一场一场摆元件；那边是脚本 + `speech.*` 节拍。不要把 web2video 的 `scene.json` 当成 script2video 工程打开。
-
-工程目录：`project.json` 片级，`scene.json` 场景，`aisession.json` AI 会话。旧版场景仍可能在 `project.json` 里。
+和 Script2Video 的差别：这边是一场一场摆元件；那边是脚本 + `speech.*` 节拍。不要把 web2video 的 `scenes` 当成 script2video 工程打开。
 
 ## 前置
 
@@ -61,5 +59,5 @@ description: >-
 ## 不要做的
 
 - 为 Script2Video 写 `speech.s` / GSAP timeline（那是另一个工具）
-- 把 web2video 的 `scene.json` 当 script2video 工程打开
+- 把 `project.json` 当 script2video 工程打开
 - 代劳配音窗口（合成 / 角色 / 音色）或 Edge 翻译

@@ -41,7 +41,7 @@ function persist(project: Project, currentSceneId: string) {
 
 const boot = sampleProject();
 
-export type DialogId = null | "welcome" | "export" | "speaks" | "tts" | "help" | "ai" | "prefs";
+export type DialogId = null | "welcome" | "export" | "speaks" | "texts" | "tts" | "help" | "ai" | "prefs";
 
 interface EditorState {
   project: Project;

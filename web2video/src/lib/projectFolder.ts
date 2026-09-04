@@ -2,11 +2,14 @@ import { saveAs } from "file-saver";
 import { getAudio, putAudio } from "./audioStore";
 import { LANG_IDS } from "./langs";
 import { isTauri } from "./platform";
-import { parseProjectFile, DEFAULT_PROJECT_NAME } from "./templates";
+import { parseProjectFile, DEFAULT_PROJECT_NAME, mergeProjectFiles, splitProjectFiles } from "./templates";
+import { dumpLlmChatStore, hydrateLlmChatStore } from "./aiChat";
 import { useEditor } from "../store/useEditor";
 import type { Project } from "../types";
 
 const FILE_NAME = "project.json";
+const SCENE_FILE = "scene.json";
+const AI_FILE = "aisession.json";
 const DB_NAME = "web2video";
 const STORE = "handles";
 const HANDLE_KEY = "project-dir";
@@ -18,6 +21,7 @@ type Bound =
   | { kind: "path"; path: string };
 
 let bound: Bound | null = null;
+let sessionDirReady = false;
 
 function canPickDirectory(): boolean {
   return typeof window !== "undefined" && "showDirectoryPicker" in window;
@@ -41,6 +45,49 @@ function dirLabel(next: Bound | null): string | null {
 function joinPath(root: string, ...parts: string[]) {
   const sep = root.includes("\\") ? "\\" : "/";
   return [root.replace(/[\\/]+$/, ""), ...parts].join(sep);
+}
+
+function pretty(data: unknown): string {
+  return `${JSON.stringify(data, null, 2)}\n`;
+}
+
+async function fsaReadText(dir: FileSystemDirectoryHandle, name: string): Promise<string | null> {
+  try {
+    return await (await (await dir.getFileHandle(name)).getFile()).text();
+  } catch {
+    return null;
+  }
+}
+
+async function fsaWriteText(dir: FileSystemDirectoryHandle, name: string, text: string) {
+  const file = await dir.getFileHandle(name, { create: true });
+  const writable = await file.createWritable();
+  await writable.write(text.endsWith("\n") ? text : `${text}\n`);
+  await writable.close();
+}
+
+let aiTimer: ReturnType<typeof setTimeout> | null = null;
+
+async function writeAiSessionNow() {
+  if (!bound) return;
+  const text = dumpLlmChatStore();
+  if (bound.kind === "fsa") {
+    const ok = await ensurePermission(bound.handle, "readwrite");
+    if (!ok) return;
+    await fsaWriteText(bound.handle, AI_FILE, text);
+    return;
+  }
+  const { writeTextFile } = await import("@tauri-apps/plugin-fs");
+  await writeTextFile(joinPath(bound.path, AI_FILE), text);
+}
+
+export function persistAiSession() {
+  if (!bound || !sessionDirReady) return;
+  if (aiTimer) clearTimeout(aiTimer);
+  aiTimer = setTimeout(() => {
+    aiTimer = null;
+    void writeAiSessionNow().catch(() => undefined);
+  }, 400);
 }
 
 async function idb(): Promise<IDBDatabase> {
@@ -85,6 +132,7 @@ async function loadPersistedHandle(): Promise<FileSystemDirectoryHandle | null> 
 
 function bindDir(next: Bound | null) {
   bound = next;
+  sessionDirReady = Boolean(next);
   useEditor.getState().setProjectDirName(dirLabel(next));
   if (next?.kind === "fsa") void persistHandle(next.handle);
   else void persistHandle(null);
@@ -204,11 +252,20 @@ async function fsaLoadMedia(dir: FileSystemDirectoryHandle, project: Project) {
   }
 }
 
-async function fsaWriteJson(dir: FileSystemDirectoryHandle, project: Project) {
-  const file = await dir.getFileHandle(FILE_NAME, { create: true });
-  const writable = await file.createWritable();
-  await writable.write(`${JSON.stringify(project, null, 2)}\n`);
-  await writable.close();
+async function fsaWriteBundle(dir: FileSystemDirectoryHandle, project: Project) {
+  const { meta, scenes } = splitProjectFiles(project);
+  await fsaWriteText(dir, FILE_NAME, pretty(meta));
+  await fsaWriteText(dir, SCENE_FILE, pretty({ scenes }));
+  await fsaWriteText(dir, AI_FILE, dumpLlmChatStore());
+}
+
+async function fsaLoadBundle(dir: FileSystemDirectoryHandle): Promise<Project> {
+  const projectText = await fsaReadText(dir, FILE_NAME);
+  if (!projectText) throw new Error("没有 project.json");
+  const sceneText = await fsaReadText(dir, SCENE_FILE);
+  const project = mergeProjectFiles(projectText, sceneText);
+  hydrateLlmChatStore(await fsaReadText(dir, AI_FILE));
+  return project;
 }
 
 async function pathExists(path: string): Promise<boolean> {
@@ -283,9 +340,30 @@ async function pathLoadMedia(dir: string, project: Project) {
   }
 }
 
-async function pathWriteJson(dir: string, project: Project) {
+async function pathWriteBundle(dir: string, project: Project) {
   const { writeTextFile } = await import("@tauri-apps/plugin-fs");
-  await writeTextFile(joinPath(dir, FILE_NAME), `${JSON.stringify(project, null, 2)}\n`);
+  const { meta, scenes } = splitProjectFiles(project);
+  await writeTextFile(joinPath(dir, FILE_NAME), pretty(meta));
+  await writeTextFile(joinPath(dir, SCENE_FILE), pretty({ scenes }));
+  await writeTextFile(joinPath(dir, AI_FILE), dumpLlmChatStore());
+}
+
+async function pathLoadBundle(dir: string): Promise<Project> {
+  const { readTextFile } = await import("@tauri-apps/plugin-fs");
+  const projectText = await readTextFile(joinPath(dir, FILE_NAME));
+  let sceneText: string | null = null;
+  try {
+    if (await pathExists(joinPath(dir, SCENE_FILE))) sceneText = await readTextFile(joinPath(dir, SCENE_FILE));
+  } catch {
+    sceneText = null;
+  }
+  const project = mergeProjectFiles(projectText, sceneText);
+  try {
+    hydrateLlmChatStore((await pathExists(joinPath(dir, AI_FILE))) ? await readTextFile(joinPath(dir, AI_FILE)) : null);
+  } catch {
+    hydrateLlmChatStore(null);
+  }
+  return project;
 }
 
 async function openJsonFallback(): Promise<void> {
@@ -340,8 +418,7 @@ export async function openProjectFolder(): Promise<void> {
         window.alert(NO_PROJECT);
         return;
       }
-      const text = await (await (await dir.getFileHandle(FILE_NAME)).getFile()).text();
-      const project = parseProjectFile(text);
+      const project = await fsaLoadBundle(dir);
       await fsaLoadMedia(dir, project);
       bindDir({ kind: "fsa", handle: dir });
       useEditor.getState().replaceProject(project);
@@ -364,8 +441,7 @@ export async function openProjectFolder(): Promise<void> {
         window.alert(NO_PROJECT);
         return;
       }
-      const { readTextFile } = await import("@tauri-apps/plugin-fs");
-      const project = parseProjectFile(await readTextFile(joinPath(dir, FILE_NAME)));
+      const project = await pathLoadBundle(dir);
       await pathLoadMedia(dir, project);
       bindDir({ kind: "path", path: dir });
       useEditor.getState().replaceProject(project);
@@ -401,7 +477,7 @@ export async function saveProjectFolder(): Promise<void> {
       bindDir({ kind: "fsa", handle: dir });
     }
     try {
-      await fsaWriteJson(dir, project);
+      await fsaWriteBundle(dir, project);
       await fsaWriteMedia(dir, project);
     } catch (e) {
       if (isAbort(e)) return;
@@ -424,7 +500,7 @@ export async function saveProjectFolder(): Promise<void> {
       bindDir({ kind: "path", path: dir });
     }
     try {
-      await pathWriteJson(dir, project);
+      await pathWriteBundle(dir, project);
       await pathWriteMedia(dir, project);
     } catch (e) {
       window.alert(e instanceof Error ? e.message : "保存失败");

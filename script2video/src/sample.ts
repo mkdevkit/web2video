@@ -88,6 +88,7 @@ export function normalizeScript(s: SceneScript): SceneScript {
     holdMs: s.holdMs ?? 0,
     audioByLang: s.audioByLang,
     stageHtml: (s.stageHtml ?? "").trim() || DEFAULT_STAGE_HTML,
+    stageTexts: Array.isArray(s.stageTexts) ? s.stageTexts : undefined,
     drive: s.drive === "script" ? "script" : "narration",
     driveSchedule: Array.isArray(s.driveSchedule) ? s.driveSchedule : undefined,
     driveTotalMs: Number.isFinite(s.driveTotalMs) ? s.driveTotalMs : undefined,
@@ -112,11 +113,27 @@ export function normalizeProject(p: Project & { stageHtml?: string }): Project {
   };
 }
 
+export function splitProjectFiles(project: Project): { meta: Omit<Project, "scripts">; scripts: SceneScript[] } {
+  const { scripts, ...meta } = project;
+  return { meta, scripts };
+}
+
+export function mergeProjectFiles(projectText: string, scriptText?: string | null): Project {
+  const meta = JSON.parse(projectText) as Project & { scripts?: SceneScript[] };
+  if (!meta || typeof meta !== "object") throw new Error("不是有效的 Script2Video 工程");
+  let scripts = Array.isArray(meta.scripts) ? meta.scripts : [];
+  if (scriptText?.trim()) {
+    const extra = JSON.parse(scriptText) as { scripts?: SceneScript[] } | SceneScript[];
+    const list = Array.isArray(extra) ? extra : extra?.scripts;
+    if (!Array.isArray(list)) throw new Error("script.json 无效");
+    scripts = list;
+  }
+  if (!scripts.length) throw new Error("工程里没有脚本。需要 script.json，或旧版把脚本写在 project.json 里。");
+  return normalizeProject({ ...meta, scripts });
+}
+
 export function parseProjectFile(text: string): Project {
-  const data = JSON.parse(text) as Project;
-  if (!data || typeof data !== "object") throw new Error("不是有效的 Script2Video 工程");
-  if (!Array.isArray(data.scripts) || !data.scripts.length) throw new Error("工程里没有脚本");
-  return normalizeProject(data);
+  return mergeProjectFiles(text, null);
 }
 
 export const sampleProject: Project = {

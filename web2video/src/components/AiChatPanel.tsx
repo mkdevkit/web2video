@@ -7,9 +7,11 @@ import {
   loadLlmChat,
   newLlmChat,
   saveLlmChat,
+  subscribeLlmChat,
   switchLlmChat,
   type ChatLine,
 } from "../lib/aiChat";
+import { persistAiSession } from "../lib/projectFolder";
 import { runAgent, type ChatMessage } from "../lib/ai/agent";
 import { useEditor } from "../store/useEditor";
 
@@ -43,6 +45,7 @@ export function AiChatPanel() {
   useEffect(() => {
     saveLlmChat({ id: sessionId, lines, history: history.current });
     setList(listLlmChats());
+    persistAiSession();
   }, [lines, sessionId]);
 
   const applySession = (session: ReturnType<typeof loadLlmChat>) => {
@@ -54,6 +57,8 @@ export function AiChatPanel() {
     setLines(session.lines);
     setList(listLlmChats());
   };
+
+  useEffect(() => subscribeLlmChat(() => applySession(loadLlmChat())), []);
 
   const send = async (text: string) => {
     const prompt = text.trim();
@@ -83,6 +88,7 @@ export function AiChatPanel() {
       });
       history.current = next.filter((m) => m.role !== "system");
       saveLlmChat({ id: sessionRef.current, lines: linesRef.current, history: history.current });
+      persistAiSession();
       setList(listLlmChats());
     } catch (e) {
       const msg = e instanceof Error ? e.message : "生成失败";
@@ -159,7 +165,7 @@ export function AiChatPanel() {
       <div className="min-h-0 flex-1 space-y-1.5 overflow-auto px-3 py-2">
         {lines.length === 0 && (
           <div className="space-y-2 text-[11px] text-ink-400">
-            <p>边看舞台边生成或改场景。会话存在本机，可切换或删除。</p>
+            <p>边看舞台边生成或改场景。会话写入工程目录的 aisession.json；打开该文件夹即可恢复。没有独立记忆库，模型只看到当前会话最近若干轮。</p>
             {!hasKey && <p className="text-copper">还没填 API Key，点右上角齿轮或顶栏「AI」配置。</p>}
             {EXAMPLES.map((ex) => (
               <button

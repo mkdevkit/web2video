@@ -32,7 +32,7 @@ npm run tauri:build   # 安装包
 | UI | 同一套 React | 同一套 React |
 | 翻译 / TTS / LLM 开发期 | Vite 插件 `/__edge_translate`、`/__tts/qwen`、`/__llm/chat` | 同样走 Vite（`tauri dev`） |
 | 翻译 / TTS 打包后 | 仍需本机预览服务器，或以后接后端 | Rust 命令直连 Edge / DashScope |
-| 工程文件 | 浏览器下载 JSON；可选目录 | 原生打开 / 保存 `project.json` + `media/` |
+| 工程文件 | 浏览器下载 JSON；可选目录 | 原生打开 / 保存 `project.json` + `script.json` + `aisession.json` + `media/` |
 
 密钥只存在本机（`script2video.tts-secrets`、`script2video.llm-secrets`），不进工程文件。
 
@@ -130,7 +130,9 @@ speech.totalS()            // 全片
 
 和 web2video 一样：选一个上级目录，工程写在「项目名」子文件夹里。
 
-- `project.json`：口播、脚本、外观、配音元数据
+- `project.json`：片级外观、语言、配音角色
+- `script.json`：各脚本的口播、舞台 HTML、GSAP、画面文案
+- `aisession.json`：工作台 AI 会话（打开工程即可恢复）
 - `media/{lang}/{scriptId}.wav`：该句拼好的配音
 
 打开时可选项目文件夹，或包含它的上级目录。Chrome / Edge 用目录选择器；没有该 API 时退回下载/打开 JSON（不含音频）。桌面（Tauri）同样选文件夹。Ctrl+S 保存到已绑定目录。换机器带上整个文件夹即可。
@@ -268,7 +270,7 @@ self.wait(0.4)
 
 Script2Video **没有** Cursor stdio MCP（没有 `mcp/server.mjs`，根目录 `.cursor/mcp.json` 只登记了 web2video）。工具只在工作台里跑。
 
-实现与 web2video 应用内 AI 同构：`src/lib/ai/tools.ts` 定义 `AI_TOOLS` / `executeTool`，`agent.ts` 做 Chat Completions function calling，改当前 Zustand 工程。密钥在 `script2video.llm-secrets`；跨域走 Vite `/__llm/chat`。约定在 `SYSTEM_PROMPT`（口播驱动 / 脚本驱动、`speech.*`、不要写死秒数）。密钥、翻译、配音合成由用户在窗口里操作。
+实现与 web2video 应用内 AI 同构：`src/lib/ai/tools.ts` 定义 `AI_TOOLS` / `executeTool`，`agent.ts` 做 Chat Completions function calling，改当前 Zustand 工程。密钥在 `script2video.llm-secrets`；跨域走 Vite `/__llm/chat`。约定在 `SYSTEM_PROMPT`（口播驱动 / 脚本驱动、`speech.*`、不要写死秒数）。密钥、翻译、配音合成由用户在窗口里操作。工作台会话写在工程目录 `aisession.json`，打开文件夹恢复；没有向量记忆。
 
 | 工具 | 作用 |
 | --- | --- |
@@ -280,6 +282,7 @@ Script2Video **没有** Cursor stdio MCP（没有 `mcp/server.mjs`，根目录 `
 | `update_script` | 改一条的文案、代码、引擎 |
 | `manage_scripts` | 增删复制调序选中 |
 | `manage_beats` | 改口播表（id、文案、角色、延时行） |
+| `manage_stage_texts` | 舞台画面文案（sync / set_text），不是口播 |
 
 口播时长只读。画面跟 `speech.s(id)` / `holdS` / `play`，不要 `timeScale`。KaTeX / Three.js 是 GSAP 脚本里的库，不是独立引擎。
 

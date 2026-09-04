@@ -42,7 +42,7 @@ npm run tauri:dev  # 桌面（需 Rust）
 仓库 [`.cursor/mcp.json`](./.cursor/mcp.json) 已登记。Cursor 里启用 `web2video`；编辑器未开时调用会失败。
 
 读：`get_project`、`get_scene`、`list_catalog`  
-写：`apply_storyboard`、`update_scene`、`manage_scenes`、`manage_blocks`、`set_cue`、`set_project`
+写：`apply_storyboard`、`update_scene`、`manage_scenes`、`manage_blocks`、`set_visual_text`、`set_cue`、`set_project`
 
 元件含 `katex`（`settings.tex`）、`three`（`settings.threeSrc`，seek，不要 rAF）。不要编造媒体 URL。
 
@@ -51,7 +51,7 @@ npm run tauri:dev  # 桌面（需 Rust）
 没有 stdio MCP。Cursor 不能直接改脚本工程。工作台 AI 用同一套工具文件：
 
 读：`get_project`、`get_script`、`list_catalog`  
-写：`apply_scripts`、`update_script`、`manage_scripts`、`manage_beats`、`set_project`
+写：`apply_scripts`、`update_script`、`manage_scripts`、`manage_beats`、`manage_stage_texts`、`set_project`
 
 画面时长用 `speech.s(id)` / `holdS` / `play`，不要写死秒数。口播驱动按 beats 列表；脚本驱动必须 `speech.play(id)`。
 

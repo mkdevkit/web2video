@@ -26,7 +26,7 @@ npm run tauri:build   # 安装包
 | UI | 同一套 React | 同一套 React |
 | 翻译 / TTS / LLM 开发期 | Vite 插件 `/__edge_translate`、`/__tts/qwen`、`/__llm/chat` | 同样走 Vite（`tauri dev`） |
 | 翻译 / TTS 打包后 | 仍需本机预览服务器，或以后接后端 | Rust 命令直连 Edge / DashScope |
-| 工程文件 | 目录选择器；可选 JSON 下载 | 原生打开 / 保存 `project.json` + `media/` |
+| 工程文件 | 目录选择器；可选 JSON 下载 | 原生打开 / 保存 `project.json` + `scene.json` + `aisession.json` + `media/` |
 
 
 ## 功能
@@ -46,7 +46,7 @@ npm run tauri:build   # 安装包
 - 一键机翻：中、英、日、法、德、俄、西班牙、葡萄牙、意大利
 - 导出 WebM（VP8/VP9）或 MP4（H.264，视浏览器而定）；分辨率 / 帧率 / 码率可配
 - 默认不烧录字幕；可另存 SRT / VTT；也可只出一段视频、配多语言字幕（同一时间轴）
-- 工程写入所选目录下的「项目名」子文件夹：`project.json` + `media/`
+- 工程写入所选目录下的「项目名」子文件夹：`project.json`（片级）+ `scene.json`（场景）+ `aisession.json`（AI 会话）+ `media/`。旧版把场景写在 `project.json` 里仍能打开，再保存会拆开。
 
 ## 字体
 
@@ -137,7 +137,7 @@ vite-plugin-*.ts  开发期 TTS / LLM / 翻译 / MCP 桥
 
 应用内 AI 与 Cursor MCP **共用** `src/lib/ai/tools.ts`（`AI_TOOLS` + `executeTool`）。`agent.ts` 把工具交给 Chat Completions。约定见 `SYSTEM_PROMPT`。
 
-**应用内：** 顶栏「AI」配接口，右侧「AI」页对话，改当前工程。
+**应用内：** 顶栏「AI」配接口，右侧「AI」页对话，改当前工程。会话写在工程目录 `aisession.json`（打开文件夹恢复）。没有向量记忆，模型只带当前会话最近约 48 条消息。
 
 **Cursor MCP：** 先 `npm run dev` 或 `tauri:dev` 打开编辑器（`http://127.0.0.1:5173`）。
 
@@ -154,13 +154,14 @@ vite-plugin-*.ts  开发期 TTS / LLM / 翻译 / MCP 桥
 | 工具 | 作用 |
 | --- | --- |
 | `get_project` | 片级概要、场景列表 |
-| `get_scene` | 一场文案、口播、元件、动效 TimeRef |
+| `get_scene` | 一场文案、口播、画面 visual i18n、元件、动效 TimeRef |
 | `list_catalog` | 版面、元件（含 katex / three）、字体 |
 | `set_project` | 画幅、字体、字幕/进度条、导出规格等 |
 | `apply_storyboard` | 整片 replace / append |
-| `update_scene` | 改一场 |
+| `update_scene` | 改一场（源语言画面 + 口播） |
 | `manage_scenes` | 增删复制调序选中 |
 | `manage_blocks` | 增删改元件；katex 写 `tex`，three 写 `threeSrc` |
+| `set_visual_text` | 写画面文案某一语言（不是口播） |
 | `set_cue` | 兼容旧入场窗口 |
 
 公式用 `katex` 元件；三维用 `three` 元件且 `update({ t, localMs })` 跟播放头，不要 rAF，不要编造模型/贴图 URL。

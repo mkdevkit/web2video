@@ -7,6 +7,7 @@ import { emptyScript, normalizeScript } from "../../sample";
 import { useStudio } from "../../store/useStudio";
 import type { AspectId, Beat, EngineId, SceneScript, StageTheme } from "../../types";
 import { DEFAULT_GAP_MS, isGapBeat } from "../beats";
+import { syncStageTexts } from "../stageText";
 
 export type ChatTool = {
   type: "function";
@@ -45,7 +46,7 @@ const scriptSpecProperties = {
     type: "string",
     description: "当前引擎源码。GSAP/HyperFrames：paused timeline，用 speech.s/holdS/startS。脚本驱动用 speech.play(id)。不要写死秒数，不要 timeline.play()。",
   },
-  stageHtml: { type: "string", description: "本脚本舞台 DOM。画幅/字体/底色/全局 CSS 是工程级，用 set_project。" },
+  stageHtml: { type: "string", description: "本脚本舞台 DOM。有字的节点会出现在文本页。画幅/字体/底色/全局 CSS 是工程级，用 set_project。" },
 };
 
 export const AI_TOOLS: ChatTool[] = [
@@ -61,7 +62,7 @@ export const AI_TOOLS: ChatTool[] = [
     type: "function",
     function: {
       name: "get_script",
-      description: "读取一个脚本的口播、引擎、源码与节拍。",
+      description: "读取一个脚本的口播、画面文案 stageTexts、引擎、源码与节拍。",
       parameters: {
         type: "object",
         properties: {
@@ -188,6 +189,25 @@ export const AI_TOOLS: ChatTool[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "manage_stage_texts",
+      description:
+        "舞台画面文案（不是口播）。sync 从 HTML 抽出有字的节点；set_text 写某一语言。预览/导出走 previewLang。不要代劳机翻。",
+      parameters: {
+        type: "object",
+        properties: {
+          action: { type: "string", enum: ["sync", "set_text"] },
+          scriptId: { type: "string" },
+          id: { type: "string", description: "节点 id（HTML id 或 data-text）" },
+          lang: { type: "string", enum: LANG_ENUM },
+          text: { type: "string" },
+        },
+        required: ["action"],
+      },
+    },
+  },
 ];
 
 function sanitizeBeatId(raw: string, used: Set<string>): string {
@@ -230,10 +250,14 @@ function codeFromBeats(ids: string[]): string {
   ];
   ids.forEach((id, i) => {
     const sel = sels[i] ?? `#el${i + 1}`;
+    lines.push(`{`);
+    lines.push(`  const el = root.querySelector("${sel}");`);
+    lines.push(`  if (el && !el.textContent.trim()) el.textContent = speech.text("${id}");`);
     lines.push(
-      `timeline.fromTo("${sel}", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: fade, ease: "power2.out" }, speech.startS("${id}"));`,
+      `  timeline.fromTo("${sel}", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: fade, ease: "power2.out" }, speech.startS("${id}"));`,
     );
-    lines.push(`timeline.to("${sel}", { duration: speech.holdS("${id}", fade) }, speech.startS("${id}") + fade);`);
+    lines.push(`  timeline.to("${sel}", { duration: speech.holdS("${id}", fade) }, speech.startS("${id}") + fade);`);
+    lines.push(`}`);
     lines.push("");
   });
   lines.push("const pause = speech.sleepS(0.4);");
@@ -243,10 +267,10 @@ function codeFromBeats(ids: string[]): string {
 
 function stageHtmlFromBeats(ids: string[]): string {
   const nodes = ids.map((id, i) => {
-    if (i === 0) return `<div id="title" class="clip title"></div>`;
-    if (i === 1) return `<div id="stat" class="clip stat"></div>`;
+    if (i === 0) return `<div id="title" class="clip title" data-speech="${id}"></div>`;
+    if (i === 1) return `<div id="stat" class="clip stat" data-speech="${id}"></div>`;
     if (i === 2) return `<div id="ring" class="clip ring"></div>`;
-    return `<div id="el${i + 1}" class="clip title">${id}</div>`;
+    return `<div id="el${i + 1}" class="clip title" data-speech="${id}">${id}</div>`;
   });
   return nodes.join("\n") || DEFAULT_STAGE_HTML;
 }
@@ -303,6 +327,7 @@ function dumpScript(scriptId?: string) {
     ),
     code: sourceOf(script),
     stageHtml: script.stageHtml ?? "",
+    stageTexts: (script.stageTexts ?? []).map((t) => ({ id: t.id, sel: t.sel, text: t.text })),
   };
 }
 
@@ -374,14 +399,15 @@ export function executeTool(name: string, rawArgs: unknown): string {
           "speech.bodyS()": "各句口播之和，不含暂停。",
           "speech.totalS()": "全长 = bodyS + 所有 sleepS。写在全部 sleepS 之后。",
           "speech.text(id)": "当前预览语言的口播文案，可写进 DOM。",
+          "stage.text(id)": "当前预览语言的画面文案（文本页），不是口播。",
         },
         notes: {
           clock: "不要写死 3 秒。入场用固定秒；换语言只换 TTS。",
           gsap: "timeline 已 paused。不要 timeline.play()。脚本驱动用 speech.play(id)。预览和导出 seek。",
-          stage: "每个脚本自己的 stageHtml。画幅/字体/底色/stageCss 是工程级。HTML 里用 #title 等选择器。",
+          stage: "每个脚本自己的 stageHtml。画幅/字体/底色/stageCss 是工程级。HTML 里用 #title 等选择器。有字的节点会出现在文本页，预览/导出按 previewLang 覆盖。",
           fonts: "舞台与字幕字体均为 SIL OFL，免费可商用。字幕条用 captionFontId。中日文不足时回落 Noto CJK。",
           sleep: "口播驱动：句间留白用延时行（kind=gap）。sleepS 加在片尾。脚本驱动：speech.play + sleepS。",
-          tts: "密钥和配音合成不用你处理。用户在顶栏「配音」：合成 / AI 配置 / 配音角色 / 音色管理。翻译后合成默认关。改口播后配音会过期。",
+          tts: "密钥和配音合成不用你处理。用户在顶栏「配音」：合成 / AI 配置 / 配音角色 / 音色管理。翻译后合成默认关。改口播后配音会过期。画面文案翻译在「文本」页，不要代劳机翻。",
           role: "每句可设 roleId（get_project.voices）。缺省用 voiceId / voiceByLang。",
         },
         fonts: STAGE_FONTS.map((f) => ({ id: f.id, label: f.label, langs: f.langs, hint: f.hint, detail: f.detail, license: f.license })),
@@ -524,6 +550,32 @@ export function executeTool(name: string, rawArgs: unknown): string {
       return fail("未知 action");
     }
 
+    if (name === "manage_stage_texts") {
+      const action = String(args.action ?? "");
+      const scriptId = typeof args.scriptId === "string" ? args.scriptId : store.scriptId;
+      const script = store.project.scripts.find((x) => x.id === scriptId);
+      if (!script) return fail("找不到脚本");
+      if (action === "sync") {
+        const stageTexts = syncStageTexts(script.stageHtml ?? "", script.stageTexts, lang);
+        store.patchScript(scriptId, { stageTexts });
+        return ok({ ok: true, ids: stageTexts.map((t) => t.id) });
+      }
+      if (action === "set_text") {
+        const id = String(args.id ?? "").trim();
+        if (!id) return fail("缺少 id");
+        const target = isLangId(String(args.lang ?? "")) ? (args.lang as LangId) : lang;
+        const text = String(args.text ?? "");
+        let stageTexts = script.stageTexts ?? syncStageTexts(script.stageHtml ?? "", undefined, lang);
+        if (!stageTexts.some((t) => t.id === id)) {
+          stageTexts = [...stageTexts, { id, sel: `#${id}`, text: {} }];
+        }
+        stageTexts = stageTexts.map((t) => (t.id === id ? { ...t, text: { ...t.text, [target]: text } } : t));
+        store.patchScript(scriptId, { stageTexts });
+        return ok({ ok: true });
+      }
+      return fail("未知 action");
+    }
+
     return fail(`未知工具 ${name}`);
   } catch (e) {
     return fail(e instanceof Error ? e.message : "工具执行失败");
@@ -544,7 +596,7 @@ export const SYSTEM_PROMPT = `你是 Script2Video 的分镜助手。这是本地
 - 每个脚本自己的舞台 HTML（DOM，不是 canvas）。GSAP 只写 paused timeline。
 - 画幅、字体、底色、全局 CSS 是工程级，用 set_project（stageTheme / stageCss / aspect）。
 - 舞台字体均为 SIL OFL（免费可商用）。fontId / titleFontId / captionFontId 用 list_catalog.fonts 里的 id。字幕条烧录到画面时走 captionFontId。中日文不足会回落 Noto CJK。
-- 画面文案可用 speech.text(id) 写进 DOM。
+- 口播文案用 speech.text(id)；画面文案用 stage.text(id)（文本页），不要把口播写进舞台字。
 - Remotion / Manim 工作台里是节拍卡；仍把口播写进 beats，code 可留草稿。
 
 写作：
@@ -553,5 +605,6 @@ export const SYSTEM_PROMPT = `你是 Script2Video 的分镜助手。这是本地
 - 加一段：mode=append，或 manage_scripts add。
 - 改现有工程先 get_project / get_script，再 update_script / manage_beats。
 - 每句可指定 roleId（get_project.voices）；缺省用语言默认角色。
+- 画面文案写在 HTML 里，和口播分开。预览/导出按 previewLang 覆盖 DOM。脚本可用 stage.text("id")。翻译由用户在「文本」页操作，不要代劳机翻。
 - 密钥、翻译、TTS、导出不用你处理。用户在顶栏「配音」操作（合成 / AI 配置 / 角色 / 音色）。翻译后合成默认关。
 - 用中文回复用户，简短说明做了什么。`;

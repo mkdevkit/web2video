@@ -218,7 +218,8 @@ export const DEFAULT_STAGE_HTML = `<div id="title" class="clip title">黑洞不�
 <div id="ring" class="clip ring"></div>`;
 
 /** Shared layout classes. Sizes follow --stage-w so preview scale and export match. */
-export const DEFAULT_STAGE_CSS = `.clip { position: absolute; }
+export const DEFAULT_STAGE_CSS = `.root, .fill { position: absolute; inset: 0; }
+.clip { position: absolute; }
 .title {
   top: 22%;
   left: 8%;
@@ -346,5 +347,53 @@ export function stageBoxStyle(project: Project, w: number, h: number): CSSProper
 
 export function mountStage(root: HTMLElement, script: { stageHtml?: string }, project: { stageCss?: string }) {
   const css = stageCssOf(project);
-  root.innerHTML = `<style data-stage-css>${css}</style>${stageHtmlOf(script)}`;
+  const base = `.root,.fill{position:absolute;inset:0;overflow:hidden}.fill{overflow:visible}`;
+  root.innerHTML = `<style data-stage-css>${base}\n${css}</style>${stageHtmlOf(script)}`;
+}
+
+function cssEscapeId(id: string) {
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") return CSS.escape(id);
+  return id.replace(/([^\w-])/g, "\\$1");
+}
+
+function fillIfEmpty(el: Element | null, text: string) {
+  if (!(el instanceof HTMLElement) || !text) return;
+  if (el.textContent?.replace(/\s+/g, "").trim()) return;
+  el.textContent = text;
+}
+
+/** Put beat text into empty stage nodes so AI-generated empty #title/#stat still preview. */
+export function hydrateStageSpeech(root: HTMLElement, speech: { ids: () => string[]; text: (id: string) => string }) {
+  const ids = speech.ids();
+  for (const id of ids) {
+    const text = speech.text(id);
+    if (!text) continue;
+    const sel = cssEscapeId(id);
+    root.querySelectorAll(`#${sel}, [data-speech="${sel}"]`).forEach((el) => fillIfEmpty(el, text));
+  }
+  const slots = ["title", "stat", "body", "caption"];
+  ids.forEach((id, i) => {
+    const slot = slots[i];
+    if (!slot) return;
+    fillIfEmpty(root.querySelector(`#${slot}`), speech.text(id));
+  });
+}
+
+/** Selectors used in timeline/gsap tweens but missing from the stage DOM. */
+export function missingGsapTargets(code: string, root: HTMLElement): string[] {
+  const stripped = code.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+  const found = new Set<string>();
+  for (const m of stripped.matchAll(/\.(?:fromTo|from|to|set)\(\s*["']([^"']+)["']/g)) {
+    const sel = m[1]?.trim();
+    if (sel && (sel.startsWith("#") || sel.startsWith("."))) found.add(sel);
+  }
+  const missing: string[] = [];
+  for (const sel of found) {
+    try {
+      if (!root.querySelector(sel)) missing.push(sel);
+    } catch {
+      missing.push(sel);
+    }
+  }
+  return missing;
 }

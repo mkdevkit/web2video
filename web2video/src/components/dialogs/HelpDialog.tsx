@@ -29,7 +29,8 @@ export function HelpDialog() {
           每场可选口播驱动或配置驱动。场景属性里点「编辑口播」管理本场口播（各有 id 与时长）；口播驱动按该列表走时钟，句间留白用延时。配置驱动在属性区给元件配多条动效（口播 / 场景 / 固定时间），并用「播放口播」元件排期，全部播完再切场。
           「元件」可加公式（KaTeX，写 TeX）和三维（Three.js，脚本跟播放头走，不要自己开动画循环）。
           浏览器与桌面（Tauri）共用同一套界面；桌面打包后翻译/配音走本机 Rust，不依赖 Vite 代理。
-          Cursor 可经 MCP 调用同一套分镜工具：先打开本编辑器（npm run dev），再在 Cursor 里启用 web2video MCP。
+          Cursor 可经 MCP 调用同一套分镜工具：先打开本编辑器（npm run dev），再在 Cursor 里启用 web2video MCP。画面文案翻译在场景属性「口播」下面的「文本」。
+          工程目录：project.json 片级设置，scene.json 场景，aisession.json AI 会话。AI 没有向量记忆，恢复办法是打开该文件夹并在 AI 页选回那条会话。
         </p>
         <FontUsageGuide />
       </div>

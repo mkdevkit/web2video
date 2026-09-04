@@ -14,7 +14,7 @@ export function StatusBar() {
   return (
     <footer className="flex h-7 shrink-0 items-center justify-between border-t border-ink-600 bg-ink-900 px-3 text-[10px] text-ink-400">
       <span>
-        {dir ? `${dir}/project.json` : "未绑定文件夹"} · 场景 {Math.max(1, idx + 1)}/{project.scenes.length} ·{" "}
+        {dir ? `${dir}/` : "未绑定文件夹"} · 场景 {Math.max(1, idx + 1)}/{project.scenes.length} ·{" "}
         {project.aspect} · {langZhName(project.previewLang)}
       </span>
       <span>

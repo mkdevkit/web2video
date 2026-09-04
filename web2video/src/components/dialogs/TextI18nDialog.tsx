@@ -1,17 +1,22 @@
 import { useMemo, useState } from "react";
 import { translateText, translateTexts } from "../../lib/edgeTranslate";
 import { LANGS, langZhName, type LangId } from "../../lib/langs";
-import { collectI18nRows, sourceLangOf, sourceTextOf, writeI18n } from "../../lib/textI18n";
+import { collectI18nRows, collectVisualRows, sourceLangOf, sourceTextOf, writeI18n } from "../../lib/textI18n";
 import { synthScenes } from "../../lib/synthProject";
 import { useEditor } from "../../store/useEditor";
 import type { I18nRow } from "../../lib/textI18n";
 import { Field, Modal } from "../ui";
 
-export function TextI18nDialog() {
+export function TextI18nDialog({ visualOnly = false }: { visualOnly?: boolean }) {
   const project = useEditor((s) => s.project);
+  const sceneId = useEditor((s) => s.currentSceneId);
+  const sceneName = project.scenes.find((s) => s.id === sceneId)?.name ?? "";
   const source = sourceLangOf(project);
   const preview = project.previewLang;
-  const rows = useMemo(() => collectI18nRows(project), [project]);
+  const rows = useMemo(
+    () => (visualOnly ? collectVisualRows(project, sceneId) : collectI18nRows(project)),
+    [project, sceneId, visualOnly],
+  );
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState("");
@@ -62,7 +67,9 @@ export function TextI18nDialog() {
           source,
           to,
         );
-        const latest = collectI18nRows(useEditor.getState().project);
+        const latest = visualOnly
+          ? collectVisualRows(useEditor.getState().project, sceneId)
+          : collectI18nRows(useEditor.getState().project);
         need.forEach((n, j) => {
           const hit =
             latest.find((x) => x.sceneId === n.r.sceneId && x.kind === n.r.kind && x.itemId === n.r.itemId) ?? n.r;
@@ -70,7 +77,7 @@ export function TextI18nDialog() {
           useEditor.getState().applyI18nRow(hit, to, i18n[to] ?? out[j] ?? n.src, false);
         });
       }
-      await ttsAfter(targets);
+      if (!visualOnly) await ttsAfter(targets);
     } catch (e) {
       setError(e instanceof Error ? e.message : "翻译失败");
     } finally {
@@ -79,7 +86,7 @@ export function TextI18nDialog() {
   };
 
   return (
-    <Modal title="多语言文本" xl onClose={() => useEditor.getState().setDialog(null)}>
+    <Modal title={visualOnly ? `画面文本 · ${sceneName}` : "多语言文本"} xl onClose={() => useEditor.getState().setDialog(null)}>
       <div className="mb-3 flex flex-wrap items-end gap-2">
         <Field label="源语言">
           <select
@@ -116,13 +123,17 @@ export function TextI18nDialog() {
         <button className="btn" disabled={Boolean(busy)} onClick={() => void translateAll(true)}>
           {busy === "all" ? "翻译中…" : "全部重译"}
         </button>
-        <label className="flex items-center gap-1.5 pb-1 text-[11px] text-ink-300">
-          <input type="checkbox" checked={alsoTts} onChange={(e) => setAlsoTts(e.target.checked)} />
-          翻译后合成语音
-        </label>
+        {visualOnly ? null : (
+          <label className="flex items-center gap-1.5 pb-1 text-[11px] text-ink-300">
+            <input type="checkbox" checked={alsoTts} onChange={(e) => setAlsoTts(e.target.checked)} />
+            翻译后合成语音
+          </label>
+        )}
       </div>
       <p className="mb-3 text-[11px] leading-relaxed text-ink-400">
-        使用 Microsoft Edge 免费翻译（无需密钥）。开场/结束口播、元件名称、元件口播与画面文案分开翻译；合成配音后会按各段口播写入场时间。机翻请校对专有名词。
+        {visualOnly
+          ? "本场舞台上的标题、列表、对白等。和口播分开。预览与导出走顶栏预览/导出语言。机翻请校对专有名词。"
+          : "使用 Microsoft Edge 免费翻译（无需密钥）。开场/结束口播、元件名称、元件口播与画面文案分开翻译；合成配音后会按各段口播写入场时间。机翻请校对专有名词。"}
       </p>
       {error && <p className="mb-2 text-xs text-red-400">{error}</p>}
       {!rows.length && <p className="py-8 text-center text-sm text-ink-400">还没有可翻译的文本。</p>}
@@ -131,7 +142,7 @@ export function TextI18nDialog() {
           <table className="min-w-full text-left text-xs">
             <thead className="sticky top-0 bg-ink-900 text-[10px] text-ink-400">
               <tr>
-                <th className="px-2 py-1.5 font-medium">场景</th>
+                {visualOnly ? null : <th className="px-2 py-1.5 font-medium">场景</th>}
                 <th className="px-2 py-1.5 font-medium">字段</th>
                 {LANGS.map((l) => (
                   <th key={l.id} className="min-w-[140px] px-2 py-1.5 font-medium">
@@ -146,7 +157,9 @@ export function TextI18nDialog() {
             <tbody>
               {shown.map((row) => (
                 <tr key={`${row.sceneId}-${row.kind}-${row.itemId ?? ""}-${row.speakKey ?? ""}`} className="border-t border-ink-700 align-top">
-                  <td className="max-w-[88px] truncate px-2 py-1.5 text-ink-200">{row.sceneName}</td>
+                  {visualOnly ? null : (
+                    <td className="max-w-[88px] truncate px-2 py-1.5 text-ink-200">{row.sceneName}</td>
+                  )}
                   <td className="max-w-[72px] truncate px-2 py-1.5 text-ink-400">{row.label}</td>
                   {LANGS.map((l) => (
                     <td key={l.id} className="px-1 py-1">

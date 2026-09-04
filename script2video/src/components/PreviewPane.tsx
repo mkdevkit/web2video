@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useStudio } from "../store/useStudio";
 import { beatOrder, langAudioOf, sceneDurationMs } from "../lib/clock";
 import { createSpeech } from "../lib/speech";
@@ -8,7 +8,8 @@ import { runGsapScript } from "../lib/runGsap";
 import { LANGS } from "../lib/langs";
 import { audioObjectUrl } from "../lib/audioStore";
 import { sourceOf, usesGsapPreview } from "../lib/engines";
-import { mountStage, stageBoxStyle } from "../lib/stage";
+import { hydrateStageSpeech, missingGsapTargets, mountStage, stageBoxStyle } from "../lib/stage";
+import { applyStageTexts, createStageApi, syncStageTexts } from "../lib/stageText";
 import { ASPECT_PX } from "../types";
 import { CaptionBar } from "./CaptionBar";
 import { EngineCard } from "./EngineCard";
@@ -76,24 +77,29 @@ export function PreviewPane() {
     setPlaying(false);
   }, [script?.id]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const root = stageRef.current;
     if (!script || !usesGsapPreview(script)) {
       if (root) root.innerHTML = "";
-      revertRef.current?.();
-      revertRef.current = null;
-      tlRef.current = null;
       setError("");
       return;
     }
     if (!root) return;
     mountStage(root, script, project);
+    const source = project.sourceLang;
+    const copies = syncStageTexts(script.stageHtml ?? "", script.stageTexts, source);
+    applyStageTexts(root, copies, lang, source);
     const speech = createSpeech(script, lang);
-    const { timeline, revert, error: err } = runGsapScript(sourceOf(script), speech, root);
-    revertRef.current?.();
+    hydrateStageSpeech(root, speech);
+    const code = sourceOf(script);
+    const { timeline, revert, error: err } = runGsapScript(code, speech, root, createStageApi(copies, lang, source));
     revertRef.current = revert;
     tlRef.current = timeline;
-    setError(err ?? "");
+    const missing = missingGsapTargets(code, root);
+    const hints: string[] = [];
+    if (err) hints.push(err);
+    if (missing.length) hints.push(`舞台 HTML 里没有：${missing.join("、")}。脚本页改 HTML，或让 GSAP 选择器对上现有 id。`);
+    setError(hints.join(" "));
     timeline.seek(localMs / 1000, false);
     persistSpeechRun(script, speech);
     if (driveOf(script) === "script") {
@@ -105,7 +111,7 @@ export function PreviewPane() {
     };
     // localMs is applied via seek below; rebuild when script/lang/code changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [script?.id, script?.engine, script?.code, script?.sources, script?.beats, script?.audioByLang, script?.holdMs, script?.stageHtml, script?.drive, project.stageCss, project.stageTheme, lang]);
+  }, [script?.id, script?.engine, script?.code, script?.sources, script?.beats, script?.audioByLang, script?.holdMs, script?.stageHtml, script?.stageTexts, script?.drive, project.stageCss, project.stageTheme, lang, project.sourceLang]);
 
   useEffect(() => {
     tlRef.current?.seek(localMs / 1000, false);
@@ -171,6 +177,7 @@ export function PreviewPane() {
         <div className="mb-2 flex items-center gap-2">
           <h2 className="min-w-0 flex-1 truncate text-xs uppercase tracking-wider text-ink-400">
             预览 · {LANGS.find((l) => l.id === lang)?.label} · {(total / 1000).toFixed(2)}s
+            {usesGsapPreview(script) ? " · 舞台" : " · 节拍卡"}
           </h2>
           <button
             type="button"
@@ -218,6 +225,11 @@ export function PreviewPane() {
               }
             />
           )}
+          {usesGsapPreview(script) && !playing && localMs < 80 && (
+            <p className="pointer-events-none absolute inset-x-0 bottom-1 z-10 px-2 text-center text-[10px] text-ink-400">
+              入场前元件是透明的，点播放或拖进度条
+            </p>
+          )}
           {project.showCaptions && usesGsapPreview(script) && (
             <CaptionBar
               script={script}
@@ -240,7 +252,7 @@ export function PreviewPane() {
           />
           显示字幕（跟口播句对齐）
         </label>
-        {error && <p className="mt-2 text-xs text-copper">{error}</p>}
+        {error && <p className="mt-2 text-xs leading-relaxed text-copper">{error}</p>}
         <div className="mt-2 flex items-center gap-2">
           <button className="rounded border border-ink-600 px-2 py-1 text-sm" onClick={() => setPlaying((p) => !p)}>
             {playing ? "暂停" : "播放"}

@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { TopBar } from "./components/TopBar";
 import { ScriptList } from "./components/ScriptList";
 import { BeatEditor } from "./components/BeatEditor";
+import { StageTextEditor } from "./components/StageTextEditor";
 import { CodeEditor } from "./components/CodeEditor";
 import { PreviewPane } from "./components/PreviewPane";
 import { TtsDialog } from "./components/TtsDialog";
@@ -57,6 +58,12 @@ export default function App() {
               口播
             </button>
             <button
+              className={`rounded-t border border-b-0 px-3 py-1 text-sm ${tab === "text" ? "border-ink-600 bg-ink-800" : "border-transparent text-ink-400"}`}
+              onClick={() => setTab("text")}
+            >
+              文本
+            </button>
+            <button
               className={`rounded-t border border-b-0 px-3 py-1 text-sm ${tab === "code" ? "border-ink-600 bg-ink-800" : "border-transparent text-ink-400"}`}
               onClick={() => setTab("code")}
             >
@@ -75,14 +82,24 @@ export default function App() {
               用法
             </button>
           </div>
-          {tab === "speech" ? <BeatEditor /> : tab === "code" ? <CodeEditor /> : tab === "ai" ? <AiChatPanel /> : <UsagePane />}
+          {tab === "speech" ? (
+            <BeatEditor />
+          ) : tab === "text" ? (
+            <StageTextEditor />
+          ) : tab === "code" ? (
+            <CodeEditor />
+          ) : tab === "ai" ? (
+            <AiChatPanel />
+          ) : (
+            <UsagePane />
+          )}
         </main>
         <PreviewPane />
       </div>
       <footer className="border-t border-ink-700 px-3 py-1 text-xs text-ink-400">
-        {projectDirName ? `${projectDirName}/project.json` : "未绑定文件夹"}
+        {projectDirName ? `${projectDirName}/` : "未绑定文件夹"}
         {" · "}
-        {status || "保存写入项目名文件夹；Ctrl+S。脚本页选工具；AI 页生成口播；用法页看各引擎如何取时长"}
+        {status || "保存写入项目名文件夹；Ctrl+S。文本页译画面字；脚本页选工具；AI 页生成口播"}
       </footer>
       {dialog === "tts" && <TtsDialog />}
       {dialog === "stage" && <StageDialog />}

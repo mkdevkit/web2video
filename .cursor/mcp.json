@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "web2video": {
+      "command": "node",
+      "args": ["web2video/mcp/server.mjs"],
+      "env": {
+        "WEB2VIDEO_MCP_URL": "http://127.0.0.1:5173"
+      }
+    }
+  }
+}

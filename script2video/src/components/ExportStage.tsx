@@ -4,7 +4,8 @@ import { createSpeech } from "../lib/speech";
 import { persistSpeechRun, mixScriptSoundtrack } from "../lib/soundtrack";
 import { driveOf } from "../lib/beats";
 import { runGsapScript } from "../lib/runGsap";
-import { mountStage, stageBoxStyle } from "../lib/stage";
+import { hydrateStageSpeech, mountStage, stageBoxStyle } from "../lib/stage";
+import { applyStageTexts, createStageApi, syncStageTexts } from "../lib/stageText";
 import { sourceOf, usesGsapPreview } from "../lib/engines";
 import { exportPx, exportSettingsOf } from "../lib/exportSettings";
 import { CaptionBar } from "./CaptionBar";
@@ -40,8 +41,12 @@ export function ExportStage() {
     }
     if (!root) return;
     mountStage(root, script, project);
+    const source = project.sourceLang;
+    const copies = syncStageTexts(script.stageHtml ?? "", script.stageTexts, source);
+    applyStageTexts(root, copies, lang, source);
     const speech = createSpeech(script, lang);
-    const { timeline, revert } = runGsapScript(sourceOf(script), speech, root);
+    hydrateStageSpeech(root, speech);
+    const { timeline, revert } = runGsapScript(sourceOf(script), speech, root, createStageApi(copies, lang, source));
     tlRef.current = timeline;
     timeline.seek(localMs / 1000, false);
     persistSpeechRun(script, speech);
@@ -53,7 +58,7 @@ export function ExportStage() {
       tlRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exporting, script?.id, script?.engine, script?.code, script?.sources, script?.beats, script?.audioByLang, script?.holdMs, script?.stageHtml, script?.drive, project.stageCss, project.stageTheme, lang]);
+  }, [exporting, script?.id, script?.engine, script?.code, script?.sources, script?.beats, script?.audioByLang, script?.holdMs, script?.stageHtml, script?.stageTexts, script?.drive, project.stageCss, project.stageTheme, lang]);
 
   useEffect(() => {
     tlRef.current?.seek(localMs / 1000, false);

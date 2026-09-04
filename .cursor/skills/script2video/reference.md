@@ -79,4 +79,4 @@ KaTeX / Three.js 是 GSAP 脚本里的库，时长仍跟 `speech` 走。
 
 ## 应用内 AI 约定
 
-改现有工程先 `get_project` / `get_script`。整片重做 `apply_scripts mode=replace`，每条给出 `stageHtml` 与 GSAP `code`。加一段用 `append`。`drive`：`narration` | `script`。画面字用 `manage_stage_texts`（`sync` / `set_text`），不要代劳机翻。工程目录：`project.json` 片级，`script.json` 脚本，`aisession.json` 会话。打开文件夹恢复对话，没有向量记忆。
+改现有工程先 `get_project` / `get_script`。整片重做 `apply_scripts mode=replace`，每条给出 `stageHtml` 与 GSAP `code`。加一段用 `append`。`drive`：`narration` | `script`。画面字用 `manage_stage_texts`（`sync` / `set_text`），不要代劳机翻。

@@ -63,6 +63,15 @@ export interface MappedEvent {
 
 export type EngineId = "gsap" | "hyperframes" | "remotion" | "manim";
 
+export interface StageCopy {
+  id: string;
+  /** querySelector to the text node wrapper */
+  sel: string;
+  /** Last HTML extract (source-language seed). */
+  extracted?: string;
+  text: Partial<Record<LangId, string>>;
+}
+
 export interface SceneScript {
   id: string;
   name: string;
@@ -79,6 +88,8 @@ export interface SceneScript {
   code?: string;
   /** This script's stage DOM (GSAP / HyperFrames). */
   stageHtml?: string;
+  /** On-stage copy, translated like beats. Overlay at preview/export by previewLang. */
+  stageTexts?: StageCopy[];
   /**
    * narration: list order (including gap rows) is the clock.
    * script: speech.play() schedules lines; list is a library.

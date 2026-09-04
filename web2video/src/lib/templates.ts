@@ -404,8 +404,25 @@ export function normalizeProject(data: Project): Project {
   };
 }
 
+export function splitProjectFiles(project: Project): { meta: Omit<Project, "scenes">; scenes: Scene[] } {
+  const { scenes, ...meta } = project;
+  return { meta, scenes };
+}
+
+export function mergeProjectFiles(projectText: string, sceneText?: string | null): Project {
+  const meta = JSON.parse(projectText) as Project & { scenes?: Scene[] };
+  if (!meta || typeof meta !== "object") throw new Error("不是有效的 web2video 工程");
+  let scenes = Array.isArray(meta.scenes) ? meta.scenes : [];
+  if (sceneText?.trim()) {
+    const extra = JSON.parse(sceneText) as { scenes?: Scene[] } | Scene[];
+    const list = Array.isArray(extra) ? extra : extra?.scenes;
+    if (!Array.isArray(list)) throw new Error("scene.json 无效");
+    scenes = list;
+  }
+  if (!scenes.length) throw new Error("工程里没有场景。需要 scene.json，或旧版把场景写在 project.json 里。");
+  return normalizeProject({ ...meta, scenes });
+}
+
 export function parseProjectFile(text: string): Project {
-  const data = JSON.parse(text) as Project;
-  if (!data || !Array.isArray(data.scenes)) throw new Error("不是有效的 web2video 工程");
-  return normalizeProject(data);
+  return mergeProjectFiles(text, null);
 }

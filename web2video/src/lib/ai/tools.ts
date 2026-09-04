@@ -5,7 +5,7 @@ import { listMarkerStyleOf } from "../listMarker";
 import { exportSettingsOf } from "../exportSettings";
 import { itemSpeakKey } from "../narration";
 import { isGapSpeak, lineDurationMs, speakLineText, speaksOf } from "../speaks";
-import { textOf, itemText, sourceLangOf, blockNameOf, writeI18n } from "../textI18n";
+import { textOf, itemText, sourceLangOf, blockNameOf, writeI18n, collectVisualRows, isVisualI18nKind, type I18nRowKind } from "../textI18n";
 import { useEditor } from "../../store/useEditor";
 import { patchSceneFromStoryboard, sceneFromStoryboard, type StoryboardScene } from "./storyboard";
 import { isLangId, type LangId } from "../langs";
@@ -154,7 +154,7 @@ export const AI_TOOLS: ChatTool[] = [
     type: "function",
     function: {
       name: "get_scene",
-      description: "读取一场的画面文案、口播列表、元件与动效（TimeRef：口播/场景/固定时间）。",
+      description: "读取一场的画面文案（含 visual i18n）、口播列表、元件与动效。",
       parameters: {
         type: "object",
         properties: {
@@ -304,6 +304,28 @@ export const AI_TOOLS: ChatTool[] = [
   {
     type: "function",
     function: {
+      name: "set_visual_text",
+      description:
+        "写画面文案某一语言（标题/列表/对白/元件名），不是口播。kind=title|subtitle|body|caption|quote|author|number|item|dialogue|blockName。item 和 dialogue 要 itemId。不要代劳机翻。",
+      parameters: {
+        type: "object",
+        properties: {
+          sceneId: { type: "string" },
+          kind: {
+            type: "string",
+            enum: ["title", "subtitle", "body", "caption", "quote", "author", "number", "item", "dialogue", "blockName"],
+          },
+          itemId: { type: "string", description: "item / dialogue / blockName 的 id" },
+          lang: { type: "string", enum: ["zh", "en", "ja", "fr", "de", "ru", "es", "pt", "it"] },
+          text: { type: "string" },
+        },
+        required: ["kind", "text"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "set_cue",
       description: "设置元件动效（兼容旧 cues，无 effects 时仍可读）。target 为元件 id 或 item:{id}。优先用口播 id 的开始/结束，不要用主体 0–1 拉伸。用户侧动效还可选场景锚点、固定时间或时长。",
       parameters: {
@@ -370,6 +392,12 @@ function dumpScene(sceneId?: string) {
       })),
       hasImage: Boolean(scene.slots.image),
     },
+    visual: collectVisualRows(s.project, scene.id).map((r) => ({
+      kind: r.kind,
+      itemId: r.itemId ?? "",
+      label: r.label,
+      i18n: r.i18n,
+    })),
     blocks: sceneBlocks(scene).map((b) => ({
       id: b.id,
       type: b.type,
@@ -486,6 +514,7 @@ export function executeTool(name: string, rawArgs: unknown): string {
           progress: "工作区底部是全片进度条。showTopProgress + progressStyle 是画布上的进度条，会进导出。",
           listMarker: "listMarkerStyle 控制全片列表序号：show 开关，kind=number 色块或 image 用户上传图，不要编造图片 URL",
           speakRole: "每句 speaks[].role 填 get_project.voices 的 id；缺省用 voiceByLang 该语言默认",
+          visual: "画面文案与口播分开。get_scene.visual 是各语言 i18n。源语言用 update_scene 的 title/items/dialogue；其它语言用 set_visual_text。预览/导出走 previewLang。翻译由用户在属性「文本」里点，不要代劳机翻。",
           tts: "密钥和配音合成不用你处理。用户在配音窗口：合成 / AI 配置 / 配音角色 / 音色管理。翻译后合成默认关。",
         },
       });
@@ -668,6 +697,20 @@ export function executeTool(name: string, rawArgs: unknown): string {
       return ok({ ok: true });
     }
 
+    if (name === "set_visual_text") {
+      const sceneId = typeof args.sceneId === "string" ? args.sceneId : store.currentSceneId;
+      const kind = String(args.kind ?? "") as I18nRowKind;
+      if (!isVisualI18nKind(kind)) return fail("kind 必须是画面字段，不能是口播");
+      const text = String(args.text ?? "");
+      const targetLang = isLangId(String(args.lang ?? "")) ? (args.lang as LangId) : lang;
+      const itemId = typeof args.itemId === "string" && args.itemId.trim() ? args.itemId : undefined;
+      const rows = collectVisualRows(store.project, sceneId);
+      const row = rows.find((r) => r.kind === kind && (itemId ? r.itemId === itemId : !r.itemId));
+      if (!row) return fail("找不到该画面文案。item/dialogue/blockName 需要 itemId。");
+      store.applyI18nRow(row, targetLang, text, true);
+      return ok({ ok: true });
+    }
+
     return fail(`未知工具 ${name}`);
   } catch (e) {
     return fail(e instanceof Error ? e.message : "工具执行失败");
@@ -690,14 +733,15 @@ export const SYSTEM_PROMPT = `你是 Web2Video 的分镜助手。这是本地口
 外观：
 - 口播字幕条：showCaptions 默认关，只影响预览。烧录字体用 captionFontId（SIL OFL，见 list_catalog.fonts）。双语：bilingualCaptions + bilingualCaptionLang。导出烧录在导出窗勾选；exportSettings.exportSubtitles 可另存 SRT/VTT。
 - 画布进度条：showTopProgress + progressStyle，画在画布顶/底，导出会带上。工作区底部另有全片分段条，不是这个。
-- 密钥、翻译、配音合成不用你处理。用户在配音窗口操作（合成 / AI 配置 / 角色 / 音色）。
+- 密钥、翻译、配音合成不用你处理。用户在配音窗口操作（合成 / AI 配置 / 角色 / 音色）。画面文案翻译在属性「文本」。
 - 列表序号：listMarkerStyle.show / kind / 颜色 / 形状。图片只能用户在全局配置里上传，不要编造 URL。
 - 字体用 fontId / titleFontId / subtitleFontId / quoteFontId / captionFontId，取值见 list_catalog。
 - 每句口播可指定角色，id 来自 get_project.voices。
 
 写作要求：
 - 口播口语化、适合配音，一句一事，避免书面长句。
-- 每场：画面文案 + speaks 口播列表；列表用 items；对话用 dialogue。
+- 每场：画面文案 + speaks 口播列表；列表用 items；对话用 dialogue。画面字不要写进口播。
+- 源语言画面用 update_scene 的 title/items/dialogue；其它语言用 set_visual_text。预览/导出走 previewLang。
 - 改现有工程先 get_project / get_scene，再 update_scene 或 apply_storyboard。
 - 用户要整片重做时 apply_storyboard mode=replace；要加场用 append。
 - 用户提到字幕、进度条、字体、配色时用 set_project，不要只改文案。

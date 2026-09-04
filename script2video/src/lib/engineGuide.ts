@@ -19,6 +19,7 @@ export const SPEECH_API = [
   { name: `speech.sleepS(0.4)`, meaning: "暂停（秒）。口播驱动：加在列表时钟之后（片尾）。脚本驱动：推进 play 光标，插在两次 play 之间。不要用它代替口播表延时行。" },
   { name: `speech.totalS()`, meaning: "本脚本全长。口播驱动 = 列表（含延时）+ 片尾 sleepS；脚本驱动 = play 光标。" },
   { name: `speech.text("hook")`, meaning: "当前预览语言的口播文案。" },
+  { name: `stage.text("title")`, meaning: "当前预览语言的画面文案（文本页），不是口播。" },
   { name: `speech.ids()`, meaning: "有文案的口播 id（不含延时行）。" },
 ];
 
@@ -69,7 +70,7 @@ export const ENGINE_GUIDES: Record<EngineId, EngineGuide> = {
     rules: [
       "timeline 必须 { paused: true }（工作台已建好，直接往上 add tween）",
       "每一段的 duration 之和应对齐 speech.s(id)，不要另写 3 秒",
-      "画面文案可用 speech.text(id) 写进 DOM",
+      "画面字用 stage.text(id)（文本页）；口播用 speech.text(id)。预览会按 previewLang 覆盖 DOM",
       "公式用 KaTeX、三维用 Three.js（见下方附加库），不要另开一个工具",
       "暂停：口播驱动用列表延时行；脚本驱动用 speech.play + sleepS。不要 timeline.play()",
       "换预览语言只换 TTS，这段代码不用改",
